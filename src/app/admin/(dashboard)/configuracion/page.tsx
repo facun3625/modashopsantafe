@@ -186,7 +186,7 @@ export default async function AdminConfiguracionPage() {
         Franquicia y mailing (SMTP)
       </h2>
       <form action={updateMailSettings} className="mt-3 rounded-xl border border-black/10 bg-white p-5">
-        <p className={labelClasses}>Encabezado del mailing</p>
+        <p className={labelClasses}>Identidad de la franquicia</p>
         <div className="flex flex-wrap gap-4">
           <div className="w-56">
             <label className={labelClasses}>Nombre de la franquicia</label>
@@ -197,6 +197,7 @@ export default async function AdminConfiguracionPage() {
               placeholder="ModaShop"
               className={fieldClasses}
             />
+            <p className="mt-1 text-xs text-brand-muted">Encabezado de los mailings.</p>
           </div>
           <div className="w-56">
             <label className={labelClasses}>Sucursal / lugar</label>
@@ -207,6 +208,9 @@ export default async function AdminConfiguracionPage() {
               placeholder="Santa Fe"
               className={fieldClasses}
             />
+            <p className="mt-1 text-xs text-brand-muted">
+              Mailings y el badge de la barra superior del sitio público.
+            </p>
           </div>
         </div>
 

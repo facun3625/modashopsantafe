@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { WHATSAPP_NUMBER, INSTAGRAM_HANDLE, DEFAULT_ADDRESS } from "@/lib/contact";
+import { WHATSAPP_NUMBER, INSTAGRAM_HANDLE, DEFAULT_ADDRESS, DEFAULT_FRANCHISE_LOCATION } from "@/lib/contact";
 
 export async function getStoreSettingsRow() {
   return prisma.storeSettings.upsert({
@@ -20,6 +20,7 @@ export async function getSiteSettings() {
     whatsappNumber: row.whatsappPhone || WHATSAPP_NUMBER,
     instagramHandle: row.instagramHandle || INSTAGRAM_HANDLE,
     address: row.address || DEFAULT_ADDRESS,
+    franchiseLocation: row.franchiseLocation || DEFAULT_FRANCHISE_LOCATION,
     marqueeItems: row.marqueeText
       ? row.marqueeText.split("\n").map((s) => s.trim()).filter(Boolean)
       : DEFAULT_MARQUEE,
