@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { setUserRole } from "./actions";
 
 export default async function AdminUsuariosPage() {
+  const session = await auth();
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
@@ -21,6 +24,7 @@ export default async function AdminUsuariosPage() {
               <th className="px-4 py-3 font-semibold">Email</th>
               <th className="px-4 py-3 font-semibold">Rol</th>
               <th className="px-4 py-3 font-semibold">Alta</th>
+              <th className="px-4 py-3 font-semibold" />
             </tr>
           </thead>
           <tbody>
@@ -38,11 +42,34 @@ export default async function AdminUsuariosPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-brand-muted">{u.createdAt.toLocaleDateString("es-AR")}</td>
+                <td className="px-4 py-3 text-right">
+                  {u.role === "admin" ? (
+                    <form action={setUserRole.bind(null, u.id, "customer")}>
+                      <button
+                        type="submit"
+                        disabled={u.id === session?.user?.id}
+                        className="cursor-pointer text-xs font-semibold text-brand-muted hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-brand-muted"
+                        title={u.id === session?.user?.id ? "No podés quitarte el rol a vos mismo" : undefined}
+                      >
+                        Quitar admin
+                      </button>
+                    </form>
+                  ) : (
+                    <form action={setUserRole.bind(null, u.id, "admin")}>
+                      <button
+                        type="submit"
+                        className="cursor-pointer text-xs font-semibold text-brand-pink-dark hover:underline"
+                      >
+                        Hacer admin
+                      </button>
+                    </form>
+                  )}
+                </td>
               </tr>
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-brand-muted">
+                <td colSpan={5} className="px-4 py-8 text-center text-brand-muted">
                   Todavía no hay usuarios registrados.
                 </td>
               </tr>
