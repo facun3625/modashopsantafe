@@ -7,6 +7,10 @@ import { prisma } from "@/lib/prisma";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
+  // Self-hosteado atrás de un reverse proxy (Nginx) en vez de Vercel — sin
+  // esto, NextAuth rechaza las requests porque no reconoce el Host que le
+  // llega a través del proxy ("UntrustedHost").
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
