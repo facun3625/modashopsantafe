@@ -63,6 +63,10 @@ model StoreSettings {
   pointsRatio     Float     @default(0.01) // puntos otorgados por cada $1 de subtotal
   pointsLastSync  DateTime?
 
+  // Apaga el sitio para clientes (ver proxy.ts + /mantenimiento) — los
+  // admins entran igual, tanto al panel como al sitio público normal.
+  maintenanceMode Boolean @default(false)
+
   // Conexión con la API externa de Odoo (ver lib/odoo.ts) — cada franquicia
   // tiene su propia instancia de Odoo, así que esto NO va en variables de
   // entorno: se carga desde Configuración en cada instalación. Vacío hasta

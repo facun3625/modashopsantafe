@@ -140,6 +140,7 @@ export async function getDashboardStats() {
 
   return {
     userLabel: settings.franchiseName || "ModaShop",
+    maintenanceMode: settings.maintenanceMode,
     userCount,
     newUsersThisWeek,
     revenueThisMonth,

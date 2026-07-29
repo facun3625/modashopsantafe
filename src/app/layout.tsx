@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import { headers } from "next/headers";
 import { Providers } from "@/components/Providers";
 import { SiteChrome } from "@/components/SiteChrome";
 import { getSiteSettings } from "@/lib/settings";
@@ -25,13 +26,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = await getSiteSettings();
+  const [settings, requestHeaders] = await Promise.all([getSiteSettings(), headers()]);
+  const isMaintenancePage = requestHeaders.get("x-maintenance-page") === "1";
 
   return (
     <html lang="es" className={`${poppins.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
         <Providers>
-          <SiteChrome settings={settings}>{children}</SiteChrome>
+          <SiteChrome settings={settings} isMaintenancePage={isMaintenancePage}>
+            {children}
+          </SiteChrome>
         </Providers>
       </body>
     </html>

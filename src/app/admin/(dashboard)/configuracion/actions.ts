@@ -13,6 +13,19 @@ async function requireAdmin() {
   if (session?.user?.role !== "admin") throw new Error("No autorizado");
 }
 
+export async function updateMaintenanceMode(formData: FormData) {
+  await requireAdmin();
+
+  await prisma.storeSettings.upsert({
+    where: { id: "global" },
+    create: { id: "global", maintenanceMode: formData.get("maintenanceMode") === "on" },
+    update: { maintenanceMode: formData.get("maintenanceMode") === "on" },
+  });
+
+  revalidatePath("/admin/configuracion");
+  revalidatePath("/admin/inicio");
+}
+
 const MAX_HERO_SLIDES = 3;
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "hero");
 

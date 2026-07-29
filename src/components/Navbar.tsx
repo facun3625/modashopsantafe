@@ -5,11 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { InstagramIcon, MapPinIcon, UserIcon, CartIcon, SearchIcon, StoreIcon, DashboardIcon, StarIcon, LogoutIcon, PackageIcon } from "@/components/icons";
+import { UserIcon, CartIcon, SearchIcon, StoreIcon, DashboardIcon, StarIcon, LogoutIcon, PackageIcon } from "@/components/icons";
 import { useCart } from "@/lib/cart";
 import { useAuthModal } from "@/lib/authModal";
 import { useProductSuggestions } from "@/lib/useProductSuggestions";
 import { SearchSuggestions } from "@/components/SearchSuggestions";
+import { TopContactBar } from "@/components/TopContactBar";
 import type { SiteSettings } from "@/lib/settings";
 
 const LINKS = [
@@ -118,30 +119,7 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Barra superior */}
-      <div className="bg-brand-pink px-3 py-2 text-[11px] tracking-wide text-white/90 sm:px-6">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 items-center gap-2 sm:grid-cols-3">
-          <span className="flex items-center gap-1.5">
-            <MapPinIcon className="h-3.5 w-3.5 shrink-0" />
-            <span className="sm:hidden">Santa Fe</span>
-            <span className="hidden sm:inline">{settings.address}</span>
-          </span>
-          <span className="hidden justify-self-center sm:block">
-            <span className="rounded-full bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
-              Santa Fe
-            </span>
-          </span>
-          <a
-            href={`https://instagram.com/${settings.instagramHandle}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-self-end gap-1.5 hover:text-white"
-          >
-            <InstagramIcon className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden sm:inline">Instagram</span>
-          </a>
-        </div>
-      </div>
+      <TopContactBar settings={settings} />
 
       {/* Barra principal */}
       <div className="border-b border-black/5 bg-white px-3 py-4 sm:px-6">

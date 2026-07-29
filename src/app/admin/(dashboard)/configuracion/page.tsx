@@ -5,10 +5,12 @@ import { ToggleSwitch } from "@/components/admin/ToggleSwitch";
 import { SaveButton } from "@/components/admin/SaveButton";
 import { CardAccordion } from "@/components/admin/CardAccordion";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
+import { WrenchIcon } from "@/components/icons";
 import {
   updateSiteSettings,
   updateMailSettings,
   updateOdooSettings,
+  updateMaintenanceMode,
   createHeroSlide,
   updateHeroSlide,
   deleteHeroSlide,
@@ -35,6 +37,37 @@ export default async function AdminConfiguracionPage() {
           Datos de contacto y el slider principal del home — todo lo que se ve en el sitio público.
         </p>
       </div>
+
+      <form
+        action={updateMaintenanceMode}
+        className={`mt-6 shrink-0 rounded-xl border p-5 transition-colors ${
+          settings.maintenanceMode ? "border-amber-300 bg-amber-50" : "border-black/10 bg-white"
+        }`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                settings.maintenanceMode ? "bg-amber-100 text-amber-700" : "bg-brand-soft text-brand-muted"
+              }`}
+            >
+              <WrenchIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-semibold text-brand-ink">Modo mantenimiento</p>
+              <p className="text-xs text-brand-muted">
+                {settings.maintenanceMode
+                  ? "El sitio está apagado para clientes ahora mismo — solo ven la pantalla de mantenimiento."
+                  : "Apaga el sitio para clientes (ven una pantalla de mantenimiento). Los admins entran igual, panel y sitio."}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <ToggleSwitch name="maintenanceMode" defaultChecked={settings.maintenanceMode} />
+            <SaveButton trackDirty />
+          </div>
+        </div>
+      </form>
 
       <h2 className="mt-8 shrink-0 text-sm font-semibold uppercase tracking-wide text-brand-muted">
         Conexión con Odoo

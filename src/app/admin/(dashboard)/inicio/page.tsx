@@ -17,6 +17,7 @@ import {
   AlertIcon,
   CheckCircleIcon,
   TrendUpIcon,
+  WrenchIcon,
 } from "@/components/icons";
 
 const STATUS_TONES: Record<string, "amber" | "green" | "red"> = {
@@ -50,6 +51,19 @@ export default async function AdminInicioPage() {
           tienda.
         </p>
       </div>
+
+      {stats.maintenanceMode && (
+        <Link
+          href="/admin/configuracion"
+          className="mt-4 flex shrink-0 items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 transition-colors hover:bg-amber-100"
+        >
+          <WrenchIcon className="h-5 w-5 shrink-0" />
+          <span>
+            <span className="font-semibold">El sitio está en modo mantenimiento</span> — los clientes solo ven la
+            pantalla de "volvemos enseguida". Tocá acá para apagarlo.
+          </span>
+        </Link>
+      )}
 
       {/* KPIs */}
       <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">

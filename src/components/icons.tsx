@@ -279,3 +279,15 @@ export function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function WrenchIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M14.7 6.3a4 4 0 0 0-5.4 4.7L3.5 16.8a1.8 1.8 0 0 0 2.5 2.5l5.8-5.8a4 4 0 0 0 4.7-5.4l-2.6 2.6-2-2 2.6-2.6Z"
+      />
+    </svg>
+  );
+}
