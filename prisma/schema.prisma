@@ -1,0 +1,387 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  customer
+  admin
+}
+
+model User {
+  id   String  @id @default(cuid())
+  name String?
+  email String @unique
+  // Null para cuentas creadas por Google (no tienen contraseña propia) —
+  // ver el guard en lib/auth.ts que evita loguearse con Credentials en ese caso.
+  passwordHash String?
+  role         Role    @default(customer)
+
+  // id del res.partner en Odoo asociado a este usuario, se crea/vincula en el primer pedido
+  odooPartnerId Int?
+
+  orders         Order[]
+  abandonedCarts AbandonedCart[]
+
+  // Sistema de puntos de fidelidad — ver PointTransaction y PointReward.
+  points            Int                @default(0)
+  pointTransactions PointTransaction[]
+  redeemedCoupons   Coupon[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// "Avisarme cuando haya stock": se anota gente interesada en un producto
+// agotado. No dispara ningún aviso automático todavía — es solo el
+// listado para que el equipo decida qué hacer (contactar a mano, mailing,
+// etc.) cuando el producto vuelve a tener stock en Odoo.
+model WaitlistEntry {
+  id           String @id @default(cuid())
+  productId    Int // product.template id en Odoo
+  productName  String
+  categoryName String?
+  name         String
+  phone        String?
+  email        String
+
+  createdAt DateTime @default(now())
+
+  @@unique([productId, email])
+}
+
+// Configuración global del sitio, singleton (siempre id = "global").
+model StoreSettings {
+  id String @id @default("global")
+
+  // Sistema de puntos de fidelidad
+  pointsEnabled   Boolean   @default(false)
+  pointsRatio     Float     @default(0.01) // puntos otorgados por cada $1 de subtotal
+  pointsLastSync  DateTime?
+
+  // Conexión con la API externa de Odoo (ver lib/odoo.ts) — cada franquicia
+  // tiene su propia instancia de Odoo, así que esto NO va en variables de
+  // entorno: se carga desde Configuración en cada instalación. Vacío hasta
+  // que el admin lo completa (una instalación nueva arranca sin esto).
+  odooUrl    String?
+  odooDb     String?
+  odooUser   String?
+  odooApiKey String?
+
+  // Datos de contacto del sitio (navbar, footer, botón de WhatsApp, sección
+  // "Dónde estamos"). Si quedan en null se usan los valores por defecto de
+  // lib/contact.ts.
+  instagramHandle String?
+  whatsappPhone   String?
+  address         String?
+
+  // Textos del marquee (la franja que se desplaza debajo del slider) — uno
+  // por línea, se guardan como un único string separado por saltos de línea.
+  marqueeText String?
+
+  // Nombre y sucursal de la franquicia — para el encabezado del mailing
+  // (ej. "ModaShop" / "Santa Fe"). Pensado para cuando haya más de una
+  // franquicia, cada una con su propia identidad en los mails que manda.
+  franchiseName     String?
+  franchiseLocation String?
+
+  // SMTP para el mailing (ver lib/mailer.ts). La contraseña queda en texto
+  // plano en la base — mismo nivel de exposición que las credenciales de
+  // Mercado Pago en PaymentMethodConfig, nunca se devuelve al cliente.
+  smtpHost     String?
+  smtpPort     Int?
+  smtpSecure   Boolean @default(true)
+  smtpUser     String?
+  smtpPassword String?
+  mailFromName  String?
+  mailFromEmail String?
+
+  updatedAt DateTime @updatedAt
+}
+
+enum MailAudience {
+  abandoned_carts
+  waitlist
+  users
+  subscribers
+}
+
+enum MailCampaignStatus {
+  sending
+  done
+  failed
+}
+
+// Registro de cada mailing mandado desde /admin/mailing — a qué listas se
+// mandó, cuántos destinatarios tenía y cómo va el envío. El envío en sí
+// pasa en segundo plano (ver actions.ts): esta fila se crea al toque con
+// status "sending" y se va actualizando sentCount a medida que manda.
+model MailCampaign {
+  id             String              @id @default(cuid())
+  subject        String
+  title          String
+  body           String
+  audiences      MailAudience[]
+  recipientCount Int                 @default(0)
+  sentCount      Int                 @default(0)
+  status         MailCampaignStatus  @default(sending)
+
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+}
+
+// Slides del carrusel principal del home, editables desde el admin — hasta
+// 3 (ver validación en actions.ts). `title` y `promoText` admiten más de
+// una línea (separadas por \n) para poder partir el texto igual que antes.
+// Los botones son 3 slots fijos en vez de una lista dinámica: alcanza para
+// el caso de uso real (categorías destacadas + "Ver todo") sin necesitar un
+// editor de lista en el admin.
+model HeroSlide {
+  id       String  @id @default(cuid())
+  position Int     @default(0)
+  enabled  Boolean @default(true)
+
+  imageUrl  String?
+  promoText String? // texto del círculo/badge, ej. "Nueva\nColección"
+  eyebrow   String
+  title     String
+  subtitle  String?
+
+  button1Label String?
+  button1Href  String?
+  button2Label String?
+  button2Href  String?
+  button3Label String?
+  button3Href  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Catálogo de recompensas canjeables por puntos, editable desde el admin. Al
+// canjearse (ver lib/points.ts) no se descuenta nada acá — se genera un
+// Coupon de un solo uso con este mismo tipo/valor de descuento.
+model PointReward {
+  id             String       @id @default(cuid())
+  title          String
+  pointsRequired Int
+  discountType   DiscountType
+  discountValue  Float
+  enabled        Boolean      @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Historial de movimientos de puntos de cada usuario. El signo de `amount`
+// es lo único que distingue un ingreso (ganado por compra) de un egreso
+// (canjeado por una recompensa) — no hay un campo `type` separado.
+model PointTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId     String? // solo presente cuando amount > 0 (puntos ganados por ese pedido)
+  amount      Int
+  description String
+  createdAt   DateTime @default(now())
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  cancelled
+}
+
+enum PaymentMethod {
+  mercadopago
+  transferencia
+  contra_entrega
+}
+
+// Configuración de cada medio de pago, editable desde el admin (Pagos) en
+// vez de hardcodeada — incluye si está habilitado, un descuento opcional, y
+// (solo para mercadopago) las credenciales de la cuenta.
+model PaymentMethodConfig {
+  id          String        @id @default(cuid())
+  method      PaymentMethod @unique
+  enabled     Boolean       @default(false)
+  discountPct Float         @default(0)
+
+  // Solo aplica a method = mercadopago
+  mpAccessToken String?
+  mpPublicKey   String?
+
+  // Solo aplica a method = transferencia — datos que se le muestran al
+  // cliente en el checkout para que sepa a dónde transferir. No son
+  // secretos (a diferencia de las credenciales de MP), se devuelven tal cual.
+  bankCbu        String?
+  bankAlias      String?
+  bankHolderName String?
+
+  // Si no tiene ninguna fila acá, el medio de pago acepta cualquier envío
+  // habilitado. Si tiene una o más, queda restringido a esos.
+  allowedShipping PaymentMethodShipping[]
+
+  updatedAt DateTime @updatedAt
+}
+
+// Métodos de envío: totalmente a cargo del admin (crear/editar/deshabilitar),
+// pensado para poder tener varios distintos (a futuro, por franquicia).
+model ShippingMethod {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  cost        Float   @default(0)
+  enabled     Boolean @default(true)
+
+  // Si es false, el checkout no pide dirección (ej. "Retiro en el local").
+  requiresAddress Boolean @default(true)
+
+  allowedForPayments PaymentMethodShipping[]
+  orders             Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Tabla puente: qué métodos de envío acepta cada medio de pago. Ausencia de
+// filas para un medio de pago = sin restricción (acepta todos los envíos
+// habilitados).
+model PaymentMethodShipping {
+  id                     String              @id @default(cuid())
+  paymentMethodConfigId  String
+  paymentMethodConfig    PaymentMethodConfig @relation(fields: [paymentMethodConfigId], references: [id], onDelete: Cascade)
+  shippingMethodId       String
+  shippingMethod         ShippingMethod      @relation(fields: [shippingMethodId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentMethodConfigId, shippingMethodId])
+}
+
+enum DiscountType {
+  percentage
+  fixed
+}
+
+// Cupones de descuento, creados desde el admin. Todo el alcance es opcional
+// y se combina con AND: si no se carga ninguna condición, aplica a
+// cualquier compra. El descuento se calcula sobre el subtotal completo del
+// pedido (no solo sobre los ítems que matchean categoría/producto) una vez
+// que se cumplen las condiciones de alcance.
+model Coupon {
+  id      String @id @default(cuid())
+  code    String @unique
+  enabled Boolean @default(true)
+
+  discountType  DiscountType
+  discountValue Float // % (0-100) si es percentage, o $ si es fixed
+
+  // Alcance — todo opcional
+  categoryId    Int? // product.category id en Odoo
+  productId     Int? // product.template id en Odoo
+  paymentMethod PaymentMethod?
+  minPurchaseAmount Float?
+  expiresAt         DateTime?
+  maxUses           Int?
+  usedCount         Int      @default(0)
+
+  // Solo presente en cupones generados por un canje de puntos (código con
+  // prefijo "CANJE-"): quedan atados a ese usuario y son de un solo uso (se
+  // deshabilitan solos al usarse, ver lib/coupons.ts).
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Foto del último estado de cada carrito, sincronizada sola en cada cambio
+// (agregar/sacar/cambiar cantidad) — no hay un "detector de abandono", es
+// simplemente el último snapshot conocido de ese sessionId. Se borra en
+// cuanto el carrito queda vacío (ya sea porque el cliente lo vació a mano o
+// porque compró y se limpió el carrito), así nunca queda un carrito
+// "abandonado" que en realidad terminó en una venta.
+model AbandonedCart {
+  id         String   @id @default(cuid())
+  sessionId  String   @unique
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  email      String?
+  name       String?
+  phone      String? // tomado del formulario de checkout — útil para contactar por WhatsApp
+  items      Json
+  total      Float
+  lastActive DateTime @updatedAt
+  createdAt  DateTime @default(now())
+}
+
+// Registro propio de ventas online: Odoo no tiene el módulo de Ventas
+// instalado en esta instancia, así que acá queda la única fuente de verdad
+// de los pedidos hechos desde la tienda. El descuento de stock sí se hace
+// en Odoo (Inventario), vía un stock.picking — ver odooPickingId.
+//
+// status refleja el estado del PAGO, no del despacho (eso vive en Odoo vía
+// el picking): pending = pedido creado, pago sin confirmar todavía
+// (transferencia/contra-entrega); confirmed = pago confirmado (a mano por el
+// equipo, o automático si viene de Mercado Pago); cancelled = nunca pagó.
+model Order {
+  id            String        @id @default(cuid())
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id])
+  customerName  String
+  customerEmail String
+  customerPhone String?
+  subtotal      Float         @default(0) // suma de items sin envío ni descuentos — base para los puntos ganados
+  total         Float
+  status        OrderStatus   @default(pending)
+  paymentMethod PaymentMethod
+
+  shippingMethodId String?
+  shippingMethod   ShippingMethod? @relation(fields: [shippingMethodId], references: [id])
+  shippingCost     Float           @default(0)
+  shippingAddress  String?
+
+  couponId       String?
+  coupon         Coupon? @relation(fields: [couponId], references: [id])
+  couponDiscount Float   @default(0)
+
+  // res.partner y stock.picking creados en Odoo para este pedido
+  odooPartnerId Int?
+  odooPickingId Int?
+
+  // Momento en que se acreditaron los puntos de este pedido (ver
+  // lib/points.ts) — null hasta que Odoo marca el picking como entregado
+  // ("done"). Solo aplica a pedidos con userId (invitados no ganan puntos).
+  pointsAwardedAt DateTime?
+
+  // Comprobante adjuntado por el cliente (solo transferencia)
+  transferProofUrl String?
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // id del product.template en Odoo
+  productId Int
+  name      String
+  price     Float
+  quantity  Int
+}

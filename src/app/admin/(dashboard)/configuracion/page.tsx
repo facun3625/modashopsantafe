@@ -1,0 +1,439 @@
+import Image from "next/image";
+import { prisma } from "@/lib/prisma";
+import { getStoreSettingsRow } from "@/lib/settings";
+import { ToggleSwitch } from "@/components/admin/ToggleSwitch";
+import { SaveButton } from "@/components/admin/SaveButton";
+import { CardAccordion } from "@/components/admin/CardAccordion";
+import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
+import {
+  updateSiteSettings,
+  updateMailSettings,
+  updateOdooSettings,
+  createHeroSlide,
+  updateHeroSlide,
+  deleteHeroSlide,
+} from "./actions";
+
+const fieldClasses =
+  "w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none";
+const labelClasses = "mb-1 block text-xs font-semibold text-brand-muted";
+const MAX_HERO_SLIDES = 3;
+
+export default async function AdminConfiguracionPage() {
+  const [settings, slides] = await Promise.all([
+    getStoreSettingsRow(),
+    prisma.heroSlide.findMany({ orderBy: { position: "asc" } }),
+  ]);
+
+  const canAddSlide = slides.length < MAX_HERO_SLIDES;
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-auto">
+      <div className="shrink-0">
+        <h1 className="text-2xl font-bold text-brand-ink">Configuración</h1>
+        <p className="mt-1 text-sm text-brand-muted">
+          Datos de contacto y el slider principal del home — todo lo que se ve en el sitio público.
+        </p>
+      </div>
+
+      <h2 className="mt-8 shrink-0 text-sm font-semibold uppercase tracking-wide text-brand-muted">
+        Conexión con Odoo
+      </h2>
+      <form action={updateOdooSettings} className="mt-3 rounded-xl border border-black/10 bg-white p-5">
+        {!settings.odooUrl && (
+          <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+            Todavía no está conectado — el catálogo, stock y pedidos no van a funcionar hasta que cargues esto.
+          </p>
+        )}
+        <div className="flex flex-wrap gap-4">
+          <div className="min-w-[220px] flex-1">
+            <label className={labelClasses}>URL de Odoo</label>
+            <input
+              type="text"
+              name="odooUrl"
+              defaultValue={settings.odooUrl ?? ""}
+              placeholder="https://tufranquicia.odoo.com"
+              className={fieldClasses}
+            />
+          </div>
+          <div className="w-48">
+            <label className={labelClasses}>Base de datos</label>
+            <input
+              type="text"
+              name="odooDb"
+              defaultValue={settings.odooDb ?? ""}
+              placeholder="nombre-db"
+              className={fieldClasses}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-4">
+          <div className="min-w-[220px] flex-1">
+            <label className={labelClasses}>Usuario</label>
+            <input
+              type="text"
+              name="odooUser"
+              defaultValue={settings.odooUser ?? ""}
+              placeholder="usuario@tufranquicia.com"
+              className={fieldClasses}
+            />
+          </div>
+          <MaskedCredentialField
+            name="odooApiKey"
+            label="API Key"
+            configured={Boolean(settings.odooApiKey)}
+            placeholder="Clave de API de Odoo"
+          />
+        </div>
+
+        <div className="mt-5 border-t border-black/5 pt-4">
+          <SaveButton trackDirty />
+        </div>
+      </form>
+
+      <h2 className="mt-8 shrink-0 text-sm font-semibold uppercase tracking-wide text-brand-muted">
+        Datos de contacto
+      </h2>
+      <form
+        action={updateSiteSettings}
+        className="mt-3 rounded-xl border border-black/10 bg-white p-5"
+      >
+        <div className="flex flex-wrap gap-4">
+          <div className="w-64">
+            <label className={labelClasses}>Instagram (usuario, sin @)</label>
+            <input
+              type="text"
+              name="instagramHandle"
+              defaultValue={settings.instagramHandle ?? ""}
+              placeholder="modashop.sf"
+              className={fieldClasses}
+            />
+          </div>
+          <div className="w-64">
+            <label className={labelClasses}>WhatsApp (con código de país, sin +)</label>
+            <input
+              type="text"
+              name="whatsappPhone"
+              defaultValue={settings.whatsappPhone ?? ""}
+              placeholder="5493420000000"
+              className={fieldClasses}
+            />
+          </div>
+          <div className="min-w-[240px] flex-1">
+            <label className={labelClasses}>Dirección</label>
+            <input
+              type="text"
+              name="address"
+              defaultValue={settings.address ?? ""}
+              placeholder="San Martín 2191 — Santa Fe, Argentina"
+              className={fieldClasses}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className={labelClasses}>Texto del marquee (uno por línea)</label>
+          <textarea
+            name="marqueeText"
+            rows={3}
+            defaultValue={settings.marqueeText ?? ""}
+            placeholder={"Nueva colección\nPromociones\nModaShop"}
+            className={fieldClasses}
+          />
+          <p className="mt-1 text-xs text-brand-muted">Es la franja que se desplaza debajo del slider del home.</p>
+        </div>
+
+        <div className="mt-5 border-t border-black/5 pt-4">
+          <SaveButton trackDirty />
+        </div>
+      </form>
+
+      <h2 className="mt-8 shrink-0 text-sm font-semibold uppercase tracking-wide text-brand-muted">
+        Franquicia y mailing (SMTP)
+      </h2>
+      <form action={updateMailSettings} className="mt-3 rounded-xl border border-black/10 bg-white p-5">
+        <p className={labelClasses}>Encabezado del mailing</p>
+        <div className="flex flex-wrap gap-4">
+          <div className="w-56">
+            <label className={labelClasses}>Nombre de la franquicia</label>
+            <input
+              type="text"
+              name="franchiseName"
+              defaultValue={settings.franchiseName ?? ""}
+              placeholder="ModaShop"
+              className={fieldClasses}
+            />
+          </div>
+          <div className="w-56">
+            <label className={labelClasses}>Sucursal / lugar</label>
+            <input
+              type="text"
+              name="franchiseLocation"
+              defaultValue={settings.franchiseLocation ?? ""}
+              placeholder="Santa Fe"
+              className={fieldClasses}
+            />
+          </div>
+        </div>
+
+        <p className={`${labelClasses} mt-5 border-t border-black/5 pt-4`}>Servidor SMTP</p>
+        <div className="flex flex-wrap gap-4">
+          <div className="min-w-[200px] flex-1">
+            <label className={labelClasses}>Host</label>
+            <input
+              type="text"
+              name="smtpHost"
+              defaultValue={settings.smtpHost ?? ""}
+              placeholder="smtp.gmail.com"
+              className={fieldClasses}
+            />
+          </div>
+          <div className="w-28">
+            <label className={labelClasses}>Puerto</label>
+            <input
+              type="number"
+              name="smtpPort"
+              defaultValue={settings.smtpPort ?? 587}
+              className={fieldClasses}
+            />
+          </div>
+          <div className="flex items-end gap-2 pb-2">
+            <ToggleSwitch name="smtpSecure" defaultChecked={settings.smtpSecure} />
+            <span className="text-sm text-brand-ink">TLS</span>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-4">
+          <div className="min-w-[200px] flex-1">
+            <label className={labelClasses}>Usuario</label>
+            <input
+              type="text"
+              name="smtpUser"
+              defaultValue={settings.smtpUser ?? ""}
+              placeholder="tu-cuenta@gmail.com"
+              className={fieldClasses}
+            />
+          </div>
+          <MaskedCredentialField
+            name="smtpPassword"
+            label="Contraseña"
+            type="password"
+            configured={Boolean(settings.smtpPassword)}
+            placeholder="Contraseña o clave de aplicación"
+          />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-4">
+          <div className="w-56">
+            <label className={labelClasses}>Nombre del remitente</label>
+            <input
+              type="text"
+              name="mailFromName"
+              defaultValue={settings.mailFromName ?? ""}
+              placeholder="ModaShop"
+              className={fieldClasses}
+            />
+          </div>
+          <div className="min-w-[200px] flex-1">
+            <label className={labelClasses}>Email remitente</label>
+            <input
+              type="email"
+              name="mailFromEmail"
+              defaultValue={settings.mailFromEmail ?? ""}
+              placeholder="hola@modashop.com.ar"
+              className={fieldClasses}
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 border-t border-black/5 pt-4">
+          <SaveButton trackDirty />
+        </div>
+      </form>
+
+      <h2 className="mt-8 shrink-0 text-sm font-semibold uppercase tracking-wide text-brand-muted">
+        Slider principal ({slides.length}/{MAX_HERO_SLIDES})
+      </h2>
+
+      <div className="mt-3 flex flex-col gap-4">
+        {slides.map((slide) => (
+          <form
+            key={slide.id}
+            action={updateHeroSlide}
+            className={`rounded-xl border bg-white p-5 transition-colors ${
+              slide.enabled ? "border-brand-pink/30" : "border-black/10"
+            }`}
+          >
+            <input type="hidden" name="id" value={slide.id} />
+            <CardAccordion
+              titleArea={
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  {slide.imageUrl && (
+                    <Image
+                      src={slide.imageUrl}
+                      alt=""
+                      width={56}
+                      height={56}
+                      className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-brand-ink">{slide.title.split("\n")[0]}</p>
+                    <p className="truncate text-xs text-brand-muted">{slide.eyebrow}</p>
+                  </div>
+                </div>
+              }
+              headerRight={<ToggleSwitch name="enabled" defaultChecked={slide.enabled} />}
+            >
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="w-56">
+                  <label className={labelClasses}>Imagen (dejar vacío para no cambiarla)</label>
+                  <input type="file" name="image" accept="image/*" className={fieldClasses} />
+                </div>
+                <div className="w-24">
+                  <label className={labelClasses}>Orden</label>
+                  <input type="number" name="position" min={0} defaultValue={slide.position} className={fieldClasses} />
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-4">
+                <div className="w-56">
+                  <label className={labelClasses}>Texto del círculo (opcional, hasta 2 líneas)</label>
+                  <textarea name="promoText" rows={2} defaultValue={slide.promoText ?? ""} className={fieldClasses} />
+                </div>
+                <div className="w-56">
+                  <label className={labelClasses}>Texto chico (eyebrow)</label>
+                  <input type="text" name="eyebrow" required defaultValue={slide.eyebrow} className={fieldClasses} />
+                </div>
+                <div className="w-56">
+                  <label className={labelClasses}>Título (hasta 2 líneas)</label>
+                  <textarea name="title" rows={2} required defaultValue={slide.title} className={fieldClasses} />
+                </div>
+                <div className="min-w-[220px] flex-1">
+                  <label className={labelClasses}>Subtítulo</label>
+                  <input type="text" name="subtitle" defaultValue={slide.subtitle ?? ""} className={fieldClasses} />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <p className={labelClasses}>Botones (opcional)</p>
+                <div className="flex flex-col gap-2">
+                  {(
+                    [
+                      [slide.button1Label, slide.button1Href],
+                      [slide.button2Label, slide.button2Href],
+                      [slide.button3Label, slide.button3Href],
+                    ] as const
+                  ).map(([label, href], i) => (
+                    <div key={i} className="flex flex-wrap gap-3">
+                      <input
+                        type="text"
+                        name={`button${i + 1}Label`}
+                        placeholder={`Texto del botón ${i + 1}`}
+                        defaultValue={label ?? ""}
+                        className={`${fieldClasses} w-48`}
+                      />
+                      <input
+                        type="text"
+                        name={`button${i + 1}Href`}
+                        placeholder="/tienda o https://..."
+                        defaultValue={href ?? ""}
+                        className={`${fieldClasses} min-w-[200px] flex-1`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 flex gap-3 border-t border-black/5 pt-4">
+                <SaveButton trackDirty />
+                <button
+                  type="submit"
+                  formAction={deleteHeroSlide.bind(null, slide.id)}
+                  className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-semibold text-brand-muted transition-colors hover:border-red-300 hover:text-red-700"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </CardAccordion>
+          </form>
+        ))}
+
+        {slides.length === 0 && (
+          <p className="rounded-xl border border-dashed border-black/15 bg-white p-5 text-center text-sm text-brand-muted">
+            Todavía no creaste ningún slide — el home usa el contenido por defecto.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-6 shrink-0">
+        {canAddSlide ? (
+          <form
+            action={createHeroSlide}
+            className="rounded-xl border border-dashed border-black/20 bg-white p-5"
+          >
+            <p className="mb-3 font-semibold text-brand-ink">Nuevo slide</p>
+
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="w-56">
+                <label className={labelClasses}>Imagen</label>
+                <input type="file" name="image" accept="image/*" className={fieldClasses} />
+              </div>
+              <div className="w-56">
+                <label className={labelClasses}>Texto del círculo (opcional, hasta 2 líneas)</label>
+                <textarea name="promoText" rows={2} className={fieldClasses} />
+              </div>
+              <div className="w-56">
+                <label className={labelClasses}>Texto chico (eyebrow)</label>
+                <input type="text" name="eyebrow" required placeholder="ModaShop" className={fieldClasses} />
+              </div>
+              <div className="w-56">
+                <label className={labelClasses}>Título (hasta 2 líneas)</label>
+                <textarea name="title" rows={2} required placeholder={"Brillá\ncon estilo"} className={fieldClasses} />
+              </div>
+              <div className="min-w-[220px] flex-1">
+                <label className={labelClasses}>Subtítulo</label>
+                <input type="text" name="subtitle" className={fieldClasses} />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <p className={labelClasses}>Botones (opcional)</p>
+              <div className="flex flex-col gap-2">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="flex flex-wrap gap-3">
+                    <input
+                      type="text"
+                      name={`button${n}Label`}
+                      placeholder={`Texto del botón ${n}`}
+                      className={`${fieldClasses} w-48`}
+                    />
+                    <input
+                      type="text"
+                      name={`button${n}Href`}
+                      placeholder="/tienda o https://..."
+                      className={`${fieldClasses} min-w-[200px] flex-1`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center gap-4 border-t border-black/5 pt-4">
+              <div className="flex items-center gap-2">
+                <ToggleSwitch name="enabled" defaultChecked />
+                <span className="text-sm text-brand-ink">Habilitado</span>
+              </div>
+              <SaveButton label="Crear" />
+            </div>
+          </form>
+        ) : (
+          <p className="rounded-xl border border-dashed border-black/15 bg-white p-5 text-center text-sm text-brand-muted">
+            Ya tenés el máximo de {MAX_HERO_SLIDES} slides. Borrá uno para poder crear otro.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
