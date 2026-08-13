@@ -19,10 +19,9 @@ import { sendOrderConfirmation } from "@/lib/orderEmails";
 // valida al empaquetar/despachar, igual que ya hacen con cualquier pedido, y
 // recién ahí baja qty_available. Decisión tomada explícitamente así (no
 // auto-validar) para no perder ese hábito ni la cola de pendientes.
-//
-// El tipo de operación de salida y las ubicaciones NO van hardcodeados: cada
-// franquicia tiene su propio Odoo con IDs distintos, así que se detectan solos
-// (ver getOutgoingPickingConfig).
+const OUTGOING_PICKING_TYPE_ID = 2; // "Santa Fe: Órdenes de entrega"
+const SOURCE_LOCATION_ID = 8; // WH/SF/Existencias
+const CUSTOMER_LOCATION_ID = 5; // Partners/Customers
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "comprobantes");
 
@@ -82,55 +81,20 @@ async function resolveVariantId(templateId: number): Promise<number> {
 // reserva (action_assign). Queda en estado "Listo"/"Confirmado" en la cola de
 // Inventario → Transferencias, a la espera de que el equipo lo valide cuando
 // empaquete/despache — ese paso (fuera de esta app) es el que baja el stock.
-// Busca en el Odoo de esta franquicia el tipo de operación de salida (código
-// "outgoing" = entregas a cliente) y sus ubicaciones por defecto, en vez de
-// depender de IDs fijos que cambian entre instancias. Con fallback: si el tipo
-// no trae ubicaciones cargadas, busca una interna (origen) y una de cliente
-// (destino).
-async function resolveLocationByUsage(usage: "internal" | "customer"): Promise<number> {
-  const locs = await executeKw<{ id: number }[]>(
-    "stock.location",
-    "search_read",
-    [[["usage", "=", usage]]],
-    { fields: ["id"], limit: 1 }
-  );
-  if (locs.length === 0) throw new Error(`No se encontró una ubicación de tipo "${usage}" en Odoo`);
-  return locs[0].id;
-}
-
-async function getOutgoingPickingConfig(): Promise<{ typeId: number; srcId: number; destId: number }> {
-  const types = await executeKw<
-    { id: number; default_location_src_id: [number, string] | false; default_location_dest_id: [number, string] | false }[]
-  >("stock.picking.type", "search_read", [[["code", "=", "outgoing"]]], {
-    fields: ["default_location_src_id", "default_location_dest_id"],
-    limit: 1,
-  });
-  if (types.length === 0) throw new Error("No se encontró un tipo de operación de salida (entregas) en Odoo");
-
-  const t = types[0];
-  const srcId = t.default_location_src_id ? t.default_location_src_id[0] : await resolveLocationByUsage("internal");
-  const destId = t.default_location_dest_id ? t.default_location_dest_id[0] : await resolveLocationByUsage("customer");
-  return { typeId: t.id, srcId, destId };
-}
-
 async function createPicking(
   partnerId: number,
   items: { variantId: number; name: string; quantity: number }[],
   origin: string
 ): Promise<number> {
-  const { typeId, srcId, destId } = await getOutgoingPickingConfig();
-
   const pickingId = await executeKw<number>("stock.picking", "create", [
     {
-      picking_type_id: typeId,
-      location_id: srcId,
-      location_dest_id: destId,
+      picking_type_id: OUTGOING_PICKING_TYPE_ID,
+      location_id: SOURCE_LOCATION_ID,
+      location_dest_id: CUSTOMER_LOCATION_ID,
       partner_id: partnerId,
       // "Documento origen" del picking — deja la referencia al pedido de la
       // web para poder cruzarlo con /admin/ventas desde Odoo.
       origin,
-      // Las ubicaciones también van explícitas en cada línea: en algunos Odoo
-      // no se heredan solas del picking y el movimiento queda sin origen.
       move_ids_without_package: items.map((item) => [
         0,
         0,
@@ -138,8 +102,6 @@ async function createPicking(
           name: item.name,
           product_id: item.variantId,
           product_uom_qty: item.quantity,
-          location_id: srcId,
-          location_dest_id: destId,
         },
       ]),
     },
