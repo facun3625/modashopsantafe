@@ -43,7 +43,11 @@ export default async function AdminVentasPage({
           </thead>
           <tbody>
             {orders.map((o) => (
-              <tr key={o.id} className="border-b border-black/5 last:border-0 hover:bg-brand-soft/50">
+              <tr
+                key={o.id}
+                id={`order-${o.id.slice(0, 8)}`}
+                className="scroll-mt-4 border-b border-black/5 target:bg-brand-soft last:border-0 hover:bg-brand-soft/50"
+              >
                 <td className="px-4 py-3 font-medium text-brand-ink">
                   {o.customerName}
                   <span className="block text-xs font-normal text-brand-muted">{o.customerEmail}</span>

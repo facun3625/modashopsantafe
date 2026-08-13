@@ -84,6 +84,15 @@ function buildMessage(order: NewOrderNotification): string {
     const address = order.shippingAddress ? `: ${escapeHtml(order.shippingAddress)}` : "";
     lines.push(`📍 ${escapeHtml(order.shippingName)}${address}`);
   }
+
+  // Link directo al pedido en el admin (si sabemos la URL del sitio). El
+  // ancla #order-xxxx coincide con el id de la fila en /admin/ventas.
+  const base = process.env.NEXTAUTH_URL?.trim().replace(/\/$/, "");
+  if (base) {
+    lines.push("");
+    lines.push(`<a href="${base}/admin/ventas#order-${escapeHtml(order.orderId.slice(0, 8))}">Ver en el panel →</a>`);
+  }
+
   return lines.join("\n");
 }
 
