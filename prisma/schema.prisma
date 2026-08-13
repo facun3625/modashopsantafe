@@ -104,6 +104,12 @@ model StoreSettings {
   mailFromName  String?
   mailFromEmail String?
 
+  // Aviso por Telegram al equipo cuando entra una venta web (ver
+  // lib/telegram.ts). Vacío hasta que se carga el bot en Configuración —
+  // si falta cualquiera de los dos, simplemente no se manda el aviso.
+  telegramBotToken String?
+  telegramChatId   String?
+
   updatedAt DateTime @updatedAt
 }
 

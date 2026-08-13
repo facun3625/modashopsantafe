@@ -7,6 +7,8 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resetOdooCache } from "@/lib/odoo";
+import { getStoreSettingsRow } from "@/lib/settings";
+import { sendTelegram } from "@/lib/telegram";
 
 async function requireAdmin() {
   const session = await auth();
@@ -119,6 +121,52 @@ export async function updateOdooSettings(formData: FormData) {
 
   resetOdooCache();
   revalidatePath("/admin/configuracion");
+}
+
+export async function updateTelegramSettings(formData: FormData) {
+  await requireAdmin();
+
+  const token = formData.get("telegramBotToken") as string;
+
+  const data: Record<string, unknown> = {
+    telegramChatId: (formData.get("telegramChatId") as string)?.trim() || null,
+  };
+  // El token es secreto: si lo dejaron en blanco porque ya estaba cargado, no
+  // lo pisamos (mismo patrón que la API key de Odoo y la pass del SMTP).
+  if (token) data.telegramBotToken = token.trim();
+
+  await prisma.storeSettings.upsert({
+    where: { id: "global" },
+    create: { id: "global", ...data },
+    update: data,
+  });
+
+  revalidatePath("/admin/configuracion");
+}
+
+export type TelegramTestState = { ok: boolean; error?: string };
+
+// Botón "Probar" de la card de Telegram. Recibe el token/chat que el cliente
+// leyó de los campos (o vacíos si el token quedó enmascarado por estar ya
+// guardado, en cuyo caso caemos al guardado). No guarda nada: solo manda un
+// mensaje de prueba y devuelve el resultado para mostrarlo inline.
+export async function testTelegram(token: string, chatId: string): Promise<TelegramTestState> {
+  await requireAdmin();
+
+  const saved = await getStoreSettingsRow();
+  const useToken = token.trim() || saved.telegramBotToken || "";
+  const useChatId = chatId.trim() || saved.telegramChatId || "";
+
+  if (!useToken || !useChatId) {
+    return { ok: false, error: "Faltan el token o el ID del chat." };
+  }
+
+  const result = await sendTelegram(
+    useToken,
+    useChatId,
+    "✅ <b>Prueba de ModaShop</b>\nSi ves este mensaje, los avisos de ventas están funcionando."
+  );
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 
 function readSlideFields(formData: FormData) {

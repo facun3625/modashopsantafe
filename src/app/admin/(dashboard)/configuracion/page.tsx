@@ -5,11 +5,13 @@ import { ToggleSwitch } from "@/components/admin/ToggleSwitch";
 import { SaveButton } from "@/components/admin/SaveButton";
 import { CardAccordion } from "@/components/admin/CardAccordion";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
+import { TelegramTestButton } from "./TelegramTestButton";
 import { WrenchIcon } from "@/components/icons";
 import {
   updateSiteSettings,
   updateMailSettings,
   updateOdooSettings,
+  updateTelegramSettings,
   updateMaintenanceMode,
   createHeroSlide,
   updateHeroSlide,
@@ -122,6 +124,40 @@ export default async function AdminConfiguracionPage() {
 
         <div className="mt-5 border-t border-black/5 pt-4">
           <SaveButton trackDirty />
+        </div>
+      </form>
+
+      <h2 className="mt-8 shrink-0 text-sm font-semibold uppercase tracking-wide text-brand-muted">
+        Aviso de ventas por Telegram
+      </h2>
+      <form action={updateTelegramSettings} className="mt-3 rounded-xl border border-black/10 bg-white p-5">
+        <p className="mb-4 text-sm text-brand-muted">
+          Cuando entra una venta web, el equipo recibe un mensaje al instante en un grupo de Telegram. Creá un bot con{" "}
+          <span className="font-medium text-brand-ink">@BotFather</span>, agregá el bot a tu grupo, y cargá acá el token
+          y el ID del chat.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <MaskedCredentialField
+            name="telegramBotToken"
+            label="Token del bot"
+            configured={Boolean(settings.telegramBotToken)}
+            placeholder="123456789:ABCdef..."
+          />
+          <div className="w-48">
+            <label className={labelClasses}>ID del chat / grupo</label>
+            <input
+              type="text"
+              name="telegramChatId"
+              defaultValue={settings.telegramChatId ?? ""}
+              placeholder="-1001234567890"
+              className={fieldClasses}
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-black/5 pt-4">
+          <SaveButton trackDirty />
+          <TelegramTestButton />
         </div>
       </form>
 

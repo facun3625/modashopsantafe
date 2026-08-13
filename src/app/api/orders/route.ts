@@ -8,6 +8,7 @@ import { executeKw } from "@/lib/odoo";
 import { checkStock } from "@/lib/products";
 import { getShippingMethodsForPayment } from "@/lib/shipping";
 import { validateCoupon, registerCouponUse } from "@/lib/coupons";
+import { notifyNewOrder } from "@/lib/telegram";
 
 // Esta instancia de Odoo no tiene el módulo de Ventas instalado (sale.order
 // no existe), pero sí tiene Inventario. El pedido en sí queda registrado acá
@@ -246,6 +247,20 @@ export async function POST(req: Request) {
     });
 
     if (couponId) await registerCouponUse(couponId);
+
+    // Aviso al equipo por Telegram (si está configurado). Fire and forget: no
+    // lo esperamos para no demorarle la respuesta al cliente, y si falla no
+    // rompe la venta (ya está guardada).
+    void notifyNewOrder({
+      orderId: order.id,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      paymentMethod,
+      total,
+      items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
+      shippingName: shipping.name,
+      shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
+    });
 
     try {
       const pickingId = await createPicking(partnerId, resolvedItems);
