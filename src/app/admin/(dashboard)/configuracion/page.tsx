@@ -33,7 +33,7 @@ export default async function AdminConfiguracionPage() {
   const canAddSlide = slides.length < MAX_HERO_SLIDES;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-auto">
+    <div className="flex flex-col">
       <div className="shrink-0">
         <h1 className="text-2xl font-bold text-brand-ink">Configuración</h1>
         <p className="mt-1 text-sm text-brand-muted">
