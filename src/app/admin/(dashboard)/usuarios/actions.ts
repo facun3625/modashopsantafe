@@ -20,3 +20,16 @@ export async function setUserRole(id: string, role: "admin" | "customer") {
   await prisma.user.update({ where: { id }, data: { role } });
   revalidatePath("/admin/usuarios");
 }
+
+// El delete es en cascada por el schema, no hace falta borrar nada a mano acá:
+// sus puntos y cupones canjeados (PointTransaction, Coupon.user) se borran con
+// onDelete: Cascade; sus pedidos y carritos abandonados quedan (userId pasa a
+// null vía onDelete: SetNull), son registros propios de la tienda.
+export async function deleteUser(id: string) {
+  const session = await requireAdmin();
+  if (session.user.id === id) {
+    throw new Error("No podés eliminar tu propia cuenta.");
+  }
+  await prisma.user.delete({ where: { id } });
+  revalidatePath("/admin/usuarios");
+}
