@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getMailTransport } from "@/lib/mailer";
+import { getMailSender } from "@/lib/mailer";
 import { buildMailHtml } from "@/lib/mailTemplate";
 import { getAudienceEmails } from "@/lib/audiences";
 import type { MailAudience } from "@/generated/prisma/enums";
@@ -19,7 +19,7 @@ async function requireAdmin() {
 // problema; si algún día esto corriera en algo tipo Vercel dejaría de
 // funcionar así y haría falta una cola de verdad.
 async function runCampaign(campaignId: string, emails: string[], subject: string, html: string) {
-  const mail = await getMailTransport();
+  const mail = await getMailSender();
   if (!mail) {
     await prisma.mailCampaign.update({
       where: { id: campaignId },
@@ -30,11 +30,8 @@ async function runCampaign(campaignId: string, emails: string[], subject: string
 
   let sent = 0;
   for (const email of emails) {
-    try {
-      await mail.transporter.sendMail({ from: mail.from, to: email, subject, html });
-    } catch (err) {
-      console.error("mailing: no se pudo enviar a", email, err);
-    }
+    const result = await mail.send(email, subject, html);
+    if (!result.ok) console.error("mailing: no se pudo enviar a", email, "—", result.error);
     sent += 1;
     if (sent % 5 === 0 || sent === emails.length) {
       await prisma.mailCampaign.update({ where: { id: campaignId }, data: { sentCount: sent } });

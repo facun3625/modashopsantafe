@@ -9,6 +9,7 @@ import { checkStock } from "@/lib/products";
 import { getShippingMethodsForPayment } from "@/lib/shipping";
 import { validateCoupon, registerCouponUse } from "@/lib/coupons";
 import { notifyNewOrder } from "@/lib/telegram";
+import { sendOrderConfirmation } from "@/lib/orderEmails";
 
 // Esta instancia de Odoo no tiene el módulo de Ventas instalado (sale.order
 // no existe), pero sí tiene Inventario. El pedido en sí queda registrado acá
@@ -82,7 +83,8 @@ async function resolveVariantId(templateId: number): Promise<number> {
 // empaquete/despache — ese paso (fuera de esta app) es el que baja el stock.
 async function createPicking(
   partnerId: number,
-  items: { variantId: number; name: string; quantity: number }[]
+  items: { variantId: number; name: string; quantity: number }[],
+  origin: string
 ): Promise<number> {
   const pickingId = await executeKw<number>("stock.picking", "create", [
     {
@@ -90,6 +92,9 @@ async function createPicking(
       location_id: SOURCE_LOCATION_ID,
       location_dest_id: CUSTOMER_LOCATION_ID,
       partner_id: partnerId,
+      // "Documento origen" del picking — deja la referencia al pedido de la
+      // web para poder cruzarlo con /admin/ventas desde Odoo.
+      origin,
       move_ids_without_package: items.map((item) => [
         0,
         0,
@@ -262,8 +267,24 @@ export async function POST(req: Request) {
       shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
     });
 
+    // Mail de confirmación al cliente (según el proveedor configurado, SMTP o
+    // Resend). También fire and forget.
+    void sendOrderConfirmation({
+      orderId: order.id,
+      to: customer.email,
+      customerName: customer.name,
+      items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
+      subtotal,
+      discountTotal: couponDiscount + (subtotal * config.discountPct) / 100,
+      shippingName: shipping.name,
+      shippingCost: shipping.cost,
+      total,
+      paymentMethod,
+      shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
+    });
+
     try {
-      const pickingId = await createPicking(partnerId, resolvedItems);
+      const pickingId = await createPicking(partnerId, resolvedItems, `Web #${order.id.slice(0, 8)}`);
       await prisma.order.update({ where: { id: order.id }, data: { odooPickingId: pickingId } });
       return NextResponse.json({ orderId: order.id, partnerId, pickingId }, { status: 201 });
     } catch (odooErr) {

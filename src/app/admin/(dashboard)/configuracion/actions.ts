@@ -75,10 +75,13 @@ export async function updateMailSettings(formData: FormData) {
 
   const port = formData.get("smtpPort");
   const password = formData.get("smtpPassword") as string;
+  const resendKey = formData.get("resendApiKey") as string;
+  const provider = formData.get("mailProvider") === "resend" ? "resend" : "smtp";
 
   const data: Record<string, unknown> = {
     franchiseName: (formData.get("franchiseName") as string) || null,
     franchiseLocation: (formData.get("franchiseLocation") as string) || null,
+    mailProvider: provider,
     smtpHost: (formData.get("smtpHost") as string) || null,
     smtpPort: port ? Number(port) : null,
     smtpSecure: formData.get("smtpSecure") === "on",
@@ -87,8 +90,9 @@ export async function updateMailSettings(formData: FormData) {
     mailFromEmail: (formData.get("mailFromEmail") as string) || null,
   };
   // Igual que con las credenciales de Mercado Pago: si dejaron el campo de
-  // contraseña vacío (porque ya estaba cargada y no la tocaron), no la pisamos.
+  // contraseña/API key vacío (porque ya estaba cargado y no lo tocaron), no lo pisamos.
   if (password) data.smtpPassword = password;
+  if (resendKey) data.resendApiKey = resendKey.trim();
 
   await prisma.storeSettings.upsert({
     where: { id: "global" },

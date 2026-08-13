@@ -6,6 +6,7 @@ import { SaveButton } from "@/components/admin/SaveButton";
 import { CardAccordion } from "@/components/admin/CardAccordion";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
 import { TelegramTestButton } from "./TelegramTestButton";
+import { MailProviderFields } from "./MailProviderFields";
 import { WrenchIcon } from "@/components/icons";
 import {
   updateSiteSettings,
@@ -219,7 +220,7 @@ export default async function AdminConfiguracionPage() {
       </form>
 
       <h2 className="mt-8 shrink-0 text-sm font-semibold uppercase tracking-wide text-brand-muted">
-        Franquicia y mailing (SMTP)
+        Franquicia y mailing
       </h2>
       <form action={updateMailSettings} className="mt-3 rounded-xl border border-black/10 bg-white p-5">
         <p className={labelClasses}>Identidad de la franquicia</p>
@@ -250,54 +251,20 @@ export default async function AdminConfiguracionPage() {
           </div>
         </div>
 
-        <p className={`${labelClasses} mt-5 border-t border-black/5 pt-4`}>Servidor SMTP</p>
+        <MailProviderFields
+          provider={settings.mailProvider === "resend" ? "resend" : "smtp"}
+          smtp={{
+            host: settings.smtpHost ?? "",
+            port: settings.smtpPort ?? 587,
+            secure: settings.smtpSecure,
+            user: settings.smtpUser ?? "",
+            passwordConfigured: Boolean(settings.smtpPassword),
+          }}
+          resendConfigured={Boolean(settings.resendApiKey)}
+        />
+
+        <p className={`${labelClasses} mt-5 border-t border-black/5 pt-4`}>Remitente (para ambos proveedores)</p>
         <div className="flex flex-wrap gap-4">
-          <div className="min-w-[200px] flex-1">
-            <label className={labelClasses}>Host</label>
-            <input
-              type="text"
-              name="smtpHost"
-              defaultValue={settings.smtpHost ?? ""}
-              placeholder="smtp.gmail.com"
-              className={fieldClasses}
-            />
-          </div>
-          <div className="w-28">
-            <label className={labelClasses}>Puerto</label>
-            <input
-              type="number"
-              name="smtpPort"
-              defaultValue={settings.smtpPort ?? 587}
-              className={fieldClasses}
-            />
-          </div>
-          <div className="flex items-end gap-2 pb-2">
-            <ToggleSwitch name="smtpSecure" defaultChecked={settings.smtpSecure} />
-            <span className="text-sm text-brand-ink">TLS</span>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-4">
-          <div className="min-w-[200px] flex-1">
-            <label className={labelClasses}>Usuario</label>
-            <input
-              type="text"
-              name="smtpUser"
-              defaultValue={settings.smtpUser ?? ""}
-              placeholder="tu-cuenta@gmail.com"
-              className={fieldClasses}
-            />
-          </div>
-          <MaskedCredentialField
-            name="smtpPassword"
-            label="Contraseña"
-            type="password"
-            configured={Boolean(settings.smtpPassword)}
-            placeholder="Contraseña o clave de aplicación"
-          />
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-4">
           <div className="w-56">
             <label className={labelClasses}>Nombre del remitente</label>
             <input

@@ -93,6 +93,11 @@ model StoreSettings {
   franchiseName     String?
   franchiseLocation String?
 
+  // Proveedor de envío de mails (mailing + confirmación de pedido). Cada
+  // franquicia elige el que tenga: su propio SMTP, o Resend (API). El "from"
+  // (mailFromName/mailFromEmail) es compartido por ambos.
+  mailProvider MailProvider @default(smtp)
+
   // SMTP para el mailing (ver lib/mailer.ts). La contraseña queda en texto
   // plano en la base — mismo nivel de exposición que las credenciales de
   // Mercado Pago en PaymentMethodConfig, nunca se devuelve al cliente.
@@ -103,6 +108,10 @@ model StoreSettings {
   smtpPassword String?
   mailFromName  String?
   mailFromEmail String?
+
+  // Resend (https://resend.com) — alternativa al SMTP, solo necesita una
+  // API key. El dominio del mailFromEmail tiene que estar verificado en Resend.
+  resendApiKey String?
 
   // Aviso por Telegram al equipo cuando entra una venta web (ver
   // lib/telegram.ts). Vacío hasta que se carga el bot en Configuración —
@@ -124,6 +133,11 @@ enum MailCampaignStatus {
   sending
   done
   failed
+}
+
+enum MailProvider {
+  smtp
+  resend
 }
 
 // Registro de cada mailing mandado desde /admin/mailing — a qué listas se
