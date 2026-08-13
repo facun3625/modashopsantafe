@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "@/lib/cart";
+import { CartRecommendations } from "@/components/CartRecommendations";
 
 export function CartDrawer() {
   const { items, removeItem, setQuantity, total, isOpen, closeCart } = useCart();
@@ -113,6 +114,7 @@ export function CartDrawer() {
                       </div>
                     ))}
                   </div>
+                  <CartRecommendations />
                 </div>
 
                 <div className="border-t border-black/10 px-6 py-5">

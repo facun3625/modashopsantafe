@@ -11,6 +11,10 @@ export type CartItem = {
   image: string | false;
   quantity: number;
   maxStock: number;
+  // Categoría en Odoo (categ_id[0]) — se usa para las recomendaciones
+  // "También te puede gustar" del carrito. Opcional: los carritos guardados
+  // antes de esto no lo tienen.
+  categoryId?: number;
 };
 
 type CartContextValue = {

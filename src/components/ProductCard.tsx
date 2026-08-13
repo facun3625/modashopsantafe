@@ -49,6 +49,7 @@ export function ProductCard({ product }: { product: OdooProductListItem }) {
               price: product.list_price,
               image: product.image_128,
               maxStock: product.qty_available,
+              categoryId: product.categ_id ? product.categ_id[0] : undefined,
             })
           }
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-brand-pink py-2 text-xs font-semibold uppercase tracking-wide text-white transition-colors hover:bg-brand-pink-dark"
