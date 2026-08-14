@@ -41,7 +41,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
         : { circle: "h-20 w-20 sm:h-24 sm:w-24", text: "text-[10px] sm:text-xs" };
 
   return (
-    <div className="relative flex min-h-[220px] max-h-[300px] flex-col items-center justify-center overflow-hidden rounded-3xl px-6 py-8 text-center sm:min-h-[260px] sm:py-10">
+    <div className="relative flex min-h-[280px] max-h-[350px] flex-col items-center justify-center overflow-hidden rounded-3xl px-6 py-10 text-center sm:min-h-[320px] sm:py-14">
       <AnimatePresence>
         <motion.div
           key={`bg-${index}`}
@@ -77,10 +77,10 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
             exit={{ opacity: 0, y: 18 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white drop-shadow-md sm:text-xs">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white drop-shadow-md sm:text-sm">
               {slide.eyebrow}
             </p>
-            <h1 className="mt-2 text-3xl font-extrabold uppercase leading-[0.95] text-white drop-shadow-lg sm:text-5xl">
+            <h1 className="mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-white drop-shadow-lg sm:text-6xl">
               {titleLines.map((line, i) => (
                 <span key={i}>
                   {line}
@@ -89,7 +89,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
               ))}
             </h1>
             {slide.subtitle && (
-              <p className="mx-auto mt-2 max-w-md text-xs text-white drop-shadow-md sm:text-sm">{slide.subtitle}</p>
+              <p className="mx-auto mt-3 max-w-md text-sm text-white drop-shadow-md sm:text-base">{slide.subtitle}</p>
             )}
           </motion.div>
         </AnimatePresence>

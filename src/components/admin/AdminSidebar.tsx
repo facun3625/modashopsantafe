@@ -41,11 +41,11 @@ export function AdminSidebar({ userLabel }: { userLabel: string }) {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
                 active ? "bg-brand-pink text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
               }`}
             >
-              <Icon className="h-4 w-4 shrink-0" />
+              <Icon className="h-3.5 w-3.5 shrink-0" />
               {link.label}
             </Link>
           );
