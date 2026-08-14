@@ -19,15 +19,20 @@ export const DEFAULT_NOTES: Record<string, string> = {
     "Recibimos tu pedido y tu comprobante. Estamos verificando el pago; si surge algún inconveniente nos comunicamos con vos. Si está todo bien, coordinamos la entrega.",
   contra_entrega: "Vas a abonar al momento de recibir el pedido.",
   mercadopago: "Tu pago con Mercado Pago fue registrado.",
+  payway: "Tu pago con tarjeta ya fue aprobado.",
 };
 
 export const DEFAULT_CLOSING = "Cualquier duda, respondé este mail o escribinos. ¡Gracias por elegirnos!";
 
 // Mapea el medio de pago al campo de StoreSettings correspondiente.
-const NOTE_FIELD: Record<string, "orderEmailNoteTransfer" | "orderEmailNoteCash" | "orderEmailNoteMercadopago"> = {
+const NOTE_FIELD: Record<
+  string,
+  "orderEmailNoteTransfer" | "orderEmailNoteCash" | "orderEmailNoteMercadopago" | "orderEmailNotePayway"
+> = {
   transferencia: "orderEmailNoteTransfer",
   contra_entrega: "orderEmailNoteCash",
   mercadopago: "orderEmailNoteMercadopago",
+  payway: "orderEmailNotePayway",
 };
 
 function fillPlaceholders(text: string, vars: { nombre: string; pedido: string }): string {

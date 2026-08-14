@@ -25,6 +25,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   mercadopago: "Mercado Pago",
   transferencia: "Transferencia",
   contra_entrega: "Contra entrega",
+  payway: "Tarjeta (Payway)",
 };
 
 export function paymentMethodLabel(method: PaymentMethod): string {

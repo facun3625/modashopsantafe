@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getShippingMethodsForPayment } from "@/lib/shipping";
 import type { PaymentMethod } from "@/generated/prisma/enums";
 
-const VALID_METHODS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega"];
+const VALID_METHODS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega", "payway"];
 
 function isPaymentMethod(value: string): value is PaymentMethod {
   return (VALID_METHODS as string[]).includes(value);

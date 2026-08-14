@@ -308,6 +308,16 @@ export default async function AdminConfiguracionPage() {
             className={textareaClasses}
           />
         </div>
+        <div>
+          <label className={labelClasses}>Payway (tarjeta)</label>
+          <textarea
+            name="orderEmailNotePayway"
+            defaultValue={settings.orderEmailNotePayway ?? ""}
+            placeholder={DEFAULT_NOTES.payway}
+            rows={2}
+            className={textareaClasses}
+          />
+        </div>
       </div>
 
       <div className="mt-5 border-t border-black/5 pt-4">

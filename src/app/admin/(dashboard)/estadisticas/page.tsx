@@ -4,7 +4,7 @@ import type { PaymentMethod } from "@/generated/prisma/enums";
 import { StatsFilters, PERIODS, type PeriodKey } from "./StatsFilters";
 
 const money = (n: number) => "$" + Math.round(n).toLocaleString("es-AR");
-const VALID_PAYMENTS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega"];
+const VALID_PAYMENTS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega", "payway"];
 
 function periodToRange(period: PeriodKey): { from?: Date; granularity: Granularity } {
   const now = new Date();

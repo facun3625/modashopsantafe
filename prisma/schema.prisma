@@ -128,6 +128,7 @@ model StoreSettings {
   orderEmailNoteTransfer    String?
   orderEmailNoteCash        String?
   orderEmailNoteMercadopago String?
+  orderEmailNotePayway      String?
   orderEmailClosing         String?
 
   updatedAt DateTime @updatedAt
@@ -257,6 +258,7 @@ enum PaymentMethod {
   mercadopago
   transferencia
   contra_entrega
+  payway
 }
 
 // Configuración de cada medio de pago, editable desde el admin (Pagos) en
@@ -271,6 +273,15 @@ model PaymentMethodConfig {
   // Solo aplica a method = mercadopago
   mpAccessToken String?
   mpPublicKey   String?
+
+  // Solo aplica a method = payway (gateway Decidir/Payway — ver
+  // lib/payway.ts). La public key se expone al cliente para tokenizar la
+  // tarjeta (decidir.js); la private key SOLO se usa server-side para
+  // cobrar, nunca se devuelve. paywaySandbox switchea entre el ambiente de
+  // pruebas y el de producción de la API.
+  paywayPublicKey  String?
+  paywayPrivateKey String?
+  paywaySandbox    Boolean @default(true)
 
   // Solo aplica a method = transferencia — datos que se le muestran al
   // cliente en el checkout para que sepa a dónde transferir. No son
@@ -410,6 +421,11 @@ model Order {
   // res.partner y stock.picking creados en Odoo para este pedido
   odooPartnerId Int?
   odooPickingId Int?
+
+  // id del pago en Payway/Decidir (solo paymentMethod = payway) — para
+  // referencia/reembolsos desde el admin. El pago ya está aprobado cuando
+  // se crea el pedido (cobro síncrono), a diferencia de transferencia.
+  paywayPaymentId Int?
 
   // Momento en que se acreditaron los puntos de este pedido (ver
   // lib/points.ts) — null hasta que Odoo marca el picking como entregado

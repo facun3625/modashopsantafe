@@ -41,6 +41,9 @@ export async function savePaymentMethodConfig(formData: FormData) {
     bankCbu?: string;
     bankAlias?: string;
     bankHolderName?: string;
+    paywayPublicKey?: string;
+    paywayPrivateKey?: string;
+    paywaySandbox?: boolean;
   } = { discountPct };
 
   if (method === "mercadopago") {
@@ -51,6 +54,16 @@ export async function savePaymentMethodConfig(formData: FormData) {
     const publicKey = formData.get("mpPublicKey") as string;
     if (accessToken) data.mpAccessToken = accessToken;
     if (publicKey) data.mpPublicKey = publicKey;
+  }
+
+  if (method === "payway") {
+    // Mismo patrón que Mercado Pago: si dejaron el campo vacío porque ya
+    // estaba cargado, no lo pisamos.
+    const publicKey = formData.get("paywayPublicKey") as string;
+    const privateKey = formData.get("paywayPrivateKey") as string;
+    if (publicKey) data.paywayPublicKey = publicKey;
+    if (privateKey) data.paywayPrivateKey = privateKey;
+    data.paywaySandbox = formData.get("paywaySandbox") === "on";
   }
 
   if (method === "transferencia") {

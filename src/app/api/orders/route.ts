@@ -4,13 +4,13 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { executeKw } from "@/lib/odoo";
 import { checkStock } from "@/lib/products";
 import { createOrderWithStockGuard, InsufficientStockError } from "@/lib/reservations";
 import { getShippingMethodsForPayment } from "@/lib/shipping";
 import { validateCoupon, registerCouponUse } from "@/lib/coupons";
 import { notifyNewOrder } from "@/lib/telegram";
 import { sendOrderConfirmation } from "@/lib/orderEmails";
+import { resolvePartnerId, type OrderCustomer } from "@/lib/orders";
 
 // Esta instancia de Odoo no tiene el módulo de Ventas instalado (sale.order
 // no existe), pero sí tiene Inventario. El pedido queda registrado acá (Prisma
@@ -31,14 +31,6 @@ const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "comprobantes")
 
 type CartItem = { productId: number; quantity: number; price: number; name: string };
 
-type Customer = {
-  name: string;
-  email: string;
-  phone?: string;
-  street?: string;
-  city?: string;
-};
-
 // Esta ruta es para los métodos "instantáneos" (transferencia, contra
 // entrega): el pedido se crea al toque, en estado "pending" (pago sin
 // confirmar), y alguien del equipo lo confirma a mano desde el admin cuando
@@ -49,25 +41,6 @@ type DirectPaymentMethod = (typeof DIRECT_PAYMENT_METHODS)[number];
 
 function isDirectPaymentMethod(value: unknown): value is DirectPaymentMethod {
   return typeof value === "string" && (DIRECT_PAYMENT_METHODS as readonly string[]).includes(value);
-}
-
-async function findOrCreatePartner(customer: Customer): Promise<number> {
-  const existing = await executeKw<number[]>("res.partner", "search", [
-    [["email", "=", customer.email]],
-  ], { limit: 1 });
-
-  if (existing.length > 0) return existing[0];
-
-  const partnerId = await executeKw<number>("res.partner", "create", [
-    {
-      name: customer.name,
-      email: customer.email,
-      phone: customer.phone,
-      street: customer.street,
-      city: customer.city,
-    },
-  ]);
-  return partnerId;
 }
 
 async function saveComprobante(file: File): Promise<string> {
@@ -82,7 +55,7 @@ async function saveComprobante(file: File): Promise<string> {
 export async function POST(req: Request) {
   const form = await req.formData();
   const items = JSON.parse(String(form.get("items") ?? "[]")) as CartItem[];
-  const customer = JSON.parse(String(form.get("customer") ?? "{}")) as Customer;
+  const customer = JSON.parse(String(form.get("customer") ?? "{}")) as OrderCustomer;
   const paymentMethod = form.get("paymentMethod");
   const comprobante = form.get("comprobante");
   const shippingMethodId = form.get("shippingMethodId");
@@ -129,21 +102,7 @@ export async function POST(req: Request) {
     }
 
     const session = await auth();
-    let partnerId: number;
-
-    if (session?.user?.id) {
-      const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-      if (user?.odooPartnerId) {
-        partnerId = user.odooPartnerId;
-      } else {
-        partnerId = await findOrCreatePartner(customer);
-        if (user) {
-          await prisma.user.update({ where: { id: user.id }, data: { odooPartnerId: partnerId } });
-        }
-      }
-    } else {
-      partnerId = await findOrCreatePartner(customer);
-    }
+    const partnerId = await resolvePartnerId(session?.user?.id, customer);
 
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 

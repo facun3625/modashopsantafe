@@ -6,7 +6,7 @@ import type { OrderStatus, PaymentMethod } from "@/generated/prisma/enums";
 import { orderStatusLabel, paymentMethodLabel } from "@/lib/orderLabels";
 
 const STATUSES: OrderStatus[] = ["pending", "confirmed", "delivered", "cancelled"];
-const PAYMENTS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega"];
+const PAYMENTS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega", "payway"];
 
 // Buscador (texto) + filtros por medio de pago y estado. Todo va por la URL
 // (?q=&payment=&status=), reseteando la paginación en cada cambio.

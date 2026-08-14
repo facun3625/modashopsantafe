@@ -13,7 +13,7 @@ export const PERIODS = {
 
 export type PeriodKey = keyof typeof PERIODS;
 
-const PAYMENTS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega"];
+const PAYMENTS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega", "payway"];
 
 export function StatsFilters({ period, payment }: { period: PeriodKey; payment?: PaymentMethod }) {
   const router = useRouter();

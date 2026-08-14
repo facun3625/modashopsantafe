@@ -18,6 +18,7 @@ const PAYMENT_METHOD_LABELS = {
   mercadopago: "Mercado Pago",
   transferencia: "Transferencia",
   contra_entrega: "Contra entrega",
+  payway: "Tarjeta (Payway)",
 } as const;
 const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as (keyof typeof PAYMENT_METHOD_LABELS)[];
 

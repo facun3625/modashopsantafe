@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/lib/cart";
 import { getCartSessionId } from "@/lib/cartSession";
+import { tokenizeCard } from "@/lib/decidirScript";
+import { PAYWAY_CARD_BRANDS } from "@/lib/payway";
 
-type PaymentMethod = "mercadopago" | "transferencia" | "contra_entrega";
+type PaymentMethod = "mercadopago" | "transferencia" | "contra_entrega" | "payway";
 
 const METHOD_LABELS: Record<PaymentMethod, string> = {
   mercadopago: "Mercado Pago",
   transferencia: "Transferencia bancaria",
   contra_entrega: "Contra entrega",
+  payway: "Tarjeta de crédito/débito",
 };
 
 type AvailableMethod = {
@@ -20,6 +23,8 @@ type AvailableMethod = {
   bankCbu?: string | null;
   bankAlias?: string | null;
   bankHolderName?: string | null;
+  paywayPublicKey?: string | null;
+  paywaySandbox?: boolean;
 };
 
 type ShippingMethod = {
@@ -52,6 +57,12 @@ export function CheckoutForm() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
+
+  // Payway: la tarjeta se tokeniza del lado del cliente (decidir.js), nunca
+  // viaja el número real a nuestro server. formRef apunta al <form> entero:
+  // decidir.js busca ahí adentro los inputs marcados con data-decidir.
+  const formRef = useRef<HTMLFormElement>(null);
+  const [paywayCardBrand, setPaywayCardBrand] = useState<number>(PAYWAY_CARD_BRANDS[0].id);
 
   useEffect(() => {
     fetch("/api/payment-methods", { cache: "no-store" })
@@ -155,6 +166,21 @@ export function CheckoutForm() {
     }
   }
 
+  function handleOrderResponse(res: Response, data: { orderId?: string; error?: string; shortages?: typeof shortages }) {
+    if (!res.ok) {
+      if (res.status === 409 && data.shortages) {
+        setShortages(data.shortages);
+        setError("Algunos productos no tienen stock suficiente.");
+      } else {
+        setError(data.error ?? "No se pudo crear el pedido.");
+      }
+      setLoading(false);
+      return;
+    }
+    clear();
+    router.push(`/carrito/gracias?id=${data.orderId}`);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedMethod) return;
@@ -162,12 +188,53 @@ export function CheckoutForm() {
     setError(null);
     setShortages(null);
 
+    const itemsPayload = items.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price, name: i.name }));
+    const customer = { name, email, phone: phone || undefined };
+
+    // Payway tiene su propio flujo: primero tokeniza la tarjeta en el
+    // navegador (decidir.js), recién con ese token se manda al server — el
+    // cobro es al toque, así que ya viaja como "pagado".
+    if (selectedMethod === "payway") {
+      if (!selectedConfig?.paywayPublicKey || !formRef.current) {
+        setError("El pago con tarjeta no está disponible en este momento.");
+        setLoading(false);
+        return;
+      }
+      const cardNumberInput = formRef.current.querySelector<HTMLInputElement>('[data-decidir="card_number"]');
+      const bin = (cardNumberInput?.value ?? "").replace(/\D/g, "").slice(0, 6);
+
+      try {
+        const tokenResult = await tokenizeCard(formRef.current, {
+          publicKey: selectedConfig.paywayPublicKey,
+          sandbox: selectedConfig.paywaySandbox ?? true,
+        });
+
+        const res = await fetch("/api/orders/payway", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: itemsPayload,
+            customer,
+            shippingMethodId: selectedShippingId,
+            shippingAddress: shippingAddress || undefined,
+            couponCode: appliedCoupon?.code,
+            paywayToken: tokenResult.token,
+            paywayBin: bin,
+            paywayPaymentMethodId: paywayCardBrand,
+          }),
+        });
+        const data = await res.json();
+        handleOrderResponse(res, data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No se pudo procesar el pago con tarjeta.");
+        setLoading(false);
+      }
+      return;
+    }
+
     const form = new FormData();
-    form.set(
-      "items",
-      JSON.stringify(items.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price, name: i.name })))
-    );
-    form.set("customer", JSON.stringify({ name, email, phone: phone || undefined }));
+    form.set("items", JSON.stringify(itemsPayload));
+    form.set("customer", JSON.stringify(customer));
     form.set("paymentMethod", selectedMethod);
     if (selectedShippingId) form.set("shippingMethodId", selectedShippingId);
     if (shippingAddress) form.set("shippingAddress", shippingAddress);
@@ -177,20 +244,7 @@ export function CheckoutForm() {
     try {
       const res = await fetch("/api/orders", { method: "POST", body: form });
       const data = await res.json();
-
-      if (!res.ok) {
-        if (res.status === 409 && data.shortages) {
-          setShortages(data.shortages);
-          setError("Algunos productos no tienen stock suficiente.");
-        } else {
-          setError(data.error ?? "No se pudo crear el pedido.");
-        }
-        setLoading(false);
-        return;
-      }
-
-      clear();
-      router.push(`/carrito/gracias?id=${data.orderId}`);
+      handleOrderResponse(res, data);
     } catch {
       setError("No se pudo conectar con el servidor. Probá de nuevo.");
       setLoading(false);
@@ -210,7 +264,7 @@ export function CheckoutForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 lg:grid lg:grid-cols-[1fr_320px] lg:items-start lg:gap-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="mt-6 lg:grid lg:grid-cols-[1fr_320px] lg:items-start lg:gap-6">
       <div className="flex flex-col gap-4 rounded-2xl border border-black/10 bg-white p-5">
       <h2 className="font-semibold text-brand-ink">Finalizar compra</h2>
 
@@ -313,6 +367,87 @@ export function CheckoutForm() {
                         hacelo con los datos de arriba y después subí la captura o el PDF.
                       </p>
                     </div>
+                  </div>
+                )}
+
+                {selected && m.method === "payway" && (
+                  <div className="mt-4 flex flex-col gap-3 border-t border-brand-pink/20 pt-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Tipo de tarjeta</label>
+                      <select
+                        value={paywayCardBrand}
+                        onChange={(e) => setPaywayCardBrand(Number(e.target.value))}
+                        className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                      >
+                        {PAYWAY_CARD_BRANDS.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-brand-muted">
+                        Número de tarjeta
+                      </label>
+                      <input
+                        required
+                        data-decidir="card_number"
+                        inputMode="numeric"
+                        maxLength={19}
+                        placeholder="•••• •••• •••• ••••"
+                        className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-brand-muted">
+                        Nombre del titular (como figura en la tarjeta)
+                      </label>
+                      <input
+                        required
+                        data-decidir="card_holder_name"
+                        className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Mes venc.</label>
+                        <input
+                          required
+                          data-decidir="card_expiration_month"
+                          inputMode="numeric"
+                          maxLength={2}
+                          placeholder="MM"
+                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Año venc.</label>
+                        <input
+                          required
+                          data-decidir="card_expiration_year"
+                          inputMode="numeric"
+                          maxLength={2}
+                          placeholder="AA"
+                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">CVV</label>
+                        <input
+                          required
+                          data-decidir="security_code"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="•••"
+                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-brand-muted">
+                      El pago se procesa al confirmar el pedido. Tu tarjeta se tokeniza en el navegador — nunca
+                      viaja a nuestros servidores.
+                    </p>
                   </div>
                 )}
               </div>
@@ -462,7 +597,13 @@ export function CheckoutForm() {
           disabled={loading || !selectedShippingId}
           className="w-full cursor-pointer rounded-full bg-brand-pink px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Confirmando..." : "Confirmar pedido"}
+          {loading
+            ? selectedMethod === "payway"
+              ? "Procesando el pago..."
+              : "Confirmando..."
+            : selectedMethod === "payway"
+              ? "Pagar y confirmar"
+              : "Confirmar pedido"}
         </button>
       </div>
     </form>

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { PaymentMethod } from "@/generated/prisma/enums";
 
-const ALL_METHODS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega"];
+const ALL_METHODS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega", "payway"];
 
 // Se auto-crean las 3 filas (una por medio de pago) la primera vez que se
 // entra a /admin/pagos, todas deshabilitadas por defecto — así no hace falta

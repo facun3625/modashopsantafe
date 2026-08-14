@@ -2,6 +2,7 @@ import { getPaymentMethodConfigs } from "@/lib/paymentSettings";
 import { getAllShippingMethods } from "@/lib/shipping";
 import { paymentMethodLabel } from "@/lib/sales";
 import { PaymentEnabledToggle } from "@/components/admin/PaymentEnabledToggle";
+import { ToggleSwitch } from "@/components/admin/ToggleSwitch";
 import { ChipCheckbox } from "@/components/admin/ChipCheckbox";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
 import { SaveButton } from "@/components/admin/SaveButton";
@@ -12,6 +13,7 @@ const METHOD_DESCRIPTIONS: Record<string, string> = {
   mercadopago: "Pago online con tarjeta, dinero en cuenta, etc. vía Mercado Pago.",
   transferencia: "El cliente transfiere y adjunta el comprobante al finalizar la compra.",
   contra_entrega: "El cliente paga en efectivo al recibir el pedido.",
+  payway: "Pago con tarjeta directo en el checkout (gateway Payway). Se cobra y confirma al toque.",
 };
 
 const fieldClasses =
@@ -79,6 +81,36 @@ export default async function AdminPagosPage() {
                       configured={Boolean(config.mpPublicKey)}
                       placeholder="APP_USR-..."
                     />
+                  </>
+                )}
+
+                {config.method === "payway" && (
+                  <>
+                    <MaskedCredentialField
+                      name="paywayPublicKey"
+                      label="Public Key"
+                      configured={Boolean(config.paywayPublicKey)}
+                      placeholder="pub_..."
+                    />
+                    <MaskedCredentialField
+                      name="paywayPrivateKey"
+                      label="Private Key"
+                      type="password"
+                      configured={Boolean(config.paywayPrivateKey)}
+                      placeholder="priv_..."
+                    />
+                    <div className="flex items-center gap-2.5 pb-2">
+                      <ToggleSwitch name="paywaySandbox" defaultChecked={config.paywaySandbox} />
+                      <div>
+                        <p className="text-sm font-medium text-brand-ink">Modo de prueba (sandbox)</p>
+                        <p className="text-xs text-brand-muted">
+                          Apagalo recién cuando tengas las keys de producción.
+                        </p>
+                      </div>
+                    </div>
+                    <p className="w-full text-xs text-brand-muted">
+                      Las keys te las da el soporte de Payway (soporte@payway.com.ar).
+                    </p>
                   </>
                 )}
 

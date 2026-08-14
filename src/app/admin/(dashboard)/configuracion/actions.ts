@@ -158,6 +158,7 @@ export async function updateOrderEmailSettings(formData: FormData) {
     orderEmailNoteTransfer: (formData.get("orderEmailNoteTransfer") as string)?.trim() || null,
     orderEmailNoteCash: (formData.get("orderEmailNoteCash") as string)?.trim() || null,
     orderEmailNoteMercadopago: (formData.get("orderEmailNoteMercadopago") as string)?.trim() || null,
+    orderEmailNotePayway: (formData.get("orderEmailNotePayway") as string)?.trim() || null,
     orderEmailClosing: (formData.get("orderEmailClosing") as string)?.trim() || null,
   };
 

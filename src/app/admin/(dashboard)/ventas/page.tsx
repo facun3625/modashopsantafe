@@ -7,7 +7,7 @@ import { SalesFilters } from "./SalesFilters";
 const PAGE_SIZE = 25;
 
 const VALID_STATUSES: OrderStatus[] = ["pending", "confirmed", "delivered", "cancelled"];
-const VALID_PAYMENTS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega"];
+const VALID_PAYMENTS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega", "payway"];
 
 export default async function AdminVentasPage({
   searchParams,
