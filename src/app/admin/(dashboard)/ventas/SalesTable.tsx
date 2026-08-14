@@ -245,6 +245,21 @@ function OrderDetailModal({
                 <span>Subtotal</span>
                 <span>${order.subtotal.toFixed(2)}</span>
               </div>
+              {/* No se guarda aparte: se deduce de subtotal/cupón/envío/total.
+                  Es el % de descuento que tenía configurado el medio de pago
+                  (/admin/pagos) al momento de la compra — por eso el total no
+                  cierra a simple vista contra el subtotal. */}
+              {(() => {
+                const paymentDiscount = order.subtotal - order.couponDiscount - order.total + order.shippingCost;
+                if (paymentDiscount <= 0.01) return null;
+                const pct = Math.round((paymentDiscount / order.subtotal) * 100);
+                return (
+                  <div className="flex justify-between text-brand-muted">
+                    <span>Descuento {paymentMethodLabel(order.paymentMethod)} ({pct}%)</span>
+                    <span>−${paymentDiscount.toFixed(2)}</span>
+                  </div>
+                );
+              })()}
               {order.couponDiscount > 0 && (
                 <div className="flex justify-between text-brand-muted">
                   <span>Descuento cupón</span>
