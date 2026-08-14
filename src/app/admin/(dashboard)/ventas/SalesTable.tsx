@@ -107,9 +107,10 @@ export function SalesTable({ orders }: { orders: SalesOrder[] }) {
                           openReceipt(o.transferProofUrl!);
                         }}
                         title={kind === "image" ? "Ver comprobante (imagen)" : "Abrir comprobante (PDF)"}
-                        className="ml-1 inline-flex cursor-pointer items-center rounded-full p-1.5 align-middle text-brand-pink-dark hover:bg-brand-soft hover:text-brand-pink"
+                        className="ml-1.5 inline-flex cursor-pointer items-center gap-1 rounded-full border border-brand-pink/30 bg-brand-soft px-2 py-1 align-middle text-xs font-semibold text-brand-pink-dark shadow-sm transition-colors hover:border-brand-pink hover:bg-brand-pink hover:text-white"
                       >
-                        📎
+                        <span aria-hidden>📎</span>
+                        Ver
                       </button>
                     )}
                   </td>
