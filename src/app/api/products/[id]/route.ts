@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { executeKw } from "@/lib/odoo";
+import { getReservedQuantities } from "@/lib/reservations";
 
 type OdooProduct = {
   id: number;
@@ -30,7 +31,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    return NextResponse.json(products[0]);
+    // Disponible real = físico de Odoo menos lo reservado por pedidos web sin
+    // despachar, igual que en el listado (ver lib/reservations.ts).
+    const reserved = await getReservedQuantities([productId]);
+    const product = {
+      ...products[0],
+      qty_available: Math.max(0, products[0].qty_available - (reserved.get(productId) ?? 0)),
+    };
+
+    return NextResponse.json(product);
   } catch (err) {
     console.error(`GET /api/products/${id} failed`, err);
     return NextResponse.json({ error: "Failed to fetch product" }, { status: 502 });

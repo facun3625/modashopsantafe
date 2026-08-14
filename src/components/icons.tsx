@@ -280,6 +280,15 @@ export function ClockIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+export function ClipboardIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <rect x="6" y="4" width="12" height="17" rx="2" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V5H9v-.5zM9 10h6M9 14h6M9 17.5h3.5" />
+    </svg>
+  );
+}
+
 export function WrenchIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>

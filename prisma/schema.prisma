@@ -223,7 +223,23 @@ model NewsletterSubscriber {
 enum OrderStatus {
   pending
   confirmed
+  delivered
   cancelled
+}
+
+// Registro de auditoría: cada acción que hace un admin desde el panel
+// (confirmar/cancelar/eliminar pedidos, cambiar roles, etc.) queda acá.
+model AdminLog {
+  id         String   @id @default(cuid())
+  adminId    String?
+  adminEmail String
+  action     String // código de la acción, ej: "order.delete"
+  targetType String? // ej: "order", "user"
+  targetId   String?
+  detail     String? // texto legible para mostrar en la lista
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 enum PaymentMethod {

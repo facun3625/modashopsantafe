@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/adminLog";
+import { paymentMethodLabel } from "@/lib/orderLabels";
 import type { PaymentMethod } from "@/generated/prisma/enums";
 
 async function requireAdmin() {
@@ -10,22 +12,36 @@ async function requireAdmin() {
   if (session?.user?.role !== "admin") throw new Error("No autorizado");
 }
 
+// Activar/desactivar un medio de pago se guarda solo, al instante (el toggle
+// del admin lo llama en onChange). Se maneja aparte del resto del form para no
+// pisar el descuento ni las credenciales al togglear.
+export async function setPaymentMethodEnabled(method: PaymentMethod, enabled: boolean) {
+  await requireAdmin();
+  await prisma.paymentMethodConfig.update({ where: { method }, data: { enabled } });
+  await logAdminAction(enabled ? "payment.enable" : "payment.disable", {
+    targetType: "payment",
+    targetId: method,
+    detail: paymentMethodLabel(method),
+  });
+  revalidatePath("/admin/pagos");
+}
+
 export async function savePaymentMethodConfig(formData: FormData) {
   await requireAdmin();
 
   const method = formData.get("method") as PaymentMethod;
-  const enabled = formData.get("enabled") === "on";
   const discountPct = Math.max(0, Number(formData.get("discountPct")) || 0);
 
+  // `enabled` NO se toca acá: lo maneja setPaymentMethodEnabled (toggle
+  // instantáneo). Así guardar el descuento/credenciales no lo pisa.
   const data: {
-    enabled: boolean;
     discountPct: number;
     mpAccessToken?: string;
     mpPublicKey?: string;
     bankCbu?: string;
     bankAlias?: string;
     bankHolderName?: string;
-  } = { enabled, discountPct };
+  } = { discountPct };
 
   if (method === "mercadopago") {
     // Los campos de credenciales se muestran vacíos (enmascarados) aunque ya
@@ -58,6 +74,12 @@ export async function savePaymentMethodConfig(formData: FormData) {
       })),
     });
   }
+
+  await logAdminAction("payment.update", {
+    targetType: "payment",
+    targetId: method,
+    detail: `${paymentMethodLabel(method)} — ${discountPct}% desc.`,
+  });
 
   revalidatePath("/admin/pagos");
 }

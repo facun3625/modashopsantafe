@@ -6,22 +6,26 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { executeKw } from "@/lib/odoo";
 import { checkStock } from "@/lib/products";
+import { createOrderWithStockGuard, InsufficientStockError } from "@/lib/reservations";
 import { getShippingMethodsForPayment } from "@/lib/shipping";
 import { validateCoupon, registerCouponUse } from "@/lib/coupons";
 import { notifyNewOrder } from "@/lib/telegram";
 import { sendOrderConfirmation } from "@/lib/orderEmails";
 
 // Esta instancia de Odoo no tiene el módulo de Ventas instalado (sale.order
-// no existe), pero sí tiene Inventario. El pedido en sí queda registrado acá
-// (Prisma es la única fuente de verdad de las ventas online). El stock NO se
-// descuenta acá: se crea un stock.picking reservado (sin validar) para que
-// quede en la cola de "Transferencias por hacer" de Odoo — el equipo lo
-// valida al empaquetar/despachar, igual que ya hacen con cualquier pedido, y
-// recién ahí baja qty_available. Decisión tomada explícitamente así (no
-// auto-validar) para no perder ese hábito ni la cola de pendientes.
-const OUTGOING_PICKING_TYPE_ID = 2; // "Santa Fe: Órdenes de entrega"
-const SOURCE_LOCATION_ID = 8; // WH/SF/Existencias
-const CUSTOMER_LOCATION_ID = 5; // Partners/Customers
+// no existe), pero sí tiene Inventario. El pedido queda registrado acá (Prisma
+// es la única fuente de verdad de las ventas online).
+//
+// Al COMPRAR: solo se reserva el stock en NUESTRA base (createOrderWithStockGuard)
+// para que el disponible que ve el cliente = qty_available de Odoo − lo reservado
+// por pedidos sin despachar. Así no se sobrevende en el hueco entre "compran" y
+// "el equipo procesa" (típico fin de semana, sin nadie en Odoo).
+//
+// La orden a Odoo (stock.picking) NO se crea acá: se crea al CONFIRMAR el pago
+// (transferencia/contra-entrega → a mano desde /admin/ventas; MP/Payway → al
+// aprobarse el pago). Ver createPickingForOrder en lib/odooPicking.ts. Cuando el
+// equipo despacha en Odoo (picking "done"), la reserva se libera sola
+// (releaseDeliveredReservations).
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "comprobantes");
 
@@ -64,53 +68,6 @@ async function findOrCreatePartner(customer: Customer): Promise<number> {
     },
   ]);
   return partnerId;
-}
-
-async function resolveVariantId(templateId: number): Promise<number> {
-  const templates = await executeKw<{ id: number; product_variant_id: [number, string] }[]>(
-    "product.template",
-    "read",
-    [[templateId]],
-    { fields: ["product_variant_id"] }
-  );
-  if (templates.length === 0) throw new Error(`Product ${templateId} not found`);
-  return templates[0].product_variant_id[0];
-}
-
-// Crea un stock.picking (salida) con un move por línea, lo confirma y lo
-// reserva (action_assign). Queda en estado "Listo"/"Confirmado" en la cola de
-// Inventario → Transferencias, a la espera de que el equipo lo valide cuando
-// empaquete/despache — ese paso (fuera de esta app) es el que baja el stock.
-async function createPicking(
-  partnerId: number,
-  items: { variantId: number; name: string; quantity: number }[],
-  origin: string
-): Promise<number> {
-  const pickingId = await executeKw<number>("stock.picking", "create", [
-    {
-      picking_type_id: OUTGOING_PICKING_TYPE_ID,
-      location_id: SOURCE_LOCATION_ID,
-      location_dest_id: CUSTOMER_LOCATION_ID,
-      partner_id: partnerId,
-      // "Documento origen" del picking — deja la referencia al pedido de la
-      // web para poder cruzarlo con /admin/ventas desde Odoo.
-      origin,
-      move_ids_without_package: items.map((item) => [
-        0,
-        0,
-        {
-          name: item.name,
-          product_id: item.variantId,
-          product_uom_qty: item.quantity,
-        },
-      ]),
-    },
-  ]);
-
-  await executeKw("stock.picking", "action_confirm", [[pickingId]]);
-  await executeKw("stock.picking", "action_assign", [[pickingId]]);
-
-  return pickingId;
 }
 
 async function saveComprobante(file: File): Promise<string> {
@@ -188,13 +145,6 @@ export async function POST(req: Request) {
       partnerId = await findOrCreatePartner(customer);
     }
 
-    const resolvedItems = await Promise.all(
-      items.map(async (item) => ({
-        ...item,
-        variantId: await resolveVariantId(item.productId),
-      }))
-    );
-
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     // Revalidado en el server (no confiamos en el descuento que ya mostró el
@@ -224,32 +174,51 @@ export async function POST(req: Request) {
     // status queda en "pending" (default del schema): el pago todavía no
     // está confirmado para transferencia/contra-entrega, alguien del equipo
     // lo confirma a mano desde el admin cuando llega la plata.
-    const order = await prisma.order.create({
-      data: {
-        userId: session?.user?.id,
-        customerName: customer.name,
-        customerEmail: customer.email,
-        customerPhone: customer.phone,
-        subtotal,
-        total,
-        paymentMethod,
-        transferProofUrl,
-        shippingMethodId: shipping.id,
-        shippingCost: shipping.cost,
-        shippingAddress: shipping.requiresAddress ? String(shippingAddress) : undefined,
-        couponId,
-        couponDiscount,
-        odooPartnerId: partnerId,
-        items: {
-          create: items.map((item) => ({
-            productId: item.productId,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-          })),
-        },
-      },
-    });
+    //
+    // El pedido se crea bajo un candado por producto (createOrderWithStockGuard):
+    // recién ahí baja el disponible real que ve el cliente (Odoo − reservado),
+    // y dos compras simultáneas de la última unidad no pasan las dos.
+    let order;
+    try {
+      order = await createOrderWithStockGuard(
+        items.map((i) => ({ productId: i.productId, quantity: i.quantity, name: i.name })),
+        (tx) =>
+          tx.order.create({
+            data: {
+              userId: session?.user?.id,
+              customerName: customer.name,
+              customerEmail: customer.email,
+              customerPhone: customer.phone,
+              subtotal,
+              total,
+              paymentMethod,
+              transferProofUrl,
+              shippingMethodId: shipping.id,
+              shippingCost: shipping.cost,
+              shippingAddress: shipping.requiresAddress ? String(shippingAddress) : undefined,
+              couponId,
+              couponDiscount,
+              odooPartnerId: partnerId,
+              items: {
+                create: items.map((item) => ({
+                  productId: item.productId,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                })),
+              },
+            },
+          })
+      );
+    } catch (err) {
+      if (err instanceof InsufficientStockError) {
+        return NextResponse.json(
+          { error: "No hay stock suficiente para algunos productos", shortages: err.shortages },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
 
     if (couponId) await registerCouponUse(couponId);
 
@@ -283,20 +252,10 @@ export async function POST(req: Request) {
       shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
     });
 
-    try {
-      const pickingId = await createPicking(partnerId, resolvedItems, `Web #${order.id.slice(0, 8)}`);
-      await prisma.order.update({ where: { id: order.id }, data: { odooPickingId: pickingId } });
-      return NextResponse.json({ orderId: order.id, partnerId, pickingId }, { status: 201 });
-    } catch (odooErr) {
-      // El pedido ya quedó guardado (fuente de verdad); si falla la reserva
-      // de stock en Odoo, queda sin odooPickingId para resolver a mano en
-      // vez de perder el registro de la venta.
-      console.error("stock.picking failed for order", order.id, odooErr);
-      return NextResponse.json(
-        { orderId: order.id, partnerId, warning: "No se pudo reservar el stock en Odoo" },
-        { status: 201 }
-      );
-    }
+    // No se crea el picking en Odoo acá: el pedido queda "pending" y el stock
+    // ya quedó reservado en la web. La orden va a Odoo al confirmar el pago
+    // (ver createPickingForOrder, disparado desde /admin/ventas).
+    return NextResponse.json({ orderId: order.id, partnerId }, { status: 201 });
   } catch (err) {
     console.error("POST /api/orders failed", err);
     return NextResponse.json({ error: "No se pudo crear el pedido" }, { status: 502 });

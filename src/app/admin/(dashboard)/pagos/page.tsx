@@ -1,7 +1,7 @@
 import { getPaymentMethodConfigs } from "@/lib/paymentSettings";
 import { getAllShippingMethods } from "@/lib/shipping";
 import { paymentMethodLabel } from "@/lib/sales";
-import { ToggleSwitch } from "@/components/admin/ToggleSwitch";
+import { PaymentEnabledToggle } from "@/components/admin/PaymentEnabledToggle";
 import { ChipCheckbox } from "@/components/admin/ChipCheckbox";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
 import { SaveButton } from "@/components/admin/SaveButton";
@@ -48,7 +48,7 @@ export default async function AdminPagosPage() {
                   <p className="mt-0.5 text-sm text-brand-muted">{METHOD_DESCRIPTIONS[config.method]}</p>
                 </div>
               }
-              headerRight={<ToggleSwitch name="enabled" defaultChecked={config.enabled} />}
+              headerRight={<PaymentEnabledToggle method={config.method} enabled={config.enabled} />}
             >
               <div className="flex flex-wrap items-end gap-4">
                 <div className="w-40">

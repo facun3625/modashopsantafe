@@ -1,25 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import type { OrderStatus, PaymentMethod } from "@/generated/prisma/enums";
 
-const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: "Pago pendiente",
-  confirmed: "Confirmado",
-  cancelled: "Cancelado",
-};
-
-export function orderStatusLabel(status: OrderStatus): string {
-  return ORDER_STATUS_LABELS[status];
-}
-
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  mercadopago: "Mercado Pago",
-  transferencia: "Transferencia",
-  contra_entrega: "Contra entrega",
-};
-
-export function paymentMethodLabel(method: PaymentMethod): string {
-  return PAYMENT_METHOD_LABELS[method];
-}
+// Re-exportados desde el módulo puro para no romper imports existentes.
+export { orderStatusLabel, paymentMethodLabel } from "@/lib/orderLabels";
 
 export async function getSalesPage(opts: { limit: number; offset: number }) {
   const [orders, total] = await Promise.all([
@@ -31,11 +13,18 @@ export async function getSalesPage(opts: { limit: number; offset: number }) {
         id: true,
         customerName: true,
         customerEmail: true,
+        customerPhone: true,
+        subtotal: true,
         total: true,
         status: true,
         paymentMethod: true,
+        transferProofUrl: true,
+        shippingCost: true,
+        shippingAddress: true,
+        couponDiscount: true,
         createdAt: true,
-        items: { select: { id: true } },
+        shippingMethod: { select: { name: true } },
+        items: { select: { id: true, name: true, price: true, quantity: true } },
       },
     }),
     prisma.order.count(),
@@ -43,3 +32,5 @@ export async function getSalesPage(opts: { limit: number; offset: number }) {
 
   return { orders, total };
 }
+
+export type SalesOrder = Awaited<ReturnType<typeof getSalesPage>>["orders"][number];

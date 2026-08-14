@@ -54,7 +54,7 @@ export function CheckoutForm() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
 
   useEffect(() => {
-    fetch("/api/payment-methods")
+    fetch("/api/payment-methods", { cache: "no-store" })
       .then((res) => res.json())
       .then((data: AvailableMethod[]) => {
         setMethods(data);
@@ -299,7 +299,7 @@ export function CheckoutForm() {
 
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-brand-muted">
-                        Comprobante de la transferencia
+                        Comprobante de la transferencia <span className="text-brand-pink-dark">(obligatorio)</span>
                       </label>
                       <input
                         type="file"
@@ -308,6 +308,10 @@ export function CheckoutForm() {
                         onChange={(e) => setComprobante(e.target.files?.[0] ?? null)}
                         className="block w-full cursor-pointer text-sm text-brand-muted file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-brand-pink file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-brand-pink-dark"
                       />
+                      <p className="mt-1.5 text-xs text-brand-muted">
+                        Para confirmar el pedido tenés que adjuntar el comprobante. Si todavía no transferiste,
+                        hacelo con los datos de arriba y después subí la captura o el PDF.
+                      </p>
                     </div>
                   </div>
                 )}

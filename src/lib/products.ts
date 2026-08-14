@@ -1,28 +1,34 @@
 import { executeKw } from "@/lib/odoo";
+import { getReservedQuantities } from "@/lib/reservations";
 import type { OdooCategory, OdooProductListItem } from "@/types/odoo";
 
 const PRODUCT_LIST_FIELDS = ["name", "list_price", "qty_available", "image_128", "image_512", "categ_id"];
 
-// Chequeo de stock antes de crear un pedido — cubre la mayoría de los casos
-// de sobreventa sin necesidad de reservar stock en tiempo real (ver
-// docs/flujo-pedidos-stock-pagos.md).
+// Chequeo de stock antes de crear un pedido. El disponible real de cara al
+// cliente es el qty_available de Odoo MENOS lo ya reservado por otros pedidos
+// web todavía sin despachar (ver lib/reservations.ts) — así no se sobrevende
+// aunque nadie entre a Odoo a validar (típico fin de semana).
 export async function checkStock(
   items: { productId: number; quantity: number }[]
 ): Promise<{ ok: boolean; shortages: { productId: number; name: string; available: number; requested: number }[] }> {
   const ids = items.map((i) => i.productId);
-  const products = await executeKw<{ id: number; name: string; qty_available: number }[]>(
-    "product.template",
-    "read",
-    [ids],
-    { fields: ["name", "qty_available"] }
-  );
+  const [products, reserved] = await Promise.all([
+    executeKw<{ id: number; name: string; qty_available: number }[]>(
+      "product.template",
+      "read",
+      [ids],
+      { fields: ["name", "qty_available"] }
+    ),
+    getReservedQuantities(ids),
+  ]);
   const byId = new Map(products.map((p) => [p.id, p]));
 
   const shortages = items
     .map((item) => {
       const product = byId.get(item.productId);
       if (!product) return { productId: item.productId, name: "Producto no encontrado", available: 0, requested: item.quantity };
-      return { productId: item.productId, name: product.name, available: product.qty_available, requested: item.quantity };
+      const available = Math.max(0, product.qty_available - (reserved.get(item.productId) ?? 0));
+      return { productId: item.productId, name: product.name, available, requested: item.quantity };
     })
     .filter((s) => s.available < s.requested);
 
@@ -56,7 +62,19 @@ export async function getProductsPage(opts: {
     executeKw<number>("product.template", "search_count", [domain]),
   ]);
 
-  return { products, total };
+  return { products: await applyReservations(products), total };
+}
+
+// Descuenta del qty_available que ve el cliente el stock ya reservado por
+// pedidos web sin despachar. Se aplica solo a lo que muestra la tienda (no al
+// catálogo del admin, que ve el stock físico real de Odoo).
+async function applyReservations(products: OdooProductListItem[]): Promise<OdooProductListItem[]> {
+  const reserved = await getReservedQuantities(products.map((p) => p.id));
+  if (reserved.size === 0) return products;
+  return products.map((p) => ({
+    ...p,
+    qty_available: Math.max(0, p.qty_available - (reserved.get(p.id) ?? 0)),
+  }));
 }
 
 // Para el panel de administración: sin filtrar por imagen ni por sale_ok,
