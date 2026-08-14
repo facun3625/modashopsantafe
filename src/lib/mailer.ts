@@ -62,6 +62,12 @@ export function buildMailSender(settings: MailSenderConfig): MailSender | null {
     port: settings.smtpPort ?? 587,
     secure: settings.smtpSecure,
     auth: { user: settings.smtpUser, pass: settings.smtpPassword },
+    // Por default nodemailer espera hasta 2 minutos antes de tirar error si
+    // el puerto está bloqueado (típico en VPS) — con esto falla en 10s y
+    // avisa, en vez de dejar el botón "Enviando..." colgado sin feedback.
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
   });
   return {
     from,
