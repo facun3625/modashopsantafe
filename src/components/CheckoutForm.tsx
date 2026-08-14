@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { useCart } from "@/lib/cart";
 import { getCartSessionId } from "@/lib/cartSession";
 import { tokenizeCard } from "@/lib/decidirScript";
-import { PAYWAY_CARD_BRANDS } from "@/lib/payway";
+import { PAYWAY_CARD_BRANDS, PROVINCIAS_AR } from "@/lib/payway";
 
 type PaymentMethod = "mercadopago" | "transferencia" | "contra_entrega" | "payway";
 
@@ -484,13 +484,21 @@ export function CheckoutForm() {
                       </div>
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Provincia</label>
-                        <input
+                        <select
                           required
                           value={paywayState}
                           onChange={(e) => setPaywayState(e.target.value)}
-                          placeholder="Santa Fe"
                           className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
-                        />
+                        >
+                          <option value="" disabled>
+                            Elegir...
+                          </option>
+                          {PROVINCIAS_AR.map((p) => (
+                            <option key={p.code} value={p.code}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold text-brand-muted">C.P.</label>

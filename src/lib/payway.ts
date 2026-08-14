@@ -23,6 +23,15 @@ export function getPaywayBaseUrl(sandbox: boolean): string {
 // del BIN de forma confiable vía API pública), tomado de la tabla oficial de
 // medios de pago. Se lo pedimos al cliente con un select en vez de
 // adivinarlo por los primeros dígitos, para no enrutar mal un cobro.
+//
+// ⚠️ Estos IDs son de la tabla PÚBLICA de Decidir y NO son necesariamente
+// universales — cada cuenta de Payway puede tener sus propios códigos por
+// marca (confirmado: otra integración con distinta cuenta necesitó 104 para
+// Mastercard, no 15). De esta lista, solo Visa=1 está verificado contra la
+// cuenta real de ModaShop (pagó de punta a punta hasta el banco en sandbox).
+// Antes de aceptar Mastercard/Cabal/etc. en producción, conviene confirmar
+// los códigos reales de esta cuenta con soporte@payway.com.ar o probando
+// cada uno en sandbox.
 export const PAYWAY_CARD_BRANDS = [
   { id: 1, label: "Visa crédito" },
   { id: 31, label: "Visa débito" },
@@ -47,13 +56,53 @@ export type PaywayPaymentResult =
 const GENERIC_DECLINE_MESSAGE = "El pago fue rechazado. Probá con otra tarjeta o con otro medio de pago.";
 const GENERIC_SYSTEM_ERROR_MESSAGE = "No se pudo procesar el pago. Probá de nuevo en un momento.";
 
+// Cybersource (el motor antifraude que usa Payway) espera el código de
+// provincia como UNA sola letra — ni el nombre completo ni la sigla de 2
+// letras. Se lo pedimos al cliente con un select (ver CheckoutForm) para que
+// llegue siempre bien, en vez de intentar adivinarlo de texto libre.
+export const PROVINCIAS_AR = [
+  { code: "B", name: "Buenos Aires" },
+  { code: "C", name: "Ciudad Autónoma de Buenos Aires" },
+  { code: "K", name: "Catamarca" },
+  { code: "H", name: "Chaco" },
+  { code: "U", name: "Chubut" },
+  { code: "X", name: "Córdoba" },
+  { code: "W", name: "Corrientes" },
+  { code: "E", name: "Entre Ríos" },
+  { code: "P", name: "Formosa" },
+  { code: "Y", name: "Jujuy" },
+  { code: "L", name: "La Pampa" },
+  { code: "F", name: "La Rioja" },
+  { code: "M", name: "Mendoza" },
+  { code: "N", name: "Misiones" },
+  { code: "Q", name: "Neuquén" },
+  { code: "R", name: "Río Negro" },
+  { code: "A", name: "Salta" },
+  { code: "J", name: "San Juan" },
+  { code: "D", name: "San Luis" },
+  { code: "Z", name: "Santa Cruz" },
+  { code: "S", name: "Santa Fe" },
+  { code: "G", name: "Santiago del Estero" },
+  { code: "V", name: "Tierra del Fuego" },
+  { code: "T", name: "Tucumán" },
+] as const;
+
+// Cybersource rechaza nombres/ciudad con tildes o ñ (ej. "Martín", "Núñez").
+// Se sanitiza antes de mandar — confirmado con pruebas reales.
+function sinAcentos(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/ñ/gi, (m) => (m === "ñ" ? "n" : "N"));
+}
+
 export type PaywayBillTo = {
   firstName: string;
   lastName: string;
   phoneNumber: string;
   street1: string;
   city: string;
-  state: string;
+  state: string; // código de una letra, ver PROVINCIAS_AR
   postalCode: string;
   country?: string; // default "AR"
 };
@@ -84,16 +133,20 @@ export async function createPaywayPayment(args: CreatePaywayPaymentArgs): Promis
   // confirmado con una prueba real). bill_to y ship_to van iguales porque no
   // manejamos facturación/envío a nombres distintos.
   const billToBlock = {
-    city: args.billTo.city,
+    city: sinAcentos(args.billTo.city),
     country,
-    customer_id: args.customerEmail,
+    // customer_id NUNCA puede ser un email — Cybersource lo rechaza con un
+    // error opaco (cybersource_error, reason.id -1) incluso con la tarjeta ya
+    // autorizada por el banco. Usamos el teléfono (no es un email, siempre
+    // requerido en el checkout).
+    customer_id: args.billTo.phoneNumber,
     email: args.customerEmail,
-    first_name: args.billTo.firstName,
-    last_name: args.billTo.lastName,
+    first_name: sinAcentos(args.billTo.firstName),
+    last_name: sinAcentos(args.billTo.lastName),
     phone_number: args.billTo.phoneNumber,
     postal_code: args.billTo.postalCode,
     state: args.billTo.state,
-    street1: args.billTo.street1,
+    street1: sinAcentos(args.billTo.street1),
   };
 
   const body = {
