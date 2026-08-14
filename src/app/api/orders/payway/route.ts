@@ -8,7 +8,7 @@ import { validateCoupon, registerCouponUse } from "@/lib/coupons";
 import { notifyNewOrder } from "@/lib/telegram";
 import { sendOrderConfirmation } from "@/lib/orderEmails";
 import { resolvePartnerId, type OrderCustomer } from "@/lib/orders";
-import { createPaywayPayment, refundPaywayPayment } from "@/lib/payway";
+import { createPaywayPayment, refundPaywayPayment, type PaywayBillTo } from "@/lib/payway";
 import { createPickingForOrder } from "@/lib/odooPicking";
 import { auth } from "@/lib/auth";
 
@@ -30,14 +30,24 @@ type PaywayOrderBody = {
   paywayToken: string;
   paywayBin: string;
   paywayPaymentMethodId: number;
+  paywayBillTo: PaywayBillTo;
 };
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as PaywayOrderBody | null;
   if (!body) return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
 
-  const { items, customer, shippingMethodId, shippingAddress, couponCode, paywayToken, paywayBin, paywayPaymentMethodId } =
-    body;
+  const {
+    items,
+    customer,
+    shippingMethodId,
+    shippingAddress,
+    couponCode,
+    paywayToken,
+    paywayBin,
+    paywayPaymentMethodId,
+    paywayBillTo,
+  } = body;
 
   if (!items?.length) {
     return NextResponse.json({ error: "El carrito está vacío" }, { status: 400 });
@@ -47,6 +57,9 @@ export async function POST(req: Request) {
   }
   if (!paywayToken || !paywayBin || !paywayPaymentMethodId) {
     return NextResponse.json({ error: "Faltan datos de la tarjeta" }, { status: 400 });
+  }
+  if (!paywayBillTo?.firstName || !paywayBillTo?.street1 || !paywayBillTo?.city || !paywayBillTo?.postalCode) {
+    return NextResponse.json({ error: "Faltan datos de facturación" }, { status: 400 });
   }
 
   try {
@@ -110,6 +123,8 @@ export async function POST(req: Request) {
       siteTransactionId: randomUUID(),
       description: `Pedido ModaShop — ${customer.email}`,
       customerEmail: customer.email,
+      billTo: paywayBillTo,
+      items: items.map((i) => ({ name: i.name, sku: String(i.productId), quantity: i.quantity, unitPrice: i.price })),
     });
 
     if (!charge.ok) {

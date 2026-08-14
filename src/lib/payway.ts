@@ -4,12 +4,17 @@
 // (decidir.js) y la respuesta ya trae "approved" o "rejected" al toque, sin
 // necesidad de webhook.
 //
-// Fuente verificada contra los SDKs oficiales (payway-ar/sdk-*-ventaonline,
-// que son forks de decidir/sdk-*-v2): header "apikey" con la private key,
-// endpoint POST /payments, monto en centavos. La URL de producción exacta
-// (live.decidir.com vs. otra que te haya dado el soporte de Payway) convdiene
-// confirmarla con soporte@payway.com.ar antes de salir a producción — si te
-// dieron una distinta, cambiala acá.
+// TODO ESTO ESTÁ PROBADO DE VERDAD (no solo leído en docs): tokenización real
+// vía decidir.js en un navegador headless + cobro contra developers.decidir.com
+// con credenciales de sandbox reales. La API pide, además del token, un bloque
+// "fraud_detection" completo (bill_to + purchase_totals + retail_transaction_data
+// con ship_to e items) — sin él, rechaza con "Fraud Detection Data is required".
+// Con el bloque completo, la prueba real pasó el control antifraude y llegó al
+// simulador del banco (quedó en "COMERCIO INVALIDO", que es un tema de
+// habilitación de la cuenta/sandbox a resolver con soporte@payway.com.ar, no
+// del código). Endpoints confirmados con curl real (401/403 = URL correcta,
+// credenciales rechazadas): developers.decidir.com (sandbox) y live.decidir.com
+// (producción) — si soporte te da otra URL de producción, cambiala acá.
 const SANDBOX_BASE_URL = "https://developers.decidir.com/api/v2";
 const PRODUCTION_BASE_URL = "https://live.decidir.com/api/v2";
 
@@ -37,6 +42,19 @@ export type PaywayPaymentResult =
   | { ok: true; id: number; status: string }
   | { ok: false; error: string };
 
+export type PaywayBillTo = {
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  street1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country?: string; // default "AR"
+};
+
+export type PaywayItem = { name: string; sku: string; quantity: number; unitPrice: number };
+
 type CreatePaywayPaymentArgs = {
   privateKey: string;
   sandbox: boolean;
@@ -47,23 +65,62 @@ type CreatePaywayPaymentArgs = {
   siteTransactionId: string; // id único nuestro (referencia del pedido)
   description: string;
   customerEmail: string;
+  billTo: PaywayBillTo;
+  items: PaywayItem[];
 };
 
 export async function createPaywayPayment(args: CreatePaywayPaymentArgs): Promise<PaywayPaymentResult> {
   const url = `${getPaywayBaseUrl(args.sandbox)}/payments`;
+  const amountCents = Math.round(args.amount * 100); // Decidir espera centavos (últimos 2 dígitos = decimales)
+  const country = args.billTo.country || "AR";
+
+  // Bloque "RetailFraudDetection" que exige la API para dejar pasar el cobro
+  // (sin esto, rechaza directo con "Fraud Detection Data is required" —
+  // confirmado con una prueba real). bill_to y ship_to van iguales porque no
+  // manejamos facturación/envío a nombres distintos.
+  const billToBlock = {
+    city: args.billTo.city,
+    country,
+    customer_id: args.customerEmail,
+    email: args.customerEmail,
+    first_name: args.billTo.firstName,
+    last_name: args.billTo.lastName,
+    phone_number: args.billTo.phoneNumber,
+    postal_code: args.billTo.postalCode,
+    state: args.billTo.state,
+    street1: args.billTo.street1,
+  };
 
   const body = {
     site_transaction_id: args.siteTransactionId.slice(0, 39),
     token: args.token,
     payment_method_id: args.paymentMethodId,
     bin: args.bin,
-    amount: Math.round(args.amount * 100), // Decidir espera centavos (los últimos 2 dígitos son decimales)
+    amount: amountCents,
     currency: "ARS",
     installments: 1,
     description: args.description.slice(0, 89),
     payment_type: "single",
     sub_payments: [],
     customer: { email: args.customerEmail },
+    fraud_detection: {
+      send_to_cs: true,
+      channel: "Web",
+      bill_to: billToBlock,
+      purchase_totals: { currency: "ARS", amount: amountCents },
+      retail_transaction_data: {
+        ship_to: billToBlock,
+        items: args.items.map((item, i) => ({
+          code: String(i + 1),
+          description: item.name.slice(0, 60),
+          name: item.name.slice(0, 60),
+          sku: item.sku || String(i + 1),
+          total_amount: Math.round(item.unitPrice * item.quantity * 100),
+          quantity: item.quantity,
+          unit_price: Math.round(item.unitPrice * 100),
+        })),
+      },
+    },
   };
 
   try {
@@ -74,18 +131,26 @@ export async function createPaywayPayment(args: CreatePaywayPaymentArgs): Promis
     });
     const data = await res.json();
 
-    if (!res.ok) {
-      const message =
-        data?.error_type || data?.message || data?.[0]?.message || `Payway respondió ${res.status}`;
-      return { ok: false, error: String(message) };
+    // Ojo: Payway devuelve HTTP 402 para pagos rechazados, pero el body SÍ
+    // trae el detalle completo (status/status_details/fraud_detection) —
+    // confirmado con una prueba real. Si no viene ni siquiera un "status" en
+    // el body, ahí sí es un error de verdad (auth, validación, etc.).
+    if (typeof data?.status === "string") {
+      if (data.status !== "approved") {
+        const fraud = data?.fraud_detection?.status;
+        const fraudDetail = fraud?.decision === "black" ? fraud?.details?.validation_errors?.[0]?.param : undefined;
+        const reason =
+          fraudDetail ||
+          data?.status_details?.error?.reason?.description ||
+          data?.status_details?.error?.type ||
+          data.status;
+        return { ok: false, error: `Pago ${data.status}${reason ? ` (${reason})` : ""}` };
+      }
+      return { ok: true, id: data.id, status: data.status };
     }
 
-    if (data.status !== "approved") {
-      const reason = data?.status_details?.error?.reason?.description || data.status_details?.ticket || data.status;
-      return { ok: false, error: `Pago ${data.status}${reason ? ` (${reason})` : ""}` };
-    }
-
-    return { ok: true, id: data.id, status: data.status };
+    const message = data?.error_type || data?.message || data?.[0]?.message || `Payway respondió ${res.status}`;
+    return { ok: false, error: String(message) };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "No se pudo conectar con Payway" };
   }

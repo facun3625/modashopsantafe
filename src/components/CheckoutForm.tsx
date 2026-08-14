@@ -63,6 +63,13 @@ export function CheckoutForm() {
   // decidir.js busca ahí adentro los inputs marcados con data-decidir.
   const formRef = useRef<HTMLFormElement>(null);
   const [paywayCardBrand, setPaywayCardBrand] = useState<number>(PAYWAY_CARD_BRANDS[0].id);
+  // Payway pide datos de facturación completos para el control antifraude
+  // (más allá de la dirección de envío, que puede no existir si es retiro
+  // en el local).
+  const [paywayStreet, setPaywayStreet] = useState("");
+  const [paywayCity, setPaywayCity] = useState("");
+  const [paywayState, setPaywayState] = useState("");
+  const [paywayPostalCode, setPaywayPostalCode] = useState("");
 
   useEffect(() => {
     fetch("/api/payment-methods", { cache: "no-store" })
@@ -202,6 +209,7 @@ export function CheckoutForm() {
       }
       const cardNumberInput = formRef.current.querySelector<HTMLInputElement>('[data-decidir="card_number"]');
       const bin = (cardNumberInput?.value ?? "").replace(/\D/g, "").slice(0, 6);
+      const [firstName, ...rest] = name.trim().split(/\s+/);
 
       try {
         const tokenResult = await tokenizeCard(formRef.current, {
@@ -221,6 +229,15 @@ export function CheckoutForm() {
             paywayToken: tokenResult.token,
             paywayBin: bin,
             paywayPaymentMethodId: paywayCardBrand,
+            paywayBillTo: {
+              firstName: firstName || name,
+              lastName: rest.join(" ") || firstName || name,
+              phoneNumber: phone,
+              street1: paywayStreet,
+              city: paywayCity,
+              state: paywayState,
+              postalCode: paywayPostalCode,
+            },
           }),
         });
         const data = await res.json();
@@ -440,6 +457,47 @@ export function CheckoutForm() {
                           inputMode="numeric"
                           maxLength={4}
                           placeholder="•••"
+                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <p className="mt-1 text-xs font-semibold text-brand-muted">Datos de facturación</p>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Dirección</label>
+                      <input
+                        required
+                        value={paywayStreet}
+                        onChange={(e) => setPaywayStreet(e.target.value)}
+                        placeholder="Calle y número"
+                        className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Ciudad</label>
+                        <input
+                          required
+                          value={paywayCity}
+                          onChange={(e) => setPaywayCity(e.target.value)}
+                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Provincia</label>
+                        <input
+                          required
+                          value={paywayState}
+                          onChange={(e) => setPaywayState(e.target.value)}
+                          placeholder="Santa Fe"
+                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">C.P.</label>
+                        <input
+                          required
+                          value={paywayPostalCode}
+                          onChange={(e) => setPaywayPostalCode(e.target.value)}
                           className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
                         />
                       </div>
