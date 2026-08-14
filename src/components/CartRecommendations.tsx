@@ -39,24 +39,26 @@ export function CartRecommendations() {
   if (shown.length === 0) return null;
 
   return (
-    <div className="mt-6 border-t border-black/10 pt-4">
-      <p className="mb-3 text-sm font-semibold text-brand-ink">También te puede gustar</p>
-      <div className="flex flex-col gap-3">
+    <div className="mt-6 rounded-xl bg-brand-soft/60 p-3.5">
+      <p className="mb-2.5 text-[11px] font-bold uppercase tracking-wide text-brand-muted">
+        También te puede gustar
+      </p>
+      <div className="flex flex-col gap-2.5">
         {shown.map((p) => (
-          <div key={p.id} className="flex items-center gap-3">
+          <div key={p.id} className="flex items-center gap-2.5">
             {p.image_128 ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`data:image/png;base64,${p.image_128}`}
                 alt={p.name}
-                className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                className="h-10 w-10 shrink-0 rounded-md object-cover opacity-95"
               />
             ) : (
-              <div className="h-14 w-14 shrink-0 rounded-lg bg-brand-soft" />
+              <div className="h-10 w-10 shrink-0 rounded-md bg-white" />
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-brand-ink">{p.name}</p>
-              <p className="text-sm font-bold text-brand-pink-dark">${p.list_price.toFixed(2)}</p>
+              <p className="truncate text-xs font-medium text-brand-ink/80">{p.name}</p>
+              <p className="text-xs text-brand-muted">${p.list_price.toFixed(2)}</p>
             </div>
             <button
               onClick={() =>
@@ -69,7 +71,7 @@ export function CartRecommendations() {
                   categoryId: p.categ_id ? p.categ_id[0] : undefined,
                 })
               }
-              className="shrink-0 cursor-pointer rounded-full bg-brand-pink px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-brand-pink-dark"
+              className="shrink-0 cursor-pointer rounded-full border border-brand-pink/50 px-2.5 py-1 text-[11px] font-semibold text-brand-pink-dark transition-colors hover:bg-brand-pink hover:text-white"
             >
               Agregar
             </button>
