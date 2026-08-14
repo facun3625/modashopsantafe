@@ -37,29 +37,36 @@ export default async function AdminEnviosPage() {
               titleArea={
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <input
-                      name="name"
-                      defaultValue={m.name}
-                      required
-                      className="min-w-0 flex-1 border-0 p-0 text-base font-semibold text-brand-ink focus:outline-none"
-                    />
+                    <p className="truncate text-base font-semibold text-brand-ink">{m.name}</p>
                     {m.cost > 0 ? (
                       <Badge tone="pink">${m.cost.toFixed(2)}</Badge>
                     ) : (
                       <Badge tone="green">Gratis</Badge>
                     )}
                   </div>
-                  <input
-                    name="description"
-                    defaultValue={m.description ?? ""}
-                    placeholder="Descripción (opcional)"
-                    className="mt-1 w-full border-0 p-0 text-sm text-brand-muted focus:outline-none"
-                  />
+                  {m.description && <p className="truncate text-sm text-brand-muted">{m.description}</p>}
                 </div>
               }
               headerRight={<ToggleSwitch name="enabled" defaultChecked={m.enabled} />}
             >
               <div className="flex flex-wrap items-end gap-4">
+                <div className="min-w-[200px] flex-1">
+                  <label className={labelClasses}>Nombre</label>
+                  <input type="text" name="name" defaultValue={m.name} required className={fieldClasses} />
+                </div>
+                <div className="min-w-[200px] flex-1">
+                  <label className={labelClasses}>Descripción (opcional)</label>
+                  <input
+                    type="text"
+                    name="description"
+                    defaultValue={m.description ?? ""}
+                    placeholder="Entrega en 24-48hs en Santa Fe"
+                    className={fieldClasses}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-end gap-4">
                 <div className="w-32">
                   <label className={labelClasses}>Costo</label>
                   <input type="number" name="cost" defaultValue={m.cost} min={0} step={0.01} className={fieldClasses} />

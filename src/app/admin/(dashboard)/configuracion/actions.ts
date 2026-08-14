@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { resetOdooCache } from "@/lib/odoo";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { sendTelegram } from "@/lib/telegram";
+import { buildMailSender } from "@/lib/mailer";
 
 async function requireAdmin() {
   const session = await auth();
@@ -101,6 +102,54 @@ export async function updateMailSettings(formData: FormData) {
   });
 
   revalidatePath("/admin/configuracion");
+}
+
+export type MailTestState = { ok: boolean; error?: string };
+
+// Botón "Probar mail" de la card de Mailing. Igual que Telegram: prueba con
+// lo que hay tipeado en el form (sin guardar nada), y si un campo vino vacío
+// porque está enmascarado (contraseña/API key ya guardadas), cae a lo que ya
+// hay en la base — así se puede probar sin tener que reescribir credenciales.
+export async function testMailSending(to: string, form: Record<string, string>): Promise<MailTestState> {
+  await requireAdmin();
+
+  const email = to.trim();
+  if (!email || !email.includes("@")) {
+    return { ok: false, error: "Ingresá un email válido para la prueba." };
+  }
+
+  const saved = await getStoreSettingsRow();
+  const provider = form.mailProvider === "resend" ? "resend" : "smtp";
+
+  const sender = buildMailSender({
+    mailFromEmail: form.mailFromEmail?.trim() || saved.mailFromEmail,
+    mailFromName: form.mailFromName?.trim() || saved.mailFromName,
+    franchiseName: saved.franchiseName,
+    mailProvider: provider,
+    smtpHost: form.smtpHost?.trim() || saved.smtpHost,
+    smtpPort: Number(form.smtpPort) || saved.smtpPort,
+    smtpSecure: form.smtpSecure === "on",
+    smtpUser: form.smtpUser?.trim() || saved.smtpUser,
+    smtpPassword: form.smtpPassword || saved.smtpPassword,
+    resendApiKey: form.resendApiKey?.trim() || saved.resendApiKey,
+  });
+
+  if (!sender) {
+    return {
+      ok: false,
+      error:
+        provider === "resend"
+          ? "Faltan datos de Resend (email remitente y/o API key)."
+          : "Faltan datos del SMTP (remitente, host, usuario y/o contraseña).",
+    };
+  }
+
+  const result = await sender.send(
+    email,
+    "Prueba de ModaShop",
+    "<p>✅ Si ves este mail, el envío está funcionando bien.</p>"
+  );
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 
 export async function updateOdooSettings(formData: FormData) {

@@ -11,10 +11,23 @@ export type MailSender = {
   send: (to: string, subject: string, html: string) => Promise<MailSendResult>;
 };
 
-// null = todavía no se puede enviar (falta completar la config del proveedor
-// elegido en /admin/configuracion). Quien llama decide qué hacer.
-export async function getMailSender(): Promise<MailSender | null> {
-  const settings = await getStoreSettingsRow();
+export type MailSenderConfig = {
+  mailFromEmail: string | null;
+  mailFromName: string | null;
+  franchiseName: string | null;
+  mailProvider: string; // "smtp" | "resend"
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpSecure: boolean;
+  smtpUser: string | null;
+  smtpPassword: string | null;
+  resendApiKey: string | null;
+};
+
+// Separado de getMailSender() para poder armar un sender "de prueba" con
+// datos que todavía no se guardaron (ver testMailSending en
+// admin/configuracion/actions.ts) — mismo patrón que el botón de Telegram.
+export function buildMailSender(settings: MailSenderConfig): MailSender | null {
   if (!settings.mailFromEmail) return null;
 
   const fromName = settings.mailFromName || settings.franchiseName || "ModaShop";
@@ -61,4 +74,11 @@ export async function getMailSender(): Promise<MailSender | null> {
       }
     },
   };
+}
+
+// null = todavía no se puede enviar (falta completar la config del proveedor
+// elegido en /admin/configuracion). Quien llama decide qué hacer.
+export async function getMailSender(): Promise<MailSender | null> {
+  const settings = await getStoreSettingsRow();
+  return buildMailSender(settings);
 }

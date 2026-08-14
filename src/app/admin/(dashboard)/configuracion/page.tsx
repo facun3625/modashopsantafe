@@ -8,6 +8,7 @@ import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField"
 import { ImagePreviewInput } from "@/components/admin/ImagePreviewInput";
 import { TelegramTestButton } from "./TelegramTestButton";
 import { MailProviderFields } from "./MailProviderFields";
+import { MailTestButton } from "./MailTestButton";
 import { SettingsTabs } from "./SettingsTabs";
 import { WrenchIcon } from "@/components/icons";
 import { DEFAULT_INTRO, DEFAULT_NOTES, DEFAULT_CLOSING } from "@/lib/orderEmails";
@@ -248,6 +249,8 @@ export default async function AdminConfiguracionPage() {
           />
         </div>
       </div>
+
+      <MailTestButton />
 
       <div className="mt-5 border-t border-black/5 pt-4">
         <SaveButton trackDirty />
