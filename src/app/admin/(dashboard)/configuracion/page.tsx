@@ -9,11 +9,13 @@ import { TelegramTestButton } from "./TelegramTestButton";
 import { MailProviderFields } from "./MailProviderFields";
 import { SettingsTabs } from "./SettingsTabs";
 import { WrenchIcon } from "@/components/icons";
+import { DEFAULT_INTRO, DEFAULT_NOTES, DEFAULT_CLOSING } from "@/lib/orderEmails";
 import {
   updateSiteSettings,
   updateMailSettings,
   updateOdooSettings,
   updateTelegramSettings,
+  updateOrderEmailSettings,
   updateMaintenanceMode,
   createHeroSlide,
   updateHeroSlide,
@@ -252,6 +254,79 @@ export default async function AdminConfiguracionPage() {
     </form>
   );
 
+  // --- Panel: Mail de compra ---
+  const textareaClasses = `${fieldClasses} min-h-[70px] resize-y`;
+  const orderEmailPanel = (
+    <form action={updateOrderEmailSettings} className="rounded-xl border border-black/10 bg-white p-5">
+      <p className="text-sm text-brand-muted">
+        El mail que recibe el cliente apenas compra. El detalle de productos y los totales siempre son los reales
+        del pedido — acá editás el mensaje alrededor. Podés usar <code className="rounded bg-brand-soft px-1">{"{nombre}"}</code>{" "}
+        y <code className="rounded bg-brand-soft px-1">{"{pedido}"}</code> (se reemplazan por el nombre del cliente y
+        el número de pedido). Dejá un campo vacío para usar el texto por defecto que ves de fondo.
+      </p>
+
+      <div className="mt-4">
+        <label className={labelClasses}>Mensaje de bienvenida</label>
+        <textarea
+          name="orderEmailIntro"
+          defaultValue={settings.orderEmailIntro ?? ""}
+          placeholder={DEFAULT_INTRO}
+          rows={2}
+          className={textareaClasses}
+        />
+      </div>
+
+      <p className={`${labelClasses} mt-5 border-t border-black/5 pt-4`}>Nota según el medio de pago</p>
+      <div className="flex flex-col gap-4">
+        <div>
+          <label className={labelClasses}>Transferencia</label>
+          <textarea
+            name="orderEmailNoteTransfer"
+            defaultValue={settings.orderEmailNoteTransfer ?? ""}
+            placeholder={DEFAULT_NOTES.transferencia}
+            rows={2}
+            className={textareaClasses}
+          />
+        </div>
+        <div>
+          <label className={labelClasses}>Contra entrega</label>
+          <textarea
+            name="orderEmailNoteCash"
+            defaultValue={settings.orderEmailNoteCash ?? ""}
+            placeholder={DEFAULT_NOTES.contra_entrega}
+            rows={2}
+            className={textareaClasses}
+          />
+        </div>
+        <div>
+          <label className={labelClasses}>Mercado Pago</label>
+          <textarea
+            name="orderEmailNoteMercadopago"
+            defaultValue={settings.orderEmailNoteMercadopago ?? ""}
+            placeholder={DEFAULT_NOTES.mercadopago}
+            rows={2}
+            className={textareaClasses}
+          />
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-black/5 pt-4">
+        <label className={labelClasses}>Cierre</label>
+        <textarea
+          name="orderEmailClosing"
+          defaultValue={settings.orderEmailClosing ?? ""}
+          placeholder={DEFAULT_CLOSING}
+          rows={2}
+          className={textareaClasses}
+        />
+      </div>
+
+      <div className="mt-5 border-t border-black/5 pt-4">
+        <SaveButton trackDirty />
+      </div>
+    </form>
+  );
+
   // --- Panel: Telegram ---
   const telegramPanel = (
     <form action={updateTelegramSettings} className="rounded-xl border border-black/10 bg-white p-5">
@@ -479,6 +554,7 @@ export default async function AdminConfiguracionPage() {
           { id: "general", label: "General", content: generalPanel },
           { id: "odoo", label: "Odoo", content: odooPanel },
           { id: "mailing", label: "Mailing", content: mailingPanel },
+          { id: "mail-compra", label: "Mail de compra", content: orderEmailPanel },
           { id: "telegram", label: "Telegram", content: telegramPanel },
           { id: "slider", label: "Slider", content: sliderPanel },
         ]}

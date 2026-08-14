@@ -119,6 +119,17 @@ model StoreSettings {
   telegramBotToken String?
   telegramChatId   String?
 
+  // Textos editables del mail "Recibimos tu pedido" que se le manda al
+  // cliente al comprar (ver lib/orderEmails.ts). El detalle de productos y
+  // los totales del pedido NO son editables acá (son datos reales de la
+  // venta) — esto es solo el mensaje alrededor. Vacío = se usa el texto por
+  // defecto. Admiten {nombre} y {pedido} como placeholders.
+  orderEmailIntro           String?
+  orderEmailNoteTransfer    String?
+  orderEmailNoteCash        String?
+  orderEmailNoteMercadopago String?
+  orderEmailClosing         String?
+
   updatedAt DateTime @updatedAt
 }
 

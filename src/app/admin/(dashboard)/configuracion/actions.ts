@@ -148,6 +148,28 @@ export async function updateTelegramSettings(formData: FormData) {
   revalidatePath("/admin/configuracion");
 }
 
+// Textos editables del mail "Recibimos tu pedido" (ver lib/orderEmails.ts).
+// Vacío = se usa el texto por defecto (no forzamos a nadie a escribir nada).
+export async function updateOrderEmailSettings(formData: FormData) {
+  await requireAdmin();
+
+  const data = {
+    orderEmailIntro: (formData.get("orderEmailIntro") as string)?.trim() || null,
+    orderEmailNoteTransfer: (formData.get("orderEmailNoteTransfer") as string)?.trim() || null,
+    orderEmailNoteCash: (formData.get("orderEmailNoteCash") as string)?.trim() || null,
+    orderEmailNoteMercadopago: (formData.get("orderEmailNoteMercadopago") as string)?.trim() || null,
+    orderEmailClosing: (formData.get("orderEmailClosing") as string)?.trim() || null,
+  };
+
+  await prisma.storeSettings.upsert({
+    where: { id: "global" },
+    create: { id: "global", ...data },
+    update: data,
+  });
+
+  revalidatePath("/admin/configuracion");
+}
+
 export type TelegramTestState = { ok: boolean; error?: string };
 
 // Botón "Probar" de la card de Telegram. Recibe el token/chat que el cliente

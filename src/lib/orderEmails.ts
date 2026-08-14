@@ -4,13 +4,35 @@ import { buildMailHtml } from "@/lib/mailTemplate";
 
 // Mail "Recibimos tu pedido" que se le manda al cliente al confirmar la compra.
 // Fire and forget desde la ruta de pedidos: nunca tira ni frena la venta.
+//
+// El intro, la nota por medio de pago y el cierre son EDITABLES desde
+// /admin/configuracion → "Mail de compra" (ver StoreSettings.orderEmail*).
+// Si el admin no cargó nada, se usan estos textos por defecto. El detalle de
+// productos y los totales NO son editables: son datos reales del pedido.
 
-const PAYMENT_NOTE: Record<string, string> = {
+// Exportados para poder mostrarlos como placeholder en /admin/configuracion.
+export const DEFAULT_INTRO =
+  "¡Gracias por tu compra, {nombre}! Recibimos tu pedido #{pedido} y ya lo estamos preparando.";
+
+export const DEFAULT_NOTES: Record<string, string> = {
   transferencia:
     "Recibimos tu pedido y tu comprobante. Estamos verificando el pago; si surge algún inconveniente nos comunicamos con vos. Si está todo bien, coordinamos la entrega.",
   contra_entrega: "Vas a abonar al momento de recibir el pedido.",
   mercadopago: "Tu pago con Mercado Pago fue registrado.",
 };
+
+export const DEFAULT_CLOSING = "Cualquier duda, respondé este mail o escribinos. ¡Gracias por elegirnos!";
+
+// Mapea el medio de pago al campo de StoreSettings correspondiente.
+const NOTE_FIELD: Record<string, "orderEmailNoteTransfer" | "orderEmailNoteCash" | "orderEmailNoteMercadopago"> = {
+  transferencia: "orderEmailNoteTransfer",
+  contra_entrega: "orderEmailNoteCash",
+  mercadopago: "orderEmailNoteMercadopago",
+};
+
+function fillPlaceholders(text: string, vars: { nombre: string; pedido: string }): string {
+  return text.replaceAll("{nombre}", vars.nombre).replaceAll("{pedido}", vars.pedido);
+}
 
 function money(value: number): string {
   return `$${value.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
@@ -37,31 +59,34 @@ export async function sendOrderConfirmation(order: OrderConfirmationEmail): Prom
   const settings = await getStoreSettingsRow();
   const shortId = order.orderId.slice(0, 8);
   const firstName = order.customerName.split(" ")[0] || order.customerName;
+  const vars = { nombre: firstName, pedido: shortId };
+
+  const intro = fillPlaceholders(settings.orderEmailIntro || DEFAULT_INTRO, vars);
+  const noteField = NOTE_FIELD[order.paymentMethod];
+  const rawNote = (noteField && settings[noteField]) || DEFAULT_NOTES[order.paymentMethod];
+  const note = rawNote ? fillPlaceholders(rawNote, vars) : null;
+  const closing = fillPlaceholders(settings.orderEmailClosing || DEFAULT_CLOSING, vars);
 
   // El cuerpo va como texto (la plantilla parte por líneas/párrafos). Armamos
-  // el resumen del pedido línea por línea.
+  // el resumen del pedido línea por línea — esta parte SIEMPRE es la real,
+  // no se edita.
   const detail = order.items.map((i) => `${i.quantity}x ${i.name}`).join("\n");
   const totals: string[] = [`Subtotal: ${money(order.subtotal)}`];
   if (order.discountTotal > 0) totals.push(`Descuento: -${money(order.discountTotal)}`);
   totals.push(`Envío (${order.shippingName}): ${order.shippingCost > 0 ? money(order.shippingCost) : "sin cargo"}`);
   totals.push(`Total: ${money(order.total)}`);
 
-  const paragraphs = [
-    `¡Gracias por tu compra, ${firstName}! Recibimos tu pedido #${shortId} y ya lo estamos preparando.`,
-    `Detalle del pedido:\n${detail}`,
-    totals.join("\n"),
-  ];
+  const paragraphs = [intro, `Detalle del pedido:\n${detail}`, totals.join("\n")];
   if (order.shippingAddress) paragraphs.push(`Envío a: ${order.shippingAddress}`);
-  const note = PAYMENT_NOTE[order.paymentMethod];
   if (note) paragraphs.push(note);
-  paragraphs.push("Cualquier duda, respondé este mail o escribinos. ¡Gracias por elegirnos!");
+  paragraphs.push(closing);
 
   const html = buildMailHtml({
     logoUrl: `${process.env.NEXTAUTH_URL ?? ""}/logo.png`,
     franchiseName: settings.franchiseName || "ModaShop",
     franchiseLocation: settings.franchiseLocation,
     subject: `Recibimos tu pedido #${shortId}`,
-    title: `¡Gracias por tu compra, ${firstName}!`,
+    title: `¡Hola, ${firstName}!`,
     body: paragraphs.join("\n\n"),
     footer: {
       address: settings.address,
