@@ -1,11 +1,34 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma/client";
+import type { OrderStatus, PaymentMethod } from "@/generated/prisma/enums";
 
 // Re-exportados desde el módulo puro para no romper imports existentes.
 export { orderStatusLabel, paymentMethodLabel } from "@/lib/orderLabels";
 
-export async function getSalesPage(opts: { limit: number; offset: number }) {
+export async function getSalesPage(opts: {
+  limit: number;
+  offset: number;
+  q?: string;
+  paymentMethod?: PaymentMethod;
+  status?: OrderStatus;
+}) {
+  const where: Prisma.OrderWhereInput = {
+    ...(opts.paymentMethod ? { paymentMethod: opts.paymentMethod } : {}),
+    ...(opts.status ? { status: opts.status } : {}),
+    ...(opts.q
+      ? {
+          OR: [
+            { customerName: { contains: opts.q, mode: "insensitive" } },
+            { customerEmail: { contains: opts.q, mode: "insensitive" } },
+            { customerPhone: { contains: opts.q, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+
   const [orders, total] = await Promise.all([
     prisma.order.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       take: opts.limit,
       skip: opts.offset,
@@ -27,7 +50,7 @@ export async function getSalesPage(opts: { limit: number; offset: number }) {
         items: { select: { id: true, name: true, price: true, quantity: true } },
       },
     }),
-    prisma.order.count(),
+    prisma.order.count({ where }),
   ]);
 
   return { orders, total };

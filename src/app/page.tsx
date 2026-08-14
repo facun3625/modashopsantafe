@@ -95,7 +95,7 @@ export default async function Home() {
   return (
     <div>
       {/* Hero */}
-      <section className="px-3 pt-6 sm:px-6 sm:pt-10">
+      <section className="px-3 pt-2 sm:px-6 sm:pt-4">
         <div className="mx-auto max-w-6xl">
           <HeroSlider slides={heroSlides} />
 

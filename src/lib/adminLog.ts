@@ -7,6 +7,7 @@ const ACTION_LABELS: Record<string, string> = {
   "order.confirm": "Confirmó el pago",
   "order.cancel": "Canceló el pedido",
   "order.deliver": "Marcó como entregado",
+  "order.reopen": "Reabrió el pedido (pago pendiente)",
   "order.delete": "Eliminó el pedido",
   "payment.enable": "Activó un medio de pago",
   "payment.disable": "Desactivó un medio de pago",

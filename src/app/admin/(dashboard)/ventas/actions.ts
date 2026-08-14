@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/adminLog";
 import { createPickingForOrder } from "@/lib/odooPicking";
+import type { OrderStatus } from "@/generated/prisma/enums";
 
 async function requireAdmin() {
   const session = await auth();
@@ -20,41 +21,34 @@ async function orderLabel(orderId: string): Promise<string> {
   return o ? `${o.customerName} — $${o.total.toFixed(2)}` : orderId;
 }
 
-export async function confirmOrderPayment(orderId: string) {
+const STATUS_ACTION: Record<OrderStatus, string> = {
+  pending: "order.reopen",
+  confirmed: "order.confirm",
+  delivered: "order.deliver",
+  cancelled: "order.cancel",
+};
+
+// Cambia el estado del pedido (desde el select del admin, sin botón aceptar).
+// Efectos por estado:
+//  - confirmed: además genera la orden reservada en Odoo (createPickingForOrder).
+//  - delivered: libera la reserva de stock (ya lo hace el estado en sí).
+//  - cancelled: libera la reserva y "devuelve" el stock a la web.
+export async function changeOrderStatus(orderId: string, status: OrderStatus) {
   await requireAdmin();
   const detail = await orderLabel(orderId);
-  await prisma.order.update({ where: { id: orderId }, data: { status: "confirmed" } });
-  await logAdminAction("order.confirm", { targetType: "order", targetId: orderId, detail });
+  await prisma.order.update({ where: { id: orderId }, data: { status } });
+  await logAdminAction(STATUS_ACTION[status], { targetType: "order", targetId: orderId, detail });
 
-  // Al confirmar el pago recién ahí se genera la orden reservada en Odoo
-  // (stock.picking). Si Odoo falla, la confirmación NO se cae: el pedido queda
-  // confirmado y sin picking, y se puede reintentar. La reserva de la web
-  // sigue firme igual.
-  try {
-    await createPickingForOrder(orderId);
-  } catch (err) {
-    console.error("createPickingForOrder failed for", orderId, err);
+  if (status === "confirmed") {
+    // Si Odoo falla, no se cae el cambio de estado: queda confirmado sin
+    // picking y se puede reintentar. La reserva de la web sigue firme.
+    try {
+      await createPickingForOrder(orderId);
+    } catch (err) {
+      console.error("createPickingForOrder failed for", orderId, err);
+    }
   }
 
-  revalidatePath("/admin/ventas");
-}
-
-export async function cancelOrder(orderId: string) {
-  await requireAdmin();
-  const detail = await orderLabel(orderId);
-  await prisma.order.update({ where: { id: orderId }, data: { status: "cancelled" } });
-  await logAdminAction("order.cancel", { targetType: "order", targetId: orderId, detail });
-  revalidatePath("/admin/ventas");
-}
-
-// Marca el pedido como entregado/despachado: libera la reserva de stock que
-// mantenía (el disponible en la web deja de descontarlo). Hacelo cuando ya
-// sacaste el producto del stock físico de Odoo — ahí queda todo consistente.
-export async function markOrderDelivered(orderId: string) {
-  await requireAdmin();
-  const detail = await orderLabel(orderId);
-  await prisma.order.update({ where: { id: orderId }, data: { status: "delivered" } });
-  await logAdminAction("order.deliver", { targetType: "order", targetId: orderId, detail });
   revalidatePath("/admin/ventas");
 }
 

@@ -2,10 +2,13 @@
 
 import { useState, useTransition } from "react";
 import type { SalesOrder } from "@/lib/sales";
+import type { OrderStatus } from "@/generated/prisma/enums";
 import { orderStatusLabel, paymentMethodLabel, ORDER_STATUS_STYLES } from "@/lib/orderLabels";
-import { confirmOrderPayment, cancelOrder, markOrderDelivered, deleteOrder } from "./actions";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { changeOrderStatus, deleteOrder } from "./actions";
 
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "webp", "gif", "avif"];
+const STATUSES: OrderStatus[] = ["pending", "confirmed", "delivered", "cancelled"];
 
 function receiptKind(url: string | null): "image" | "pdf" | "other" | null {
   if (!url) return null;
@@ -15,13 +18,56 @@ function receiptKind(url: string | null): "image" | "pdf" | "other" | null {
   return "other";
 }
 
+// Select de estado que aplica el cambio al instante (sin botón aceptar).
+// Optimista: muestra el nuevo estado enseguida y revierte si el server falla.
+function OrderStatusSelect({ orderId, status }: { orderId: string; status: OrderStatus }) {
+  const [value, setValue] = useState<OrderStatus>(status);
+  const [pending, startTransition] = useTransition();
+
+  function onChange(next: OrderStatus) {
+    const prev = value;
+    setValue(next);
+    startTransition(async () => {
+      try {
+        await changeOrderStatus(orderId, next);
+      } catch {
+        setValue(prev);
+      }
+    });
+  }
+
+  return (
+    <select
+      value={value}
+      disabled={pending}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value as OrderStatus)}
+      className={`cursor-pointer rounded-full border-0 px-2.5 py-1 text-xs font-semibold outline-none focus:ring-2 focus:ring-brand-pink/40 disabled:opacity-60 ${ORDER_STATUS_STYLES[value] ?? "bg-gray-100 text-gray-700"}`}
+    >
+      {STATUSES.map((s) => (
+        <option key={s} value={s}>
+          {orderStatusLabel(s)}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function SalesTable({ orders }: { orders: SalesOrder[] }) {
   const [selected, setSelected] = useState<SalesOrder | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  // Abre el comprobante directo desde la lista: imagen en lightbox, PDF/otros
+  // en pestaña nueva.
+  function openReceipt(url: string) {
+    if (receiptKind(url) === "image") setLightbox(url);
+    else window.open(url, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <>
       <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-xl border border-black/10 bg-white">
-        <table className="w-full min-w-[760px] text-left text-sm">
+        <table className="w-full min-w-[820px] text-left text-sm">
           <thead className="sticky top-0 bg-white">
             <tr className="border-b border-black/10 text-xs uppercase tracking-wide text-brand-muted">
               <th className="px-4 py-3 font-semibold">Cliente</th>
@@ -34,42 +80,50 @@ export function SalesTable({ orders }: { orders: SalesOrder[] }) {
             </tr>
           </thead>
           <tbody>
-            {orders.map((o) => (
-              <tr
-                key={o.id}
-                id={`order-${o.id.slice(0, 8)}`}
-                onClick={() => setSelected(o)}
-                className="scroll-mt-4 cursor-pointer border-b border-black/5 target:bg-brand-soft last:border-0 hover:bg-brand-soft/50"
-              >
-                <td className="px-4 py-3 font-medium text-brand-ink">
-                  {o.customerName}
-                  <span className="block text-xs font-normal text-brand-muted">{o.customerEmail}</span>
-                </td>
-                <td className="px-4 py-3 text-brand-muted">{o.items.length}</td>
-                <td className="px-4 py-3 text-brand-muted">{o.createdAt.toLocaleDateString("es-AR")}</td>
-                <td className="px-4 py-3 text-brand-pink-dark">${o.total.toFixed(2)}</td>
-                <td className="px-4 py-3 text-brand-muted">
-                  {paymentMethodLabel(o.paymentMethod)}
-                  {receiptKind(o.transferProofUrl) && (
-                    <span className="ml-1.5 align-middle text-brand-pink-dark" title="Tiene comprobante">📎</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${ORDER_STATUS_STYLES[o.status] ?? "bg-gray-100 text-gray-700"}`}
-                  >
-                    {orderStatusLabel(o.status)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="text-xs font-semibold text-brand-pink-dark">Ver →</span>
-                </td>
-              </tr>
-            ))}
+            {orders.map((o) => {
+              const kind = receiptKind(o.transferProofUrl);
+              return (
+                <tr
+                  key={o.id}
+                  id={`order-${o.id.slice(0, 8)}`}
+                  onClick={() => setSelected(o)}
+                  className="scroll-mt-4 cursor-pointer border-b border-black/5 target:bg-brand-soft last:border-0 hover:bg-brand-soft/50"
+                >
+                  <td className="px-4 py-3 font-medium text-brand-ink">
+                    {o.customerName}
+                    <span className="block text-xs font-normal text-brand-muted">{o.customerEmail}</span>
+                  </td>
+                  <td className="px-4 py-3 text-brand-muted">{o.items.length}</td>
+                  <td className="px-4 py-3 text-brand-muted">{o.createdAt.toLocaleDateString("es-AR")}</td>
+                  <td className="px-4 py-3 text-brand-pink-dark">${o.total.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-brand-muted">
+                    {paymentMethodLabel(o.paymentMethod)}
+                    {kind && o.transferProofUrl && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openReceipt(o.transferProofUrl!);
+                        }}
+                        title="Ver comprobante"
+                        className="ml-1.5 cursor-pointer align-middle text-brand-pink-dark hover:text-brand-pink"
+                      >
+                        📎
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <OrderStatusSelect orderId={o.id} status={o.status} />
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span className="text-xs font-semibold text-brand-pink-dark">Ver →</span>
+                  </td>
+                </tr>
+              );
+            })}
             {orders.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-brand-muted">
-                  Todavía no hay pedidos.
+                  No hay pedidos que coincidan.
                 </td>
               </tr>
             )}
@@ -77,21 +131,44 @@ export function SalesTable({ orders }: { orders: SalesOrder[] }) {
         </table>
       </div>
 
-      {selected && <OrderDetailModal order={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <OrderDetailModal order={selected} onClose={() => setSelected(null)} onOpenReceipt={openReceipt} />
+      )}
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[95] flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setLightbox(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightbox}
+            alt="Comprobante de transferencia"
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+          />
+        </div>
+      )}
     </>
   );
 }
 
-function OrderDetailModal({ order, onClose }: { order: SalesOrder; onClose: () => void }) {
+function OrderDetailModal({
+  order,
+  onClose,
+  onOpenReceipt,
+}: {
+  order: SalesOrder;
+  onClose: () => void;
+  onOpenReceipt: (url: string) => void;
+}) {
   const [isPending, startTransition] = useTransition();
-  const [lightbox, setLightbox] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const kind = receiptKind(order.transferProofUrl);
   const showPdfPanel = kind === "pdf";
 
-  function run(action: (id: string) => Promise<void>, confirmMsg?: string) {
-    if (confirmMsg && !window.confirm(confirmMsg)) return;
+  function doDelete() {
     startTransition(async () => {
-      await action(order.id);
+      await deleteOrder(order.id);
       onClose();
     });
   }
@@ -126,12 +203,9 @@ function OrderDetailModal({ order, onClose }: { order: SalesOrder; onClose: () =
         <div className={`min-h-0 flex-1 overflow-auto ${showPdfPanel ? "grid grid-cols-1 md:grid-cols-2" : ""}`}>
           {/* Columna: detalle */}
           <div className="space-y-5 p-6">
-            <div className="flex items-center gap-2">
-              <span
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${ORDER_STATUS_STYLES[order.status] ?? "bg-gray-100 text-gray-700"}`}
-              >
-                {orderStatusLabel(order.status)}
-              </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">Estado:</span>
+              <OrderStatusSelect orderId={order.id} status={order.status} />
               <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-ink">
                 {paymentMethodLabel(order.paymentMethod)}
               </span>
@@ -195,67 +269,28 @@ function OrderDetailModal({ order, onClose }: { order: SalesOrder; onClose: () =
                   <img
                     src={order.transferProofUrl}
                     alt="Comprobante de transferencia"
-                    onClick={() => setLightbox(true)}
+                    onClick={() => onOpenReceipt(order.transferProofUrl!)}
                     className="max-h-40 cursor-zoom-in rounded-lg border border-black/10 object-contain"
                   />
-                ) : kind === "pdf" ? (
-                  <a
-                    href={order.transferProofUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                ) : (
+                  <button
+                    onClick={() => onOpenReceipt(order.transferProofUrl!)}
                     className="inline-flex items-center gap-2 rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-soft"
                   >
-                    📄 Abrir comprobante (PDF) en pestaña nueva
-                  </a>
-                ) : (
-                  <a
-                    href={order.transferProofUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-semibold text-brand-pink-dark hover:underline"
-                  >
-                    Descargar comprobante
-                  </a>
+                    📄 Abrir comprobante (PDF)
+                  </button>
                 )}
               </div>
             )}
 
-            {/* Acciones */}
-            <div className="flex flex-wrap gap-2 border-t border-black/10 pt-4">
-              {order.status === "pending" && (
-                <button
-                  disabled={isPending}
-                  onClick={() => run(confirmOrderPayment)}
-                  className="cursor-pointer rounded-full bg-brand-pink px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-pink-dark disabled:opacity-50"
-                >
-                  Confirmar pago
-                </button>
-              )}
-              {(order.status === "pending" || order.status === "confirmed") && (
-                <button
-                  disabled={isPending}
-                  onClick={() => run(markOrderDelivered)}
-                  title="Normalmente se marca solo cuando despachás en Odoo. Usalo solo si necesitás liberar la reserva a mano."
-                  className="cursor-pointer rounded-full border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-                >
-                  Marcar entregado (manual)
-                </button>
-              )}
-              {order.status !== "cancelled" && order.status !== "delivered" && (
-                <button
-                  disabled={isPending}
-                  onClick={() => run(cancelOrder)}
-                  className="cursor-pointer rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-brand-muted hover:border-red-300 hover:text-red-700 disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-              )}
+            {/* Eliminar */}
+            <div className="flex justify-end border-t border-black/10 pt-4">
               <button
                 disabled={isPending}
-                onClick={() => run(deleteOrder, "¿Eliminar este pedido definitivamente? No se puede deshacer.")}
-                className="ml-auto cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                onClick={() => setConfirmDelete(true)}
+                className="cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
               >
-                Eliminar
+                Eliminar pedido
               </button>
             </div>
           </div>
@@ -263,33 +298,22 @@ function OrderDetailModal({ order, onClose }: { order: SalesOrder; onClose: () =
           {/* Panel PDF al lado */}
           {showPdfPanel && order.transferProofUrl && (
             <div className="min-h-[300px] border-t border-black/10 bg-brand-soft/30 md:border-l md:border-t-0">
-              <iframe
-                src={order.transferProofUrl}
-                title="Comprobante"
-                className="h-full min-h-[400px] w-full"
-              />
+              <iframe src={order.transferProofUrl} title="Comprobante" className="h-full min-h-[400px] w-full" />
             </div>
           )}
         </div>
       </div>
 
-      {/* Lightbox de imagen */}
-      {lightbox && kind === "image" && order.transferProofUrl && (
-        <div
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 p-4"
-          onClick={(e) => {
-            e.stopPropagation();
-            setLightbox(false);
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={order.transferProofUrl}
-            alt="Comprobante de transferencia"
-            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
-          />
-        </div>
-      )}
+      <ConfirmDialog
+        open={confirmDelete}
+        danger
+        pending={isPending}
+        title="Eliminar pedido"
+        message="Se elimina definitivamente y no se puede deshacer."
+        confirmLabel="Eliminar"
+        onConfirm={doDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }
