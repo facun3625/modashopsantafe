@@ -7,7 +7,7 @@ import { buildMailHtml } from "@/lib/mailTemplate";
 
 const PAYMENT_NOTE: Record<string, string> = {
   transferencia:
-    "Recibimos tu comprobante de transferencia. Estamos verificando el pago y te avisamos apenas quede confirmado.",
+    "Recibimos tu pedido y tu comprobante. Estamos verificando el pago; si surge algún inconveniente nos comunicamos con vos. Si está todo bien, coordinamos la entrega.",
   contra_entrega: "Vas a abonar al momento de recibir el pedido.",
   mercadopago: "Tu pago con Mercado Pago fue registrado.",
 };
