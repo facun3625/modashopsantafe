@@ -5,6 +5,7 @@ import { ToggleSwitch } from "@/components/admin/ToggleSwitch";
 import { SaveButton } from "@/components/admin/SaveButton";
 import { CardAccordion } from "@/components/admin/CardAccordion";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
+import { ImagePreviewInput } from "@/components/admin/ImagePreviewInput";
 import { TelegramTestButton } from "./TelegramTestButton";
 import { MailProviderFields } from "./MailProviderFields";
 import { SettingsTabs } from "./SettingsTabs";
@@ -372,6 +373,101 @@ export default async function AdminConfiguracionPage() {
   );
 
   // --- Panel: Slider principal ---
+  // Contenido compartido entre "editar slide" y "nuevo slide" — mismo orden
+  // visual en los dos para que no se sientan como formularios distintos:
+  // imagen (con vista previa) → textos en grilla prolija → botones como
+  // lista numerada, en vez del flex-wrap amontonado que había antes.
+  function slideFields(opts: {
+    imageExisting?: string | null;
+    imageRequired: boolean;
+    defaults?: {
+      promoText?: string | null;
+      eyebrow?: string;
+      title?: string;
+      subtitle?: string | null;
+      buttons?: readonly [string | null, string | null][];
+    };
+  }) {
+    const d = opts.defaults;
+    const buttons = d?.buttons ?? [
+      [null, null],
+      [null, null],
+      [null, null],
+    ];
+
+    return (
+      <div className="flex flex-col gap-5">
+        <ImagePreviewInput
+          name="image"
+          label="Imagen"
+          existingUrl={opts.imageExisting}
+          required={opts.imageRequired}
+          helperText={
+            opts.imageRequired
+              ? "Apaisada y de buena resolución — es el fondo del banner principal del home."
+              : "Dejá sin elegir para mantener la imagen actual."
+          }
+        />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className={labelClasses}>Texto chico (eyebrow)</label>
+            <input type="text" name="eyebrow" required placeholder="ModaShop" defaultValue={d?.eyebrow} className={fieldClasses} />
+          </div>
+          <div>
+            <label className={labelClasses}>Subtítulo</label>
+            <input type="text" name="subtitle" defaultValue={d?.subtitle ?? ""} className={fieldClasses} />
+          </div>
+          <div>
+            <label className={labelClasses}>Título (hasta 2 líneas)</label>
+            <textarea
+              name="title"
+              rows={2}
+              required
+              placeholder={"Brillá\ncon estilo"}
+              defaultValue={d?.title}
+              className={fieldClasses}
+            />
+          </div>
+          <div>
+            <label className={labelClasses}>Texto del círculo (opcional, hasta 2 líneas)</label>
+            <textarea name="promoText" rows={2} defaultValue={d?.promoText ?? ""} className={fieldClasses} />
+          </div>
+        </div>
+
+        <div>
+          <p className={`${labelClasses} normal-case`}>Botones (opcional, hasta 3)</p>
+          <div className="flex flex-col gap-2">
+            {buttons.map(([label, href], i) => (
+              <div
+                key={i}
+                className="flex flex-wrap items-center gap-2.5 rounded-lg border border-black/10 bg-brand-soft/50 p-2.5"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-muted shadow-sm">
+                  {i + 1}
+                </span>
+                <input
+                  type="text"
+                  name={`button${i + 1}Label`}
+                  placeholder="Texto del botón"
+                  defaultValue={label ?? ""}
+                  className="w-44 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-sm text-brand-ink focus:border-brand-pink focus:outline-none"
+                />
+                <input
+                  type="text"
+                  name={`button${i + 1}Href`}
+                  placeholder="/tienda o https://..."
+                  defaultValue={href ?? ""}
+                  className="min-w-[180px] flex-1 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-sm text-brand-ink focus:border-brand-pink focus:outline-none"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const sliderPanel = (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-brand-muted">
@@ -407,65 +503,26 @@ export default async function AdminConfiguracionPage() {
             }
             headerRight={<ToggleSwitch name="enabled" defaultChecked={slide.enabled} />}
           >
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="w-56">
-                <label className={labelClasses}>Imagen (dejar vacío para no cambiarla)</label>
-                <input type="file" name="image" accept="image/*" className={fieldClasses} />
-              </div>
-              <div className="w-24">
-                <label className={labelClasses}>Orden</label>
-                <input type="number" name="position" min={0} defaultValue={slide.position} className={fieldClasses} />
-              </div>
+            <div className="mb-4 w-24">
+              <label className={labelClasses}>Orden</label>
+              <input type="number" name="position" min={0} defaultValue={slide.position} className={fieldClasses} />
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-4">
-              <div className="w-56">
-                <label className={labelClasses}>Texto del círculo (opcional, hasta 2 líneas)</label>
-                <textarea name="promoText" rows={2} defaultValue={slide.promoText ?? ""} className={fieldClasses} />
-              </div>
-              <div className="w-56">
-                <label className={labelClasses}>Texto chico (eyebrow)</label>
-                <input type="text" name="eyebrow" required defaultValue={slide.eyebrow} className={fieldClasses} />
-              </div>
-              <div className="w-56">
-                <label className={labelClasses}>Título (hasta 2 líneas)</label>
-                <textarea name="title" rows={2} required defaultValue={slide.title} className={fieldClasses} />
-              </div>
-              <div className="min-w-[220px] flex-1">
-                <label className={labelClasses}>Subtítulo</label>
-                <input type="text" name="subtitle" defaultValue={slide.subtitle ?? ""} className={fieldClasses} />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <p className={labelClasses}>Botones (opcional)</p>
-              <div className="flex flex-col gap-2">
-                {(
-                  [
-                    [slide.button1Label, slide.button1Href],
-                    [slide.button2Label, slide.button2Href],
-                    [slide.button3Label, slide.button3Href],
-                  ] as const
-                ).map(([label, href], i) => (
-                  <div key={i} className="flex flex-wrap gap-3">
-                    <input
-                      type="text"
-                      name={`button${i + 1}Label`}
-                      placeholder={`Texto del botón ${i + 1}`}
-                      defaultValue={label ?? ""}
-                      className={`${fieldClasses} w-48`}
-                    />
-                    <input
-                      type="text"
-                      name={`button${i + 1}Href`}
-                      placeholder="/tienda o https://..."
-                      defaultValue={href ?? ""}
-                      className={`${fieldClasses} min-w-[200px] flex-1`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            {slideFields({
+              imageExisting: slide.imageUrl,
+              imageRequired: false,
+              defaults: {
+                promoText: slide.promoText,
+                eyebrow: slide.eyebrow,
+                title: slide.title,
+                subtitle: slide.subtitle,
+                buttons: [
+                  [slide.button1Label, slide.button1Href],
+                  [slide.button2Label, slide.button2Href],
+                  [slide.button3Label, slide.button3Href],
+                ],
+              },
+            })}
 
             <div className="mt-5 flex gap-3 border-t border-black/5 pt-4">
               <SaveButton trackDirty />
@@ -489,52 +546,9 @@ export default async function AdminConfiguracionPage() {
 
       {canAddSlide ? (
         <form action={createHeroSlide} className="rounded-xl border border-dashed border-black/20 bg-white p-5">
-          <p className="mb-3 font-semibold text-brand-ink">Nuevo slide</p>
+          <p className="mb-4 text-base font-semibold text-brand-ink">Nuevo slide</p>
 
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="w-56">
-              <label className={labelClasses}>Imagen</label>
-              <input type="file" name="image" accept="image/*" className={fieldClasses} />
-            </div>
-            <div className="w-56">
-              <label className={labelClasses}>Texto del círculo (opcional, hasta 2 líneas)</label>
-              <textarea name="promoText" rows={2} className={fieldClasses} />
-            </div>
-            <div className="w-56">
-              <label className={labelClasses}>Texto chico (eyebrow)</label>
-              <input type="text" name="eyebrow" required placeholder="ModaShop" className={fieldClasses} />
-            </div>
-            <div className="w-56">
-              <label className={labelClasses}>Título (hasta 2 líneas)</label>
-              <textarea name="title" rows={2} required placeholder={"Brillá\ncon estilo"} className={fieldClasses} />
-            </div>
-            <div className="min-w-[220px] flex-1">
-              <label className={labelClasses}>Subtítulo</label>
-              <input type="text" name="subtitle" className={fieldClasses} />
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <p className={labelClasses}>Botones (opcional)</p>
-            <div className="flex flex-col gap-2">
-              {[1, 2, 3].map((n) => (
-                <div key={n} className="flex flex-wrap gap-3">
-                  <input
-                    type="text"
-                    name={`button${n}Label`}
-                    placeholder={`Texto del botón ${n}`}
-                    className={`${fieldClasses} w-48`}
-                  />
-                  <input
-                    type="text"
-                    name={`button${n}Href`}
-                    placeholder="/tienda o https://..."
-                    className={`${fieldClasses} min-w-[200px] flex-1`}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+          {slideFields({ imageRequired: true })}
 
           <div className="mt-5 flex items-center gap-4 border-t border-black/5 pt-4">
             <div className="flex items-center gap-2">
