@@ -6,7 +6,7 @@
 
 const SCRIPT_URL = "https://ventasonline.payway.com.ar/static/v2.6.4/decidir.js";
 const SANDBOX_API_URL = "https://developers.decidir.com/api/v2";
-const PRODUCTION_API_URL = "https://live.decidir.com/api/v2";
+const PRODUCTION_API_URL = "https://ventasonline.payway.com.ar/api/v2";
 
 type DecidirInstance = {
   setPublishableKey: (key: string) => void;

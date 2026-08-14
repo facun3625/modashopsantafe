@@ -128,6 +128,11 @@ export async function POST(req: Request) {
     });
 
     if (!charge.ok) {
+      // charge.error es siempre un mensaje genérico y seguro para el cliente.
+      // El motivo técnico real (charge.detail) solo va al log — mostrar el
+      // motivo específico de un rechazo le sirve a un atacante para probar
+      // tarjetas robadas una por una hasta encontrar cuál pasa.
+      console.error("Payway payment declined/error:", charge.detail);
       return NextResponse.json({ error: charge.error }, { status: 402 });
     }
 
