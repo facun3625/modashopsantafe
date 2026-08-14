@@ -5,6 +5,7 @@ import type { SalesOrder } from "@/lib/sales";
 import type { OrderStatus } from "@/generated/prisma/enums";
 import { orderStatusLabel, paymentMethodLabel, ORDER_STATUS_STYLES } from "@/lib/orderLabels";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { EyeIcon } from "@/components/icons";
 import { changeOrderStatus, deleteOrder } from "./actions";
 
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "webp", "gif", "avif"];
@@ -107,10 +108,9 @@ export function SalesTable({ orders }: { orders: SalesOrder[] }) {
                           openReceipt(o.transferProofUrl!);
                         }}
                         title={kind === "image" ? "Ver comprobante (imagen)" : "Abrir comprobante (PDF)"}
-                        className="ml-1.5 inline-flex cursor-pointer items-center gap-1 rounded-full border border-brand-pink/30 bg-brand-soft px-2 py-1 align-middle text-xs font-semibold text-brand-pink-dark shadow-sm transition-colors hover:border-brand-pink hover:bg-brand-pink hover:text-white"
+                        className="ml-2 inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full bg-brand-pink text-white shadow-sm transition-colors hover:bg-brand-pink-dark align-middle"
                       >
-                        <span aria-hidden>📎</span>
-                        Ver
+                        <EyeIcon className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </td>
