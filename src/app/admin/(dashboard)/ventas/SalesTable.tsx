@@ -47,6 +47,7 @@ function OrderStatusSelect({ orderId, status }: { orderId: string; status: Order
       {STATUSES.map((s) => (
         <option key={s} value={s}>
           {orderStatusLabel(s)}
+          {s === "delivered" ? " (se pone solo al despachar en Odoo)" : ""}
         </option>
       ))}
     </select>
@@ -100,12 +101,13 @@ export function SalesTable({ orders }: { orders: SalesOrder[] }) {
                     {paymentMethodLabel(o.paymentMethod)}
                     {kind && o.transferProofUrl && (
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           openReceipt(o.transferProofUrl!);
                         }}
-                        title="Ver comprobante"
-                        className="ml-1.5 cursor-pointer align-middle text-brand-pink-dark hover:text-brand-pink"
+                        title={kind === "image" ? "Ver comprobante (imagen)" : "Abrir comprobante (PDF)"}
+                        className="ml-1 inline-flex cursor-pointer items-center rounded-full p-1.5 align-middle text-brand-pink-dark hover:bg-brand-soft hover:text-brand-pink"
                       >
                         📎
                       </button>
