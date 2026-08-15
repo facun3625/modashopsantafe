@@ -427,6 +427,10 @@ model Order {
   // se crea el pedido (cobro síncrono), a diferencia de transferencia.
   paywayPaymentId Int?
 
+  // Ídem para Mercado Pago (solo paymentMethod = mercadopago) — mismo
+  // patrón: cobro síncrono, tarjeta únicamente (nunca efectivo).
+  mercadopagoPaymentId Int?
+
   // Momento en que se acreditaron los puntos de este pedido (ver
   // lib/points.ts) — null hasta que Odoo marca el picking como entregado
   // ("done"). Solo aplica a pedidos con userId (invitados no ganan puntos).

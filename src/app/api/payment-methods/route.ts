@@ -23,6 +23,7 @@ export async function GET() {
       bankHolderName: true,
       paywayPublicKey: true,
       paywaySandbox: true,
+      mpPublicKey: true,
     },
   });
 

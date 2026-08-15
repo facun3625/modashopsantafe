@@ -10,7 +10,7 @@ import { CardAccordion } from "@/components/admin/CardAccordion";
 import { savePaymentMethodConfig } from "./actions";
 
 const METHOD_DESCRIPTIONS: Record<string, string> = {
-  mercadopago: "Pago online con tarjeta, dinero en cuenta, etc. vía Mercado Pago.",
+  mercadopago: "Pago con tarjeta directo en el checkout vía Mercado Pago. Se cobra y confirma al toque — no incluye efectivo.",
   transferencia: "El cliente transfiere y adjunta el comprobante al finalizar la compra.",
   contra_entrega: "El cliente paga en efectivo al recibir el pedido.",
   payway: "Pago con tarjeta directo en el checkout (gateway Payway). Se cobra y confirma al toque.",
