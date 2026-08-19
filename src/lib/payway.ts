@@ -24,24 +24,29 @@ export function getPaywayBaseUrl(sandbox: boolean): string {
 // medios de pago. Se lo pedimos al cliente con un select en vez de
 // adivinarlo por los primeros dígitos, para no enrutar mal un cobro.
 //
-// ⚠️ Estos IDs son de la tabla PÚBLICA de Decidir y NO son necesariamente
-// universales — cada cuenta de Payway puede tener sus propios códigos por
-// marca (confirmado: otra integración con distinta cuenta necesitó 104 para
-// Mastercard, no 15). De esta lista, solo Visa=1 está verificado contra la
-// cuenta real de ModaShop (pagó de punta a punta hasta el banco en sandbox).
-// Antes de aceptar Mastercard/Cabal/etc. en producción, conviene confirmar
-// los códigos reales de esta cuenta con soporte@payway.com.ar o probando
-// cada uno en sandbox.
+// Estos IDs son ESPECÍFICOS de la cuenta de ModaShop, no la tabla genérica
+// pública de Decidir (esa cambia por cuenta — la propia guía de Payway lo
+// advierte). Verificados el 2026-08-19 en dos pasos, contra el sandbox real:
+//   1. GET /payment-methods/all con la public key: expone el catálogo
+//      completo de Decidir, donde las variantes con sufijo "Payway" (ej.
+//      "104 MasterCard Payway") son las que corresponden a cuentas Payway
+//      (vs. "118 MasterCard Fiserv", de otro procesador).
+//   2. Confirmado con pagos de prueba reales (POST /payments) probando cada
+//      ID candidato: los que aparecen abajo pasan la validación de
+//      payment_method_id (avanzan a la siguiente etapa); Amex (65/6/111),
+//      Tarjeta Naranja (24), Argencard (30) y Diners (8) devuelven
+//      "invalid_param: payment_method_id" — no están habilitados en esta
+//      cuenta, así que no se ofrecen como opción (romperían el pago para
+//      cualquiera que los elija).
+// Los IDs viejos (15 Mastercard, 66 MC Debit, 27 Cabal) eran los genéricos
+// de la tabla pública — daban ese mismo error para esta cuenta.
 export const PAYWAY_CARD_BRANDS = [
   { id: 1, label: "Visa crédito" },
   { id: 31, label: "Visa débito" },
-  { id: 15, label: "Mastercard crédito" },
-  { id: 66, label: "Mastercard débito" },
-  { id: 65, label: "American Express" },
-  { id: 27, label: "Cabal" },
-  { id: 24, label: "Tarjeta Naranja" },
-  { id: 30, label: "Argencard" },
-  { id: 8, label: "Diners" },
+  { id: 104, label: "Mastercard crédito" },
+  { id: 105, label: "Mastercard débito" },
+  { id: 63, label: "Cabal crédito" },
+  { id: 108, label: "Cabal débito" },
 ] as const;
 
 // `error` es SIEMPRE un mensaje genérico, seguro para mostrarle al cliente.
@@ -168,15 +173,23 @@ export async function createPaywayPayment(args: CreatePaywayPaymentArgs): Promis
       purchase_totals: { currency: "ARS", amount: amountCents },
       retail_transaction_data: {
         ship_to: billToBlock,
-        items: args.items.map((item, i) => ({
-          code: String(i + 1),
-          description: item.name.slice(0, 60),
-          name: item.name.slice(0, 60),
-          sku: item.sku || String(i + 1),
-          total_amount: Math.round(item.unitPrice * item.quantity * 100),
-          quantity: item.quantity,
-          unit_price: Math.round(item.unitPrice * 100),
-        })),
+        items: args.items.map((item, i) => {
+          // Cybersource exige total_amount === unit_price × quantity exacto
+          // — si cada uno se redondea por separado (peso con centavos
+          // fraccionarios × cantidad), pueden quedar desincronizados por un
+          // centavo y el pago se rechaza. Se redondea una sola vez y se
+          // deriva el total desde ahí, nunca al revés.
+          const unitPriceCents = Math.round(item.unitPrice * 100);
+          return {
+            code: String(i + 1),
+            description: item.name.slice(0, 60),
+            name: item.name.slice(0, 60),
+            sku: item.sku || String(i + 1),
+            total_amount: unitPriceCents * item.quantity,
+            quantity: item.quantity,
+            unit_price: unitPriceCents,
+          };
+        }),
       },
     },
   };
