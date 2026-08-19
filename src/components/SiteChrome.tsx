@@ -20,6 +20,12 @@ export function SiteChrome({
 }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin");
+  // En /carrito el botón fijo de WhatsApp queda tapando controles del
+  // checkout en mobile (el botón "Confirmar pedido", el CVV de la tarjeta,
+  // el resumen con el total) — cualquier contenido que coincida con esa
+  // esquina al scrollear se ve tapado, porque el botón es fixed. Ahí el CTA
+  // de la propia página tiene prioridad.
+  const isCart = pathname?.startsWith("/carrito");
 
   if (isAdmin) {
     // El dashboard admin maneja su propio scroll interno (sidebar fijo +
@@ -44,7 +50,7 @@ export function SiteChrome({
       <Navbar settings={settings} />
       <div className="flex-1">{children}</div>
       <Footer settings={settings} />
-      <WhatsAppButton phone={settings.whatsappNumber} />
+      {!isCart && <WhatsAppButton phone={settings.whatsappNumber} />}
     </>
   );
 }

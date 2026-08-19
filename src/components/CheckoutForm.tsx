@@ -609,7 +609,7 @@ export function CheckoutForm() {
                         className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
                       />
                     </div>
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Mes venc.</label>
                         <input
