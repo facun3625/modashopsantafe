@@ -209,6 +209,16 @@ export default async function AdminProductosPage({
                   >
                     {p.qty_available}
                   </span>
+                  {p.reserved > 0 && (
+                    <span
+                      className="ml-2 text-xs text-brand-muted"
+                      title="Reservado por pedidos web todavía sin despachar — no se puede vender de nuevo hasta que se entreguen o cancelen."
+                    >
+                      {p.reserved >= p.qty_available
+                        ? "· sin disponible (reservado por pedido web)"
+                        : `· ${p.reserved} reservado`}
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}

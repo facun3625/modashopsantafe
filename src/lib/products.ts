@@ -81,6 +81,8 @@ async function applyReservations(products: OdooProductListItem[]): Promise<OdooP
 // el admin necesita ver todo el catálogo tal cual está en Odoo.
 const ADMIN_SORT_FIELDS = { name: "name", price: "list_price", stock: "qty_available" } as const;
 
+export type AdminProductListItem = OdooProductListItem & { reserved: number };
+
 export async function getAdminProductsPage(opts: {
   query?: string;
   categoryId?: number;
@@ -92,7 +94,7 @@ export async function getAdminProductsPage(opts: {
   dir?: "asc" | "desc";
   limit: number;
   offset: number;
-}): Promise<{ products: OdooProductListItem[]; total: number }> {
+}): Promise<{ products: AdminProductListItem[]; total: number }> {
   const domain: unknown[] = [];
   if (opts.query) {
     domain.push(["name", "ilike", opts.query]);
@@ -125,7 +127,8 @@ export async function getAdminProductsPage(opts: {
       order: "name asc",
     });
     all.sort((a, b) => (dir === "asc" ? a.qty_available - b.qty_available : b.qty_available - a.qty_available));
-    return { products: all.slice(opts.offset, opts.offset + opts.limit), total: all.length };
+    const page = all.slice(opts.offset, opts.offset + opts.limit);
+    return { products: await withReserved(page), total: all.length };
   }
 
   const sortField = ADMIN_SORT_FIELDS[opts.sort ?? "name"];
@@ -141,7 +144,18 @@ export async function getAdminProductsPage(opts: {
     executeKw<number>("product.template", "search_count", [domain]),
   ]);
 
-  return { products, total };
+  return { products: await withReserved(products), total };
+}
+
+// El admin ve el stock físico real de Odoo (source of truth para reponer),
+// pero eso solo confundía cuando un pedido web todavía sin despachar deja la
+// tienda pública en "Sin stock" mientras acá se seguía viendo el número
+// físico intacto, sin ninguna pista de por qué. Se suma cuánto de ese stock
+// ya está reservado, para mostrarlo al lado sin cambiar qué número es "la
+// verdad" del inventario.
+async function withReserved(products: OdooProductListItem[]): Promise<AdminProductListItem[]> {
+  const reserved = await getReservedQuantities(products.map((p) => p.id));
+  return products.map((p) => ({ ...p, reserved: reserved.get(p.id) ?? 0 }));
 }
 
 // Cuenta productos por categoría con solo 2 llamadas a Odoo: trae el conteo
