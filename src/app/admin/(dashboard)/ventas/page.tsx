@@ -12,7 +12,7 @@ const VALID_PAYMENTS: PaymentMethod[] = ["mercadopago", "transferencia", "contra
 export default async function AdminVentasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; payment?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; payment?: string; status?: string; productId?: string }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
@@ -23,6 +23,7 @@ export default async function AdminVentasPage({
   const status = VALID_STATUSES.includes(params.status as OrderStatus)
     ? (params.status as OrderStatus)
     : undefined;
+  const productId = params.productId ? Number(params.productId) : undefined;
 
   const { orders, total } = await getSalesPage({
     limit: PAGE_SIZE,
@@ -30,9 +31,10 @@ export default async function AdminVentasPage({
     q,
     paymentMethod,
     status,
+    productId,
   });
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const filtered = Boolean(q || paymentMethod || status);
+  const filtered = Boolean(q || paymentMethod || status || productId);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -41,6 +43,14 @@ export default async function AdminVentasPage({
         <p className="mt-1 text-sm text-brand-muted">
           {filtered ? `${total} pedidos encontrados` : `${total} pedidos hechos desde la tienda online.`}
         </p>
+        {productId && (
+          <p className="mt-1 text-sm text-brand-muted">
+            Mostrando solo pedidos que incluyen este producto (así ves cuál está reteniendo el stock).{" "}
+            <a href="/admin/ventas" className="font-medium text-brand-pink-dark hover:underline">
+              Quitar filtro
+            </a>
+          </p>
+        )}
         <SalesFilters />
       </div>
 
@@ -50,7 +60,7 @@ export default async function AdminVentasPage({
         <Pagination
           basePath="/admin/ventas"
           query={q}
-          extraParams={{ payment: paymentMethod, status }}
+          extraParams={{ payment: paymentMethod, status, productId: params.productId }}
           currentPage={page}
           totalPages={totalPages}
         />

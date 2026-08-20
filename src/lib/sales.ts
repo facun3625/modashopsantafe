@@ -11,10 +11,12 @@ export async function getSalesPage(opts: {
   q?: string;
   paymentMethod?: PaymentMethod;
   status?: OrderStatus;
+  productId?: number;
 }) {
   const where: Prisma.OrderWhereInput = {
     ...(opts.paymentMethod ? { paymentMethod: opts.paymentMethod } : {}),
     ...(opts.status ? { status: opts.status } : {}),
+    ...(opts.productId ? { items: { some: { productId: opts.productId } } } : {}),
     ...(opts.q
       ? {
           OR: [
