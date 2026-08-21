@@ -7,9 +7,9 @@ export function AdminLogoutButton() {
   return (
     <button
       onClick={() => signOut({ callbackUrl: "/" })}
-      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+      className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
     >
-      <LogoutIcon className="h-4 w-4 shrink-0" />
+      <LogoutIcon className="h-3.5 w-3.5 shrink-0" />
       Cerrar sesión
     </button>
   );
