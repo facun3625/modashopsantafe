@@ -6,7 +6,6 @@ import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { resetOdooCache } from "@/lib/odoo";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { sendTelegram } from "@/lib/telegram";
 import { buildMailSender } from "@/lib/mailer";
@@ -164,30 +163,6 @@ export async function testMailSending(to: string, form: Record<string, string>):
     "<p>✅ Si ves este mail, el envío está funcionando bien.</p>"
   );
   return result.ok ? { ok: true } : { ok: false, error: result.error };
-}
-
-export async function updateOdooSettings(formData: FormData) {
-  await requireAdmin();
-
-  const apiKey = formData.get("odooApiKey") as string;
-
-  const data: Record<string, unknown> = {
-    odooUrl: (formData.get("odooUrl") as string)?.trim().replace(/\/$/, "") || null,
-    odooDb: (formData.get("odooDb") as string)?.trim() || null,
-    odooUser: (formData.get("odooUser") as string)?.trim() || null,
-  };
-  // Igual que la contraseña del SMTP: si la dejaron en blanco porque ya
-  // estaba cargada, no la pisamos.
-  if (apiKey) data.odooApiKey = apiKey;
-
-  await prisma.storeSettings.upsert({
-    where: { id: "global" },
-    create: { id: "global", ...data },
-    update: data,
-  });
-
-  resetOdooCache();
-  revalidatePath("/admin/configuracion");
 }
 
 export async function updateTelegramSettings(formData: FormData) {

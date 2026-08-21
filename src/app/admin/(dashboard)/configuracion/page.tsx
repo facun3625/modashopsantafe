@@ -15,7 +15,6 @@ import { DEFAULT_INTRO, DEFAULT_NOTES, DEFAULT_CLOSING } from "@/lib/orderEmails
 import {
   updateSiteSettings,
   updateMailSettings,
-  updateOdooSettings,
   updateTelegramSettings,
   updateOrderEmailSettings,
   updateMaintenanceMode,
@@ -148,62 +147,6 @@ export default async function AdminConfiguracionPage() {
         </form>
       </div>
     </div>
-  );
-
-  // --- Panel: Odoo ---
-  const odooPanel = (
-    <form action={updateOdooSettings} className="rounded-xl border border-black/10 bg-white p-5">
-      {!settings.odooUrl && (
-        <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-          Todavía no está conectado — el catálogo, stock y pedidos no van a funcionar hasta que cargues esto.
-        </p>
-      )}
-      <div className="flex flex-wrap gap-4">
-        <div className="min-w-[220px] flex-1">
-          <label className={labelClasses}>URL de Odoo</label>
-          <input
-            type="text"
-            name="odooUrl"
-            defaultValue={settings.odooUrl ?? ""}
-            placeholder="https://tufranquicia.odoo.com"
-            className={fieldClasses}
-          />
-        </div>
-        <div className="w-48">
-          <label className={labelClasses}>Base de datos</label>
-          <input
-            type="text"
-            name="odooDb"
-            defaultValue={settings.odooDb ?? ""}
-            placeholder="nombre-db"
-            className={fieldClasses}
-          />
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-4">
-        <div className="min-w-[220px] flex-1">
-          <label className={labelClasses}>Usuario</label>
-          <input
-            type="text"
-            name="odooUser"
-            defaultValue={settings.odooUser ?? ""}
-            placeholder="usuario@tufranquicia.com"
-            className={fieldClasses}
-          />
-        </div>
-        <MaskedCredentialField
-          name="odooApiKey"
-          label="API Key"
-          configured={Boolean(settings.odooApiKey)}
-          placeholder="Clave de API de Odoo"
-        />
-      </div>
-
-      <div className="mt-5 border-t border-black/5 pt-4">
-        <SaveButton trackDirty />
-      </div>
-    </form>
   );
 
   // --- Panel: Mailing (franquicia + proveedor + remitente) ---
@@ -602,7 +545,6 @@ export default async function AdminConfiguracionPage() {
       <SettingsTabs
         tabs={[
           { id: "general", label: "General", content: generalPanel },
-          { id: "odoo", label: "Odoo", content: odooPanel },
           { id: "mailing", label: "Mailing", content: mailingPanel },
           { id: "mail-compra", label: "Mail de compra", content: orderEmailPanel },
           { id: "telegram", label: "Telegram", content: telegramPanel },

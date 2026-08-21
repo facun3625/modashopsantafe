@@ -26,6 +26,9 @@ export function SiteChrome({
   // esquina al scrollear se ve tapado, porque el botón es fixed. Ahí el CTA
   // de la propia página tiene prioridad.
   const isCart = pathname?.startsWith("/carrito");
+  // Página de conexión a Odoo: aparte de /admin a propósito, pero misma
+  // idea — pantalla propia, sin navbar/footer/whatsapp del sitio público.
+  const isOdooApi = pathname === "/odoo_api";
 
   if (isAdmin) {
     // El dashboard admin maneja su propio scroll interno (sidebar fijo +
@@ -33,6 +36,10 @@ export function SiteChrome({
     // pantalla, si no el body entero crece con el contenido y el sidebar
     // (que sí es h-screen) se queda corto.
     return <div className="h-screen overflow-hidden">{children}</div>;
+  }
+
+  if (isOdooApi) {
+    return <>{children}</>;
   }
 
   // La pantalla de mantenimiento arma su propio encabezado mínimo (solo
