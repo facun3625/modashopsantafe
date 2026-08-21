@@ -29,6 +29,20 @@ export async function updateMaintenanceMode(formData: FormData) {
   revalidatePath("/admin/inicio");
 }
 
+export async function updateHideOutOfStock(formData: FormData) {
+  await requireAdmin();
+
+  await prisma.storeSettings.upsert({
+    where: { id: "global" },
+    create: { id: "global", hideOutOfStock: formData.get("hideOutOfStock") === "on" },
+    update: { hideOutOfStock: formData.get("hideOutOfStock") === "on" },
+  });
+
+  revalidatePath("/admin/configuracion");
+  revalidatePath("/tienda");
+  revalidatePath("/");
+}
+
 const MAX_HERO_SLIDES = 3;
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "hero");
 

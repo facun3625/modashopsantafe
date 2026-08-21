@@ -97,6 +97,13 @@ export default async function Home() {
       {/* Hero */}
       <section className="px-3 pt-6 sm:px-6 sm:pt-10">
         <div className="mx-auto max-w-6xl">
+          <Link
+            href="/tienda"
+            className="mb-3 flex items-center justify-center rounded-full bg-brand-pink px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-pink-dark sm:hidden"
+          >
+            Ir a la tienda
+          </Link>
+
           <HeroSlider slides={heroSlides} />
 
           {/* Marquee de promociones */}

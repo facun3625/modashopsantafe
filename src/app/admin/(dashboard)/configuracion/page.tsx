@@ -10,7 +10,7 @@ import { TelegramTestButton } from "./TelegramTestButton";
 import { MailProviderFields } from "./MailProviderFields";
 import { MailTestButton } from "./MailTestButton";
 import { SettingsTabs } from "./SettingsTabs";
-import { WrenchIcon } from "@/components/icons";
+import { WrenchIcon, PackageIcon } from "@/components/icons";
 import { DEFAULT_INTRO, DEFAULT_NOTES, DEFAULT_CLOSING } from "@/lib/orderEmails";
 import {
   updateSiteSettings,
@@ -19,6 +19,7 @@ import {
   updateTelegramSettings,
   updateOrderEmailSettings,
   updateMaintenanceMode,
+  updateHideOutOfStock,
   createHeroSlide,
   updateHeroSlide,
   deleteHeroSlide,
@@ -66,6 +67,28 @@ export default async function AdminConfiguracionPage() {
           </div>
           <div className="flex items-center gap-3">
             <ToggleSwitch name="maintenanceMode" defaultChecked={settings.maintenanceMode} />
+            <SaveButton trackDirty />
+          </div>
+        </div>
+      </form>
+
+      <form action={updateHideOutOfStock} className="rounded-xl border border-black/10 bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-muted">
+              <PackageIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-semibold text-brand-ink">Ocultar productos sin stock</p>
+              <p className="text-xs text-brand-muted">
+                {settings.hideOutOfStock
+                  ? "Los productos en 0 no aparecen en la tienda ni en el buscador."
+                  : "Los productos en 0 se muestran igual, con \"Sin stock\" y el aviso de reposición."}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <ToggleSwitch name="hideOutOfStock" defaultChecked={settings.hideOutOfStock} />
             <SaveButton trackDirty />
           </div>
         </div>

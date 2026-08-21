@@ -67,6 +67,14 @@ model StoreSettings {
   // admins entran igual, tanto al panel como al sitio público normal.
   maintenanceMode Boolean @default(false)
 
+  // Si está prendido, la tienda pública (grilla y buscador) no muestra
+  // productos con stock 0 en vez de mostrarlos con la etiqueta "Sin stock" +
+  // botón "Avisarme". Apagado por defecto porque el aviso de stock agotado
+  // es una función existente (recupera intención de compra) — esto le da al
+  // admin la opción de ocultarlos directamente si prefiere una vidriera más
+  // "limpia".
+  hideOutOfStock Boolean @default(false)
+
   // Conexión con la API externa de Odoo (ver lib/odoo.ts) — cada franquicia
   // tiene su propia instancia de Odoo, así que esto NO va en variables de
   // entorno: se carga desde Configuración en cada instalación. Vacío hasta

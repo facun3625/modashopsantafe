@@ -1,5 +1,6 @@
 import { executeKw } from "@/lib/odoo";
 import { getReservedQuantities } from "@/lib/reservations";
+import { getStoreSettingsRow } from "@/lib/settings";
 import type { OdooCategory, OdooProductListItem } from "@/types/odoo";
 
 const PRODUCT_LIST_FIELDS = ["name", "list_price", "qty_available", "image_128", "image_512", "categ_id"];
@@ -50,6 +51,17 @@ export async function getProductsPage(opts: {
   }
   if (opts.query) {
     domain.push(["name", "ilike", opts.query]);
+  }
+
+  // Filtro opcional del admin (Configuración → General): oculta del todo los
+  // productos en 0 en vez de mostrarlos con "Sin stock" + aviso de reposición.
+  // Se filtra por el stock físico de Odoo, no por el neto post-reserva (ver
+  // applyReservations) — el caso de "1 físico pero reservado por un pedido
+  // web" queda igual visible con "Sin stock", cubierto aparte por el aviso
+  // de reserva en /admin/productos.
+  const settings = await getStoreSettingsRow();
+  if (settings.hideOutOfStock) {
+    domain.push(["qty_available", ">", 0]);
   }
 
   const [products, total] = await Promise.all([
