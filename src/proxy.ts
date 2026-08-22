@@ -42,6 +42,14 @@ export default auth(async (req) => {
     return NextResponse.next();
   }
 
+  // El manual se comparte con franquicias potenciales como material de
+  // venta (ver src/app/manual/route.ts) — tiene que verse aunque el sitio
+  // esté en mantenimiento, si no el link queda inservible justo cuando más
+  // se necesita mandarlo.
+  if (pathname === "/manual") {
+    return NextResponse.next();
+  }
+
   // Alguien visitando /mantenimiento directo también lleva el encabezado
   // minimalista (ver comentario más abajo sobre por qué hace falta el header).
   if (pathname === "/mantenimiento") {
