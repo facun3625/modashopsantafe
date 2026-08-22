@@ -115,15 +115,17 @@ export function SalesTable({ orders }: { orders: SalesOrder[] }) {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <OrderStatusSelect orderId={o.id} status={o.status} />
-                    {(o.status === "pending" || o.status === "confirmed") && !o.odooPickingId && (
-                      <span
-                        className="ml-2 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700"
-                        title="No tiene picking en Odoo enganchado, así que el chequeo automático (cada 15 min) nunca lo va a poder marcar como entregado solo. Si esta venta ya se despachó, cambiá el estado a mano para liberar el stock que está reteniendo."
-                      >
-                        sin picking — revisar
-                      </span>
-                    )}
+                    <div className="flex flex-col items-start gap-1">
+                      <OrderStatusSelect orderId={o.id} status={o.status} />
+                      {(o.status === "pending" || o.status === "confirmed") && !o.odooPickingId && (
+                        <span
+                          className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700"
+                          title="No tiene picking en Odoo enganchado, así que el chequeo automático (cada 15 min) nunca lo va a poder marcar como entregado solo. Si esta venta ya se despachó, cambiá el estado a mano para liberar el stock que está reteniendo."
+                        >
+                          sin picking — revisar
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className="text-xs font-semibold text-brand-pink-dark">Ver →</span>

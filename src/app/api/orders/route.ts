@@ -44,12 +44,14 @@ function isDirectPaymentMethod(value: unknown): value is DirectPaymentMethod {
 }
 
 async function saveComprobante(file: File): Promise<string> {
-  const ext = path.extname(file.name) || "";
+  const ext = (path.extname(file.name) || "").toLowerCase();
   const filename = `${randomUUID()}${ext}`;
   await mkdir(UPLOAD_DIR, { recursive: true });
   const bytes = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(UPLOAD_DIR, filename), bytes);
-  return `/uploads/comprobantes/${filename}`;
+  // Servido por una ruta propia, no por /public estático — ver
+  // src/app/api/uploads/comprobantes/[filename]/route.ts para el porqué.
+  return `/api/uploads/comprobantes/${filename}`;
 }
 
 export async function POST(req: Request) {
