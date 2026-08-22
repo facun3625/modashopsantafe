@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { VisitTracker } from "@/components/VisitTracker";
 import type { SiteSettings } from "@/lib/settings";
 
 // El panel de administración tiene su propio layout (sidebar, header) y no
@@ -54,6 +55,7 @@ export function SiteChrome({
 
   return (
     <>
+      <VisitTracker />
       <Navbar settings={settings} />
       <div className="flex-1">{children}</div>
       <Footer settings={settings} />

@@ -376,6 +376,20 @@ model Coupon {
   updatedAt DateTime @updatedAt
 }
 
+// Una fila por carga de página del sitio público (nunca /admin). sessionId
+// es el mismo id anónimo persistente que ya usa el carrito (lib/cartSession),
+// reutilizado acá para poder contar "visitas" (sesiones distintas) además de
+// "vistas de página" (filas) sin inventar un segundo mecanismo de sesión.
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  sessionId String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+}
+
 // Foto del último estado de cada carrito, sincronizada sola en cada cambio
 // (agregar/sacar/cambiar cantidad) — no hay un "detector de abandono", es
 // simplemente el último snapshot conocido de ese sessionId. Se borra en

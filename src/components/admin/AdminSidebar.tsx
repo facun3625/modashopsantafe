@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PackageIcon, SalesIcon, UsersIcon, StoreIcon, UserIcon, CardIcon, TruckIcon, TagIcon, MailIcon, CartIcon, StarIcon, GearIcon, BellIcon, SendIcon, HomeIcon, ClipboardIcon, TrendUpIcon } from "@/components/icons";
+import { PackageIcon, SalesIcon, UsersIcon, StoreIcon, UserIcon, CardIcon, TruckIcon, TagIcon, MailIcon, CartIcon, StarIcon, GearIcon, BellIcon, SendIcon, HomeIcon, ClipboardIcon, TrendUpIcon, EyeIcon } from "@/components/icons";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 
 const LINKS = [
@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/admin/productos", label: "Productos", icon: PackageIcon },
   { href: "/admin/ventas", label: "Ventas", icon: SalesIcon },
   { href: "/admin/estadisticas", label: "Estadísticas", icon: TrendUpIcon },
+  { href: "/admin/visitas", label: "Visitas", icon: EyeIcon },
   { href: "/admin/carritos-abandonados", label: "Carritos abandonados", icon: CartIcon },
   { href: "/admin/lista-espera", label: "Lista de espera", icon: BellIcon },
   { href: "/admin/mailing", label: "Mailing", icon: SendIcon },
