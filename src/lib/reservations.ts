@@ -103,7 +103,12 @@ export async function createOrderWithStockGuard<T>(
     // pedidos que comparten productos. Namespace "order_stock" para no chocar
     // con otros advisory locks. Se sueltan solos al cerrar la transacción.
     for (const id of [...ids].sort((a, b) => a - b)) {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('order_stock'), ${id}::int4)`;
+      // $executeRaw en vez de $queryRaw: pg_advisory_xact_lock devuelve
+      // "void" en Postgres, y el driver adapter no puede deserializar esa
+      // columna en una consulta que espera filas — con $queryRaw esto
+      // rompía TODA creación de pedido (P2010 UnsupportedNativeDataType).
+      // $executeRaw no intenta parsear el resultado, solo lo ejecuta.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('order_stock'), ${id}::int4)`;
     }
 
     const reserved = await getReservedQuantities(ids, tx);
