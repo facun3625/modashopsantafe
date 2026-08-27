@@ -56,6 +56,12 @@ export async function createPickingForOrder(orderId: string): Promise<number | n
       location_dest_id: CUSTOMER_LOCATION_ID,
       partner_id: order.odooPartnerId,
       origin: `Web #${order.id.slice(0, 8)}`,
+      // location_id/location_dest_id explícitos en cada línea: antes se
+      // confiaba en que Odoo los completara solo a partir del picking_type_id
+      // (como pasaba históricamente), pero en producción empezó a fallar con
+      // NotNullViolation en stock_move.location_id — se ve que ya no los
+      // defaultea al crear las líneas junto con el picking en la misma
+      // llamada. No cuesta nada ponerlos explícitos.
       move_ids_without_package: resolvedItems.map((item) => [
         0,
         0,
@@ -63,6 +69,8 @@ export async function createPickingForOrder(orderId: string): Promise<number | n
           name: item.name,
           product_id: item.variantId,
           product_uom_qty: item.quantity,
+          location_id: SOURCE_LOCATION_ID,
+          location_dest_id: CUSTOMER_LOCATION_ID,
         },
       ]),
     },
