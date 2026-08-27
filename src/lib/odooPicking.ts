@@ -56,25 +56,31 @@ export async function createPickingForOrder(orderId: string): Promise<number | n
       location_dest_id: CUSTOMER_LOCATION_ID,
       partner_id: order.odooPartnerId,
       origin: `Web #${order.id.slice(0, 8)}`,
-      // location_id/location_dest_id explícitos en cada línea: antes se
-      // confiaba en que Odoo los completara solo a partir del picking_type_id
-      // (como pasaba históricamente), pero en producción empezó a fallar con
-      // NotNullViolation en stock_move.location_id — se ve que ya no los
-      // defaultea al crear las líneas junto con el picking en la misma
-      // llamada. No cuesta nada ponerlos explícitos.
-      move_ids_without_package: resolvedItems.map((item) => [
-        0,
-        0,
+    },
+  ]);
+
+  // Las líneas (stock.move) se crean en una llamada aparte, ya con el
+  // picking existente: pasar move_ids_without_package en el mismo create
+  // del picking (probado antes) tiraba NotNullViolation en location_id —
+  // el valor explícito que le pasábamos a cada línea se perdía, se ve que
+  // Odoo lo recalcula después a partir de picking_id y en ese momento
+  // todavía no estaba resuelto. Creándolas por separado, contra un
+  // picking_id ya persistido, location_id/location_dest_id se completan
+  // bien solos (related a picking_id) — igual los pasamos explícitos.
+  await Promise.all(
+    resolvedItems.map((item) =>
+      executeKw("stock.move", "create", [
         {
+          picking_id: pickingId,
           name: item.name,
           product_id: item.variantId,
           product_uom_qty: item.quantity,
           location_id: SOURCE_LOCATION_ID,
           location_dest_id: CUSTOMER_LOCATION_ID,
         },
-      ]),
-    },
-  ]);
+      ])
+    )
+  );
 
   await executeKw("stock.picking", "action_confirm", [[pickingId]]);
   await executeKw("stock.picking", "action_assign", [[pickingId]]);
