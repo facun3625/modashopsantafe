@@ -51,7 +51,9 @@ async function saveHeroImage(file: File): Promise<string> {
   await mkdir(UPLOAD_DIR, { recursive: true });
   const bytes = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(UPLOAD_DIR, filename), bytes);
-  return `/uploads/hero/${filename}`;
+  // Servido por una ruta propia, no por /public estático — ver
+  // src/app/api/uploads/hero/[filename]/route.ts para el porqué.
+  return `/api/uploads/hero/${filename}`;
 }
 
 // Acepta "modashopsantafe", "@modashopsantafe" o el link completo
