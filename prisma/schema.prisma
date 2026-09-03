@@ -190,10 +190,6 @@ model HeroSlide {
   enabled  Boolean @default(true)
 
   imageUrl  String?
-  // La imagen se guarda en PostgreSQL: el filesystem del proceso no es un
-  // almacenamiento persistente entre releases/deploys.
-  imageData Bytes?
-  imageMime String?
   promoText String? // texto del círculo/badge, ej. "Nueva\nColección"
   eyebrow   String
   title     String
