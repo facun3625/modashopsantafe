@@ -7,6 +7,7 @@ import { ProductCarousel } from "@/components/ProductCarousel";
 import { CategoryCarousel } from "@/components/CategoryCarousel";
 import { NewsletterBanner } from "@/components/NewsletterBanner";
 import { HeroSlider, type HeroSlide } from "@/components/HeroSlider";
+import { heroImageUrl } from "@/lib/heroImages";
 import type { OdooProductListItem } from "@/types/odoo";
 
 // Elegidas a mano por ahora. Cuando exista el panel de administración,
@@ -63,7 +64,7 @@ export default async function Home() {
   const heroSlides: HeroSlide[] =
     slidesFromDb.length > 0
       ? slidesFromDb.map((s) => ({
-          image: s.imageUrl ?? "/hero-bg.jpg",
+          image: heroImageUrl(s) ?? "/hero-bg.jpg",
           eyebrow: s.eyebrow,
           title: s.title,
           subtitle: s.subtitle,

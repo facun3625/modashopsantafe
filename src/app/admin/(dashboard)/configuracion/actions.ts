@@ -1,8 +1,5 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -43,15 +40,14 @@ export async function updateHideOutOfStock(formData: FormData) {
 }
 
 const MAX_HERO_SLIDES = 3;
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "hero");
+const MAX_HERO_IMAGE_BYTES = 8 * 1024 * 1024;
+const ALLOWED_HERO_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 
-async function saveHeroImage(file: File): Promise<string> {
-  const ext = path.extname(file.name) || "";
-  const filename = `${randomUUID()}${ext}`;
-  await mkdir(UPLOAD_DIR, { recursive: true });
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(UPLOAD_DIR, filename), bytes);
-  return `/uploads/hero/${filename}`;
+async function readHeroImage(file: File) {
+  if (!ALLOWED_HERO_IMAGE_TYPES.has(file.type)) throw new Error("Formato de imagen no permitido.");
+  if (file.size > MAX_HERO_IMAGE_BYTES) throw new Error("La imagen no puede superar los 8 MB.");
+
+  return { imageData: Buffer.from(await file.arrayBuffer()), imageMime: file.type };
 }
 
 // Acepta "modashopsantafe", "@modashopsantafe" o el link completo
@@ -261,9 +257,10 @@ export async function createHeroSlide(formData: FormData) {
   if (!fields.eyebrow || !fields.title) return;
 
   const image = formData.get("image");
-  const imageUrl = image instanceof File && image.size > 0 ? await saveHeroImage(image) : null;
+  if (!(image instanceof File) || image.size === 0) return;
+  const storedImage = await readHeroImage(image);
 
-  await prisma.heroSlide.create({ data: { ...fields, imageUrl, position: count } });
+  await prisma.heroSlide.create({ data: { ...fields, ...storedImage, imageUrl: null, position: count } });
   revalidatePath("/admin/configuracion");
   revalidatePath("/");
 }
@@ -276,11 +273,11 @@ export async function updateHeroSlide(formData: FormData) {
   if (!id || !fields.eyebrow || !fields.title) return;
 
   const image = formData.get("image");
-  const imageUrl = image instanceof File && image.size > 0 ? await saveHeroImage(image) : undefined;
+  const storedImage = image instanceof File && image.size > 0 ? await readHeroImage(image) : null;
 
   await prisma.heroSlide.update({
     where: { id },
-    data: { ...fields, ...(imageUrl ? { imageUrl } : {}) },
+    data: { ...fields, ...(storedImage ? { ...storedImage, imageUrl: null } : {}) },
   });
   revalidatePath("/admin/configuracion");
   revalidatePath("/");

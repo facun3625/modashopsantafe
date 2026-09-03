@@ -12,6 +12,7 @@ import { MailTestButton } from "./MailTestButton";
 import { SettingsTabs } from "./SettingsTabs";
 import { WrenchIcon, PackageIcon } from "@/components/icons";
 import { DEFAULT_INTRO, DEFAULT_NOTES, DEFAULT_CLOSING } from "@/lib/orderEmails";
+import { heroImageUrl } from "@/lib/heroImages";
 import {
   updateSiteSettings,
   updateMailSettings,
@@ -443,8 +444,10 @@ export default async function AdminConfiguracionPage() {
         Hasta {MAX_HERO_SLIDES} slides para el carrusel del home. Tenés {slides.length}.
       </p>
 
-      {slides.map((slide) => (
-        <form
+      {slides.map((slide) => {
+        const imageUrl = heroImageUrl(slide);
+        return (
+          <form
           key={slide.id}
           action={updateHeroSlide}
           className={`rounded-xl border bg-white p-5 transition-colors ${
@@ -455,9 +458,9 @@ export default async function AdminConfiguracionPage() {
           <CardAccordion
             titleArea={
               <div className="flex min-w-0 flex-1 items-center gap-3">
-                {slide.imageUrl && (
+                {imageUrl && (
                   <Image
-                    src={slide.imageUrl}
+                    src={imageUrl}
                     alt=""
                     width={56}
                     height={56}
@@ -478,7 +481,7 @@ export default async function AdminConfiguracionPage() {
             </div>
 
             {slideFields({
-              imageExisting: slide.imageUrl,
+              imageExisting: imageUrl,
               imageRequired: false,
               defaults: {
                 promoText: slide.promoText,
@@ -504,8 +507,9 @@ export default async function AdminConfiguracionPage() {
               </button>
             </div>
           </CardAccordion>
-        </form>
-      ))}
+          </form>
+        );
+      })}
 
       {slides.length === 0 && (
         <p className="rounded-xl border border-dashed border-black/15 bg-white p-5 text-center text-sm text-brand-muted">
