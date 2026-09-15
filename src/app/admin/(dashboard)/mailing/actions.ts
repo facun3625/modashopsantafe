@@ -75,7 +75,7 @@ export async function createCampaign(formData: FormData) {
 
   if (emails.length > 0) {
     const html = buildMailHtml({
-      logoUrl: `${process.env.NEXTAUTH_URL}/logo.png`,
+      logoUrl: `${process.env.NEXTAUTH_URL}/logo2.png`,
       franchiseName: settings?.franchiseName || "ModaShop",
       franchiseLocation: settings?.franchiseLocation,
       subject,

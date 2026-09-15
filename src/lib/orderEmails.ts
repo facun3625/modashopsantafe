@@ -87,7 +87,7 @@ export async function sendOrderConfirmation(order: OrderConfirmationEmail): Prom
   paragraphs.push(closing);
 
   const html = buildMailHtml({
-    logoUrl: `${process.env.NEXTAUTH_URL ?? ""}/logo.png`,
+    logoUrl: `${process.env.NEXTAUTH_URL ?? ""}/logo2.png`,
     franchiseName: settings.franchiseName || "ModaShop",
     franchiseLocation: settings.franchiseLocation,
     subject: `Recibimos tu pedido #${shortId}`,

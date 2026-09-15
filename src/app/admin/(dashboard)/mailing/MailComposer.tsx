@@ -48,7 +48,7 @@ export function MailComposer({
 
   const previewHtml = useMemo(() => {
     return buildMailHtml({
-      logoUrl: `${origin}/logo.png`,
+      logoUrl: `${origin}/logo2.png`,
       franchiseName: franchiseName || "ModaShop",
       franchiseLocation,
       subject: subject || "Asunto del mail",

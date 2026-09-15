@@ -12,7 +12,7 @@ export function Footer({ settings }: { settings: SiteSettings }) {
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-14 sm:grid-cols-3">
         <div>
           <div className="inline-block rounded-lg bg-white px-2 py-1.5">
-            <Image src="/logo.png" alt="ModaShop" width={300} height={120} className="h-8 w-auto" />
+            <Image src="/logo2.png" alt="ModaShop" width={300} height={120} className="h-8 w-auto" />
           </div>
           <p className="mt-4 max-w-xs text-sm text-white/60">
             Accesorios de moda, bijouterie y mucho más. Todo lo que buscás, en un solo lugar.

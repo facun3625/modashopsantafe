@@ -141,7 +141,7 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
           </button>
 
           <Link href="/" className="shrink-0">
-            <Image src="/logo.png" alt="ModaShop" width={300} height={120} priority className="h-14 w-auto sm:h-16" />
+            <Image src="/logo2.png" alt="ModaShop" width={300} height={120} priority className="h-14 w-auto sm:h-16" />
           </Link>
 
           <nav className="hidden flex-1 items-center justify-center gap-8 lg:flex">

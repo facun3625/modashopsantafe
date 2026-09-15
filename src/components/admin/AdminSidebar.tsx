@@ -31,7 +31,7 @@ export function AdminSidebar({ userLabel }: { userLabel: string }) {
   return (
     <aside className="flex w-56 shrink-0 flex-col bg-brand-ink px-3 py-3">
       <div className="mb-2.5 flex shrink-0 justify-center rounded-lg bg-white px-3 py-2">
-        <Image src="/logo.png" alt="ModaShop" width={300} height={120} className="h-8 w-auto" />
+        <Image src="/logo2.png" alt="ModaShop" width={300} height={120} className="h-8 w-auto" />
       </div>
 
       <nav className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto">

@@ -24,7 +24,7 @@ export default async function MantenimientoPage() {
       <div className="border-b border-black/5 px-3 py-4 sm:px-6">
         <div className="mx-auto flex max-w-6xl items-center justify-center">
           <Link href="/">
-            <Image src="/logo.png" alt="ModaShop" width={300} height={120} priority className="h-14 w-auto sm:h-16" />
+            <Image src="/logo2.png" alt="ModaShop" width={300} height={120} priority className="h-14 w-auto sm:h-16" />
           </Link>
         </div>
       </div>
