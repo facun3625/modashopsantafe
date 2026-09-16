@@ -63,8 +63,8 @@ export default async function AdminPagosPage() {
               headerRight={<PaymentEnabledToggle method={config.method} enabled={config.enabled} />}
             >
               <div className="flex flex-wrap items-end gap-4">
-                <div className="w-40">
-                  <label className={labelClasses}>Descuento por defecto (%)</label>
+                <div className="w-48">
+                  <label className={`${labelClasses} whitespace-nowrap`}>Descuento base (%)</label>
                   <input
                     type="number"
                     name="discountPct"
