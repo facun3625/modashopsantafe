@@ -34,7 +34,7 @@ export function AdminSidebar({ userLabel }: { userLabel: string }) {
         <Image src="/logo2.png" alt="ModaShop" width={300} height={120} className="h-8 w-auto" />
       </div>
 
-      <nav className="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto">
+      <nav className="scrollbar-thin-dark flex min-h-0 flex-1 flex-col gap-px overflow-y-auto">
         {LINKS.map((link) => {
           const active = pathname.startsWith(link.href);
           const Icon = link.icon;

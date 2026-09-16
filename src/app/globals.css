@@ -70,3 +70,44 @@ button:not(:disabled),
 [role="button"]:not(:disabled) {
   cursor: pointer;
 }
+
+/* Mac usa un scrollbar fino translúcido por defecto, pero Windows/Linux
+   muestran el clásico gris y grueso — se nota sobre todo en listas cortas
+   como el menú del admin. Esto lo afina en todos lados sin depender del SO. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brand-muted) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--color-brand-muted);
+  border-radius: 9999px;
+}
+
+/* Igual, pero pensado para superficies oscuras (ej. el sidebar del admin) —
+   el thumb gris de arriba casi no se distingue sobre bg-brand-ink. */
+.scrollbar-thin-dark {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.scrollbar-thin-dark::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin-dark::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin-dark::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+}
