@@ -90,6 +90,7 @@ model StoreSettings {
   instagramHandle String?
   whatsappPhone   String?
   address         String?
+  contactEmail    String?
 
   // Textos del marquee (la franja que se desplaza debajo del slider) — uno
   // por línea, se guardan como un único string separado por saltos de línea.

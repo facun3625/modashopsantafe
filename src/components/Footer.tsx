@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { WhatsAppIcon, InstagramIcon, MailIcon } from "@/components/icons";
-import { CONTACT_EMAIL } from "@/lib/contact";
 import type { SiteSettings } from "@/lib/settings";
 
 export function Footer({ settings }: { settings: SiteSettings }) {
@@ -50,8 +49,8 @@ export function Footer({ settings }: { settings: SiteSettings }) {
             </li>
             <li className="flex items-center gap-2">
               <MailIcon className="h-4 w-4 shrink-0" />
-              <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-brand-pink">
-                {CONTACT_EMAIL}
+              <a href={`mailto:${settings.contactEmail}`} className="hover:text-brand-pink">
+                {settings.contactEmail}
               </a>
             </li>
             <li className="flex items-center gap-2">

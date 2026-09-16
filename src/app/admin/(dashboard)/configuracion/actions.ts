@@ -73,6 +73,7 @@ export async function updateSiteSettings(formData: FormData) {
     instagramHandle: normalizeInstagramHandle((formData.get("instagramHandle") as string) ?? ""),
     whatsappPhone: (formData.get("whatsappPhone") as string) || null,
     address: (formData.get("address") as string) || null,
+    contactEmail: (formData.get("contactEmail") as string) || null,
     marqueeText: (formData.get("marqueeText") as string) || null,
   };
 

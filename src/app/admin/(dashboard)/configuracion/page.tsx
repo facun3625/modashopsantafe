@@ -127,6 +127,16 @@ export default async function AdminConfiguracionPage() {
                 className={fieldClasses}
               />
             </div>
+            <div className="w-64">
+              <label className={labelClasses}>Email de contacto</label>
+              <input
+                type="email"
+                name="contactEmail"
+                defaultValue={settings.contactEmail ?? ""}
+                placeholder="info@modashop.com.ar"
+                className={fieldClasses}
+              />
+            </div>
           </div>
 
           <div className="mt-4">
