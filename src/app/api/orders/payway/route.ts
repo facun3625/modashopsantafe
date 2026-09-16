@@ -5,6 +5,7 @@ import { checkStock } from "@/lib/products";
 import { createOrderWithStockGuard, InsufficientStockError } from "@/lib/reservations";
 import { getShippingMethodsForPayment } from "@/lib/shipping";
 import { validateCoupon, registerCouponUse } from "@/lib/coupons";
+import { calculatePaymentMethodDiscount } from "@/lib/paymentMethodDiscount";
 import { notifyNewOrder } from "@/lib/telegram";
 import { sendOrderConfirmation } from "@/lib/orderEmails";
 import { resolvePartnerId, type OrderCustomer } from "@/lib/orders";
@@ -63,7 +64,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const config = await prisma.paymentMethodConfig.findUnique({ where: { method: "payway" } });
+    const config = await prisma.paymentMethodConfig.findUnique({
+      where: { method: "payway" },
+      include: { categoryDiscounts: true },
+    });
     if (!config?.enabled) {
       return NextResponse.json({ error: "Ese método de pago no está disponible" }, { status: 400 });
     }
@@ -110,7 +114,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const total = Math.max(0, subtotal * (1 - config.discountPct / 100) - couponDiscount) + shipping.cost;
+    const paymentMethodDiscount = await calculatePaymentMethodDiscount(items, config);
+    const total = Math.max(0, subtotal - paymentMethodDiscount - couponDiscount) + shipping.cost;
 
     // Cobro síncrono contra Payway ANTES de crear el pedido.
     const charge = await createPaywayPayment({
@@ -211,7 +216,7 @@ export async function POST(req: Request) {
       customerName: customer.name,
       items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
       subtotal,
-      discountTotal: couponDiscount + (subtotal * config.discountPct) / 100,
+      discountTotal: couponDiscount + paymentMethodDiscount,
       shippingName: shipping.name,
       shippingCost: shipping.cost,
       total,

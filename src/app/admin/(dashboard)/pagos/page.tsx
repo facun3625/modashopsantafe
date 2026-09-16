@@ -1,5 +1,6 @@
 import { getPaymentMethodConfigs } from "@/lib/paymentSettings";
 import { getAllShippingMethods } from "@/lib/shipping";
+import { getAllCategories } from "@/lib/categories";
 import { paymentMethodLabel } from "@/lib/sales";
 import { PaymentEnabledToggle } from "@/components/admin/PaymentEnabledToggle";
 import { ToggleSwitch } from "@/components/admin/ToggleSwitch";
@@ -7,7 +8,11 @@ import { ChipCheckbox } from "@/components/admin/ChipCheckbox";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
 import { SaveButton } from "@/components/admin/SaveButton";
 import { CardAccordion } from "@/components/admin/CardAccordion";
-import { savePaymentMethodConfig } from "./actions";
+import {
+  savePaymentMethodConfig,
+  upsertPaymentMethodCategoryDiscount,
+  deletePaymentMethodCategoryDiscount,
+} from "./actions";
 
 const METHOD_DESCRIPTIONS: Record<string, string> = {
   mercadopago: "Pago con tarjeta directo en el checkout vía Mercado Pago. Se cobra y confirma al toque — no incluye efectivo.",
@@ -21,7 +26,12 @@ const fieldClasses =
 const labelClasses = "mb-1 block text-xs font-semibold text-brand-muted";
 
 export default async function AdminPagosPage() {
-  const [configs, shippingMethods] = await Promise.all([getPaymentMethodConfigs(), getAllShippingMethods()]);
+  const [configs, shippingMethods, categories] = await Promise.all([
+    getPaymentMethodConfigs(),
+    getAllShippingMethods(),
+    getAllCategories(),
+  ]);
+  const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto">
@@ -54,7 +64,7 @@ export default async function AdminPagosPage() {
             >
               <div className="flex flex-wrap items-end gap-4">
                 <div className="w-40">
-                  <label className={labelClasses}>Descuento (%)</label>
+                  <label className={labelClasses}>Descuento por defecto (%)</label>
                   <input
                     type="number"
                     name="discountPct"
@@ -149,6 +159,76 @@ export default async function AdminPagosPage() {
                   </>
                 )}
               </div>
+
+              {categories.length > 0 && (
+                <div className="mt-5 border-t border-black/5 pt-4">
+                  <p className="mb-2.5 text-xs font-semibold text-brand-muted">
+                    Excepciones por categoría{" "}
+                    <span className="font-normal normal-case text-brand-muted/70">
+                      (reemplazan el descuento por defecto para esa categoría y sus subcategorías)
+                    </span>
+                  </p>
+
+                  {config.categoryDiscounts.length > 0 && (
+                    <ul className="mb-3 flex flex-col gap-2">
+                      {config.categoryDiscounts.map((cd) => (
+                        <li
+                          key={cd.id}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-black/10 px-3 py-2 text-sm"
+                        >
+                          <span className="text-brand-ink">
+                            {categoryNameById.get(cd.categoryId) ?? `Categoría #${cd.categoryId}`}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-brand-pink-dark">{cd.discountPct}%</span>
+                            <button
+                              type="submit"
+                              formAction={deletePaymentMethodCategoryDiscount.bind(null, cd.id)}
+                              className="cursor-pointer text-xs font-semibold text-brand-muted transition-colors hover:text-red-700"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="w-56">
+                      <label className={labelClasses}>Categoría</label>
+                      <select name="newCategoryId" defaultValue="" className={`${fieldClasses} bg-white`}>
+                        <option value="" disabled>
+                          Elegir categoría
+                        </option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="w-28">
+                      <label className={labelClasses}>Descuento (%)</label>
+                      <input
+                        type="number"
+                        name="newCategoryDiscountPct"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        className={fieldClasses}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      formAction={upsertPaymentMethodCategoryDiscount.bind(null, config.id)}
+                      className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-semibold text-brand-ink transition-colors hover:border-brand-pink/40 hover:text-brand-pink-dark"
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {shippingMethods.length > 0 && (
                 <div className="mt-5 border-t border-black/5 pt-4">

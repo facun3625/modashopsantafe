@@ -59,6 +59,7 @@ export function CheckoutForm() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
+  const [methodDiscount, setMethodDiscount] = useState(0);
 
   // Payway: la tarjeta se tokeniza del lado del cliente (decidir.js), nunca
   // viaja el número real a nuestro server. formRef apunta al <form> entero:
@@ -151,10 +152,42 @@ export function CheckoutForm() {
     setCouponError(null);
   }, [selectedMethod]);
 
+  // El descuento por medio de pago puede variar por categoría (ver
+  // lib/paymentMethodDiscount.ts), así que no se puede calcular solo con el
+  // discountPct plano que ya trae /api/payment-methods — hace falta
+  // resolverlo en el server con la composición real del carrito.
+  const itemsKey = items.map((i) => `${i.productId}:${i.quantity}`).join(",");
+  useEffect(() => {
+    if (!selectedMethod || items.length === 0) {
+      setMethodDiscount(0);
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/payment-methods/discount-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        paymentMethod: selectedMethod,
+        items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price })),
+      }),
+    })
+      .then((res) => res.json())
+      .then((data: { discountAmount?: number }) => {
+        if (!cancelled) setMethodDiscount(data.discountAmount ?? 0);
+      })
+      .catch(() => {
+        if (!cancelled) setMethodDiscount(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMethod, itemsKey]);
+
   const selectedConfig = methods?.find((m) => m.method === selectedMethod);
   const selectedShipping = shippingMethods?.find((s) => s.id === selectedShippingId);
-  const discountedTotal = selectedConfig ? total * (1 - selectedConfig.discountPct / 100) : total;
-  const finalTotal = Math.max(0, discountedTotal - (appliedCoupon?.discountAmount ?? 0)) + (selectedShipping?.cost ?? 0);
+  const finalTotal =
+    Math.max(0, total - methodDiscount - (appliedCoupon?.discountAmount ?? 0)) + (selectedShipping?.cost ?? 0);
 
   async function handleApplyCoupon() {
     if (!couponCode.trim() || !selectedMethod) return;
@@ -789,6 +822,12 @@ export function CheckoutForm() {
         <h2 className="font-semibold text-brand-ink">Resumen</h2>
 
         <div className="flex flex-col gap-1">
+          {methodDiscount > 0 && selectedMethod && (
+            <div className="flex items-center justify-between text-sm text-green-700">
+              <p>Descuento ({METHOD_LABELS[selectedMethod]})</p>
+              <p>-${methodDiscount.toFixed(2)}</p>
+            </div>
+          )}
           {appliedCoupon && (
             <div className="flex items-center justify-between text-sm text-green-700">
               <p>Cupón ({appliedCoupon.code})</p>

@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { executeKw } from "@/lib/odoo";
-import { getAllCategories } from "@/lib/categories";
+import { resolveItemCategoryChains } from "@/lib/categories";
 
 type ValidateOpts = {
   subtotal: number;
@@ -14,25 +13,8 @@ type ValidateResult =
   | { ok: false; error: string };
 
 async function anyItemInCategory(items: { productId: number }[], categoryId: number): Promise<boolean> {
-  const products = await executeKw<{ id: number; categ_id: [number, string] | false }[]>(
-    "product.template",
-    "read",
-    [items.map((i) => i.productId)],
-    { fields: ["categ_id"] }
-  );
-  const categories = await getAllCategories();
-  const byId = new Map(categories.map((c) => [c.id, c]));
-
-  function chainIncludesTarget(startId: number): boolean {
-    let current = byId.get(startId);
-    while (current) {
-      if (current.id === categoryId) return true;
-      current = current.parent_id ? byId.get(current.parent_id[0]) : undefined;
-    }
-    return false;
-  }
-
-  return products.some((p) => p.categ_id && chainIncludesTarget(p.categ_id[0]));
+  const chains = await resolveItemCategoryChains(items);
+  return [...chains.values()].some((chain) => chain.includes(categoryId));
 }
 
 // Valida un código de cupón contra el carrito/medio de pago actual. No

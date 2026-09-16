@@ -303,7 +303,26 @@ model PaymentMethodConfig {
   // habilitado. Si tiene una o más, queda restringido a esos.
   allowedShipping PaymentMethodShipping[]
 
+  // Excepciones de descuento por categoría (ver PaymentMethodCategoryDiscount)
+  // — si un ítem no matchea ninguna, se le aplica el discountPct de arriba.
+  categoryDiscounts PaymentMethodCategoryDiscount[]
+
   updatedAt DateTime @updatedAt
+}
+
+// Excepción al discountPct plano de PaymentMethodConfig para una categoría
+// puntual (y sus subcategorías) — ej. "efectivo: 20% en Bijouterie, 10% en
+// el resto de la tienda". Si una categoría y alguna de sus categorías
+// ancestro tienen las dos una excepción cargada, gana la más específica (ver
+// lib/paymentMethodDiscount.ts).
+model PaymentMethodCategoryDiscount {
+  id                    String              @id @default(cuid())
+  paymentMethodConfigId String
+  paymentMethodConfig   PaymentMethodConfig @relation(fields: [paymentMethodConfigId], references: [id], onDelete: Cascade)
+  categoryId            Int // product.category id en Odoo
+  discountPct           Float
+
+  @@unique([paymentMethodConfigId, categoryId])
 }
 
 // Métodos de envío: totalmente a cargo del admin (crear/editar/deshabilitar),

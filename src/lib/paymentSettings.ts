@@ -28,7 +28,9 @@ async function ensurePaymentMethodConfigsSeeded() {
 
 export async function getPaymentMethodConfigs() {
   await ensurePaymentMethodConfigsSeeded();
-  const all = await prisma.paymentMethodConfig.findMany({ include: { allowedShipping: true } });
+  const all = await prisma.paymentMethodConfig.findMany({
+    include: { allowedShipping: true, categoryDiscounts: true },
+  });
   const byMethod = new Map(all.map((c) => [c.method, c]));
   return ALL_METHODS.map((m) => byMethod.get(m)!);
 }

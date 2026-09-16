@@ -96,3 +96,35 @@ export async function savePaymentMethodConfig(formData: FormData) {
 
   revalidatePath("/admin/pagos");
 }
+
+// Excepción de descuento para una categoría puntual dentro de un medio de
+// pago (ej. "efectivo: 20% en Bijouterie") — se guarda aparte del form
+// principal para no tener que resubmitir todo el resto de la configuración
+// cada vez que se agrega/edita una excepción.
+export async function upsertPaymentMethodCategoryDiscount(paymentMethodConfigId: string, formData: FormData) {
+  await requireAdmin();
+
+  const categoryId = Number(formData.get("newCategoryId"));
+  const discountPct = Math.max(0, Math.min(100, Number(formData.get("newCategoryDiscountPct")) || 0));
+  if (!categoryId) return;
+
+  await prisma.paymentMethodCategoryDiscount.upsert({
+    where: { paymentMethodConfigId_categoryId: { paymentMethodConfigId, categoryId } },
+    create: { paymentMethodConfigId, categoryId, discountPct },
+    update: { discountPct },
+  });
+
+  await logAdminAction("payment.category_discount.update", {
+    targetType: "payment",
+    targetId: paymentMethodConfigId,
+    detail: `Categoría ${categoryId} — ${discountPct}% desc.`,
+  });
+
+  revalidatePath("/admin/pagos");
+}
+
+export async function deletePaymentMethodCategoryDiscount(id: string) {
+  await requireAdmin();
+  await prisma.paymentMethodCategoryDiscount.delete({ where: { id } });
+  revalidatePath("/admin/pagos");
+}
