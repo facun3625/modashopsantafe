@@ -57,7 +57,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
             </p>
             <h1 className="mt-3 text-4xl font-extrabold uppercase leading-[0.95] sm:text-6xl">
               {titleLines.map((line, i) => (
-                <span key={i} className={`block ${i === 1 ? "text-brand-pink-dark" : "text-brand-ink"}`}>
+                <span key={i} className={`block ${i % 2 === 1 ? "text-brand-pink-dark" : "text-brand-ink"}`}>
                   {line}
                 </span>
               ))}
