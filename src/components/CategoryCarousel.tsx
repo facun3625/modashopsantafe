@@ -38,19 +38,29 @@ export function CategoryCarousel({
             <Link
               key={cat.id}
               href={`/categoria/${cat.id}`}
-              className="group w-[calc((100%-1rem)/2)] shrink-0 snap-start overflow-hidden rounded-xl border border-black/10 bg-white transition-shadow hover:shadow-md sm:w-[calc((100%-2rem)/3)] xl:w-[calc((100%-3rem)/4)]"
+              className="group relative w-[calc((100%-1rem)/2)] shrink-0 snap-start sm:w-[calc((100%-2rem)/3)] xl:w-[calc((100%-3rem)/4)]"
             >
-              {cat.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={`data:image/png;base64,${cat.image}`}
-                  alt={cat.name}
-                  className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
-                />
-              ) : (
-                <div className="aspect-square w-full bg-brand-soft" />
-              )}
-              <p className="p-3 text-center text-xs font-semibold text-brand-ink">{cat.name}</p>
+              <div className="overflow-hidden rounded-2xl">
+                {cat.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`data:image/png;base64,${cat.image}`}
+                    alt={cat.name}
+                    className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="aspect-square w-full bg-brand-soft" />
+                )}
+              </div>
+
+              <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2 rounded-full bg-white py-2 pl-4 pr-2 shadow-md">
+                <p className="truncate text-xs font-bold uppercase tracking-wide text-brand-ink">{cat.name}</p>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-pink/10 text-brand-pink-dark transition-colors group-hover:bg-brand-pink group-hover:text-white">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </span>
+              </div>
             </Link>
           ))}
         </div>
