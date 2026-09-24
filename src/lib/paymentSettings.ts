@@ -36,13 +36,3 @@ export async function getPaymentMethodConfigs() {
 }
 
 export { ensurePaymentMethodConfigsSeeded };
-
-// Versión liviana de getPaymentMethodConfigs para consumo público (ej. el
-// home) — evita traer credenciales/relaciones que ese contexto no necesita.
-export async function getCashDiscountPct(): Promise<number | null> {
-  const config = await prisma.paymentMethodConfig.findUnique({
-    where: { method: "contra_entrega" },
-    select: { enabled: true, discountPct: true },
-  });
-  return config?.enabled && config.discountPct > 0 ? config.discountPct : null;
-}

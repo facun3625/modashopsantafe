@@ -2,13 +2,11 @@ import Link from "next/link";
 import { getAllCategories } from "@/lib/categories";
 import { getProductsPage, getCategoryShowcaseImage } from "@/lib/products";
 import { getHeroSlides, getSiteSettings } from "@/lib/settings";
-import { getCashDiscountPct } from "@/lib/paymentSettings";
 import { MapPinIcon } from "@/components/icons";
 import { ProductCarousel } from "@/components/ProductCarousel";
 import { CategoryCarousel } from "@/components/CategoryCarousel";
 import { NewsletterBanner } from "@/components/NewsletterBanner";
 import { HeroSlider, type HeroSlide } from "@/components/HeroSlider";
-import { BenefitsStrip } from "@/components/BenefitsStrip";
 import type { OdooProductListItem } from "@/types/odoo";
 
 // Elegidas a mano por ahora. Cuando exista el panel de administración,
@@ -22,11 +20,7 @@ export default async function Home() {
   let carouselProducts: OdooProductListItem[] = [];
   let error: string | null = null;
 
-  const [slidesFromDb, settings, cashDiscountPct] = await Promise.all([
-    getHeroSlides(),
-    getSiteSettings(),
-    getCashDiscountPct(),
-  ]);
+  const [slidesFromDb, settings] = await Promise.all([getHeroSlides(), getSiteSettings()]);
 
   try {
     const categories = await getAllCategories();
@@ -129,12 +123,6 @@ export default async function Home() {
                 ))}
             </div>
           </div>
-
-          <BenefitsStrip
-            cashDiscountPct={cashDiscountPct}
-            franchiseLocation={settings.franchiseLocation}
-            address={settings.address}
-          />
         </div>
       </section>
 

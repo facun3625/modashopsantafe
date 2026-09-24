@@ -40,7 +40,7 @@ function NavbarSearch({ className }: { className: string }) {
       }}
       className={`relative ${className}`}
     >
-      <label className="flex items-center gap-2 rounded-full border border-transparent bg-brand-soft px-3.5 py-2 text-brand-ink/70 focus-within:border-brand-pink focus-within:bg-white">
+      <label className="flex items-center gap-2 rounded-full border border-black/10 px-3.5 py-2 text-brand-ink/70 focus-within:border-brand-pink">
         <SearchIcon className="h-4 w-4 shrink-0" />
         <input
           type="text"
@@ -153,7 +153,7 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
                   key={link.href}
                   href={link.href}
                   onClick={(e) => handleNavClick(e, link.href)}
-                  className={`relative flex cursor-pointer items-center gap-1.5 py-2 text-xs font-medium uppercase tracking-widest transition-colors ${
+                  className={`flex cursor-pointer items-center gap-1.5 py-2 text-xs font-medium uppercase tracking-widest transition-colors ${
                     isTienda
                       ? "text-brand-pink-dark hover:text-brand-pink"
                       : active
@@ -163,9 +163,6 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
                 >
                   {isTienda && <StoreIcon className="h-3.5 w-3.5 shrink-0" />}
                   {link.label}
-                  {active && !isTienda && (
-                    <span className="absolute -bottom-0.5 left-0 h-0.5 w-full rounded-full bg-brand-pink-dark" />
-                  )}
                 </Link>
               );
             })}

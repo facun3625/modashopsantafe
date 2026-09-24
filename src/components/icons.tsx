@@ -199,18 +199,6 @@ export function StarIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-export function HeartIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M12 20.5s-7.5-4.6-9.9-9.2C.6 7.9 2 4.5 5.4 3.7c2-.5 3.9.3 5 1.9l1.6 2.2 1.6-2.2c1.1-1.6 3-2.4 5-1.9 3.4.8 4.8 4.2 3.3 7.6-2.4 4.6-9.9 9.2-9.9 9.2Z"
-      />
-    </svg>
-  );
-}
-
 export function GearIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>

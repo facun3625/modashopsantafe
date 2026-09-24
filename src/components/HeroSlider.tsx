@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { HeartIcon } from "@/components/icons";
 
 export type HeroSlide = {
   image: string;
@@ -13,6 +12,8 @@ export type HeroSlide = {
   promoText?: string | null; // hasta 2 líneas separadas por \n
   buttons: { label: string; href: string }[];
 };
+
+const GRADIENT = "from-black/90 via-black/45 to-transparent";
 
 export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
   const [index, setIndex] = useState(0);
@@ -34,108 +35,101 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
   const promoTotalLength = promoLines.reduce((sum, l) => sum + l.length, 0);
   const promoSize =
     promoTotalLength > 26
-      ? { circle: "h-24 w-24 sm:h-28 sm:w-28", text: "text-[9px] sm:text-xs" }
+      ? { circle: "h-28 w-28 sm:h-32 sm:w-32", text: "text-[9px] sm:text-xs" }
       : promoTotalLength > 14
-        ? { circle: "h-20 w-20 sm:h-24 sm:w-24", text: "text-[9px] sm:text-[11px]" }
-        : { circle: "h-16 w-16 sm:h-20 sm:w-20", text: "text-[10px] sm:text-xs" };
+        ? { circle: "h-24 w-24 sm:h-28 sm:w-28", text: "text-[9px] sm:text-[11px]" }
+        : { circle: "h-20 w-20 sm:h-24 sm:w-24", text: "text-[10px] sm:text-xs" };
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-white px-6 py-8 sm:px-10 sm:py-10">
-      <AnimatePresence mode="wait">
+    <div className="relative flex min-h-[280px] max-h-[350px] flex-col items-center justify-center overflow-hidden rounded-3xl px-6 py-10 text-center sm:min-h-[320px] sm:py-14">
+      <AnimatePresence>
         <motion.div
-          key={index}
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -14 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
-          className="grid grid-cols-1 items-center gap-8 sm:grid-cols-2 sm:gap-10"
+          key={`bg-${index}`}
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${slide.image})` }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.6 }}
+        />
+      </AnimatePresence>
+      <div className={`absolute inset-0 bg-gradient-to-t ${GRADIENT}`} />
+
+      {/* Fijo a la esquina del banner entero (no del bloque de texto, que se
+          centra verticalmente y puede tener distinta altura según el
+          slide) — así siempre queda en el mismo lugar. */}
+      {promoLines.length > 0 && (
+        <div
+          className={`absolute right-4 top-4 z-10 flex shrink-0 rotate-6 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-full bg-white p-2 text-center font-bold uppercase leading-tight text-wrap break-words text-brand-pink-dark shadow-lg ${promoSize.circle} ${promoSize.text}`}
         >
-          {/* Texto */}
-          <div className="order-2 text-center sm:order-1 sm:text-left">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-muted sm:text-sm">
+          {promoLines.map((line, i) => (
+            <span key={i}>{line}</span>
+          ))}
+        </div>
+      )}
+
+      <div className="relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: -18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 18 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white drop-shadow-md sm:text-sm">
               {slide.eyebrow}
             </p>
-            <h1 className="mt-3 text-4xl font-extrabold uppercase leading-[0.95] sm:text-6xl">
+            <h1 className="mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-white drop-shadow-lg sm:text-6xl">
               {titleLines.map((line, i) => (
-                <span key={i} className={`block ${i === 1 ? "text-brand-pink-dark" : "text-brand-ink"}`}>
+                <span key={i}>
                   {line}
+                  {i < titleLines.length - 1 && <br />}
                 </span>
               ))}
             </h1>
             {slide.subtitle && (
-              <p className="mx-auto mt-4 max-w-md text-sm text-brand-muted sm:mx-0 sm:text-base">
-                {slide.subtitle}
-              </p>
+              <p className="mx-auto mt-3 max-w-md text-sm text-white drop-shadow-md sm:text-base">{slide.subtitle}</p>
             )}
+          </motion.div>
+        </AnimatePresence>
 
-            {slide.buttons.length > 0 && (
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-                {slide.buttons.map((btn, i) => (
-                  <Link
-                    key={i}
-                    href={btn.href}
-                    className={`inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-colors ${
-                      i === 0
-                        ? "bg-brand-pink text-white hover:bg-brand-pink-dark"
-                        : "border border-black/10 text-brand-ink hover:border-brand-pink hover:text-brand-pink-dark"
-                    }`}
-                  >
-                    {btn.label}
-                    {i === 0 && (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
-                      </svg>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Imagen */}
-          <div className="relative order-1 sm:order-2">
-            <div className="pointer-events-none absolute -inset-4 -z-10 rounded-full bg-brand-pink/10 blur-2xl" />
-            <HeartIcon className="pointer-events-none absolute -left-2 -top-2 h-8 w-8 -rotate-12 text-brand-pink/50 sm:h-10 sm:w-10" />
-
-            <div
-              className="aspect-[4/3] w-full rounded-2xl bg-cover bg-center shadow-sm sm:aspect-[5/4]"
-              style={{ backgroundImage: `url(${slide.image})` }}
-            />
-
-            {promoLines.length > 0 && (
-              <div
-                className={`absolute -right-2 -top-4 flex shrink-0 rotate-6 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-full bg-brand-pink p-2 text-center font-bold uppercase leading-tight text-wrap break-words text-white shadow-lg sm:-right-4 ${promoSize.circle} ${promoSize.text}`}
+        {slide.buttons.length > 0 && (
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            {slide.buttons.map((btn, i) => (
+              <Link
+                key={i}
+                href={btn.href}
+                className="rounded-full border-2 border-white px-6 py-2.5 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-white hover:text-brand-pink-dark sm:text-sm"
               >
-                {promoLines.map((line, i) => (
-                  <span key={i}>{line}</span>
-                ))}
-              </div>
-            )}
+                {btn.label}
+              </Link>
+            ))}
           </div>
-        </motion.div>
-      </AnimatePresence>
+        )}
 
-      {slides.length > 1 && (
-        <div className="mt-8 flex items-center justify-center gap-2">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setIndex(i)}
-              aria-label={`Ir al slide ${i + 1}`}
-              className={`h-2 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-brand-pink ${
-                i === index ? "w-6 bg-brand-pink" : "w-2 bg-black/15 hover:bg-black/25"
-              }`}
-            />
-          ))}
-        </div>
-      )}
+        {slides.length > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-2">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIndex(i)}
+                aria-label={`Ir al slide ${i + 1}`}
+                className={`h-2 rounded-full outline-none transition-all focus-visible:ring-2 focus-visible:ring-white ${
+                  i === index ? "w-6 bg-white" : "w-2 bg-white/50 hover:bg-white/80"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {slides.length > 1 && (
         <>
           <button
             onClick={() => setIndex((i) => (i - 1 + slides.length) % slides.length)}
             aria-label="Slide anterior"
-            className="absolute left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white text-brand-ink outline-none transition-colors hover:border-brand-pink hover:text-brand-pink-dark focus-visible:ring-2 focus-visible:ring-brand-pink sm:flex"
+            className="absolute left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white outline-none backdrop-blur-sm transition-colors hover:bg-white/30 focus-visible:ring-2 focus-visible:ring-white sm:flex"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="m15 18-6-6 6-6" />
@@ -144,7 +138,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
           <button
             onClick={() => setIndex((i) => (i + 1) % slides.length)}
             aria-label="Slide siguiente"
-            className="absolute right-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white text-brand-ink outline-none transition-colors hover:border-brand-pink hover:text-brand-pink-dark focus-visible:ring-2 focus-visible:ring-brand-pink sm:flex"
+            className="absolute right-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white outline-none backdrop-blur-sm transition-colors hover:bg-white/30 focus-visible:ring-2 focus-visible:ring-white sm:flex"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="m9 18 6-6-6-6" />

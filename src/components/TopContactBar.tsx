@@ -8,7 +8,7 @@ export function TopContactBar({
   settings: { address: string; instagramHandle: string; franchiseLocation: string };
 }) {
   return (
-    <div className="bg-brand-pink px-3 py-2.5 text-xs font-medium tracking-wide text-white/95 sm:px-6">
+    <div className="bg-brand-pink px-3 py-2 text-[11px] tracking-wide text-white/90 sm:px-6">
       <div className="mx-auto grid max-w-6xl grid-cols-2 items-center gap-2 sm:grid-cols-3">
         <span className="flex items-center gap-1.5">
           <MapPinIcon className="h-3.5 w-3.5 shrink-0" />
@@ -24,10 +24,10 @@ export function TopContactBar({
           href={`https://instagram.com/${settings.instagramHandle}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-self-end gap-1.5 transition-colors hover:text-white/70"
+          className="flex items-center justify-self-end gap-1.5 hover:text-white"
         >
           <InstagramIcon className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">@{settings.instagramHandle}</span>
+          <span className="hidden sm:inline">Instagram</span>
         </a>
       </div>
     </div>
