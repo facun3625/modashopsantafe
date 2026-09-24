@@ -78,10 +78,10 @@ export default async function AdminVisitasPage({
         {stats.series.length === 0 || stats.pageViews === 0 ? (
           <p className="mt-8 text-center text-sm text-brand-muted">Sin visitas registradas en este período.</p>
         ) : (
-          <div className="mt-4 flex h-48 items-end gap-1">
+          <div className="mt-4 flex h-48 gap-1">
             {stats.series.map((m, i) => (
               <div key={`${m.label}-${i}`} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-                <div className="flex w-full flex-1 items-end">
+                <div className="flex h-full w-full flex-1 items-end">
                   <div
                     className="w-full rounded-t bg-brand-pink/80 transition-all hover:bg-brand-pink"
                     style={{ height: `${Math.max(m.count > 0 ? 2 : 0, (m.count / maxSeries) * 100)}%` }}

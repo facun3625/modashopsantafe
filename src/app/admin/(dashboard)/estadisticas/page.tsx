@@ -107,10 +107,10 @@ export default async function AdminEstadisticasPage({
         {stats.series.length === 0 || stats.revenue === 0 ? (
           <p className="mt-8 text-center text-sm text-brand-muted">Sin ventas confirmadas en este período.</p>
         ) : (
-          <div className="mt-4 flex h-48 items-end gap-1">
+          <div className="mt-4 flex h-48 gap-1">
             {stats.series.map((m, i) => (
               <div key={`${m.label}-${i}`} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-                <div className="flex w-full flex-1 items-end">
+                <div className="flex h-full w-full flex-1 items-end">
                   <div
                     className="w-full rounded-t bg-brand-pink/80 transition-all hover:bg-brand-pink"
                     style={{ height: `${Math.max(m.revenue > 0 ? 2 : 0, (m.revenue / maxSeries) * 100)}%` }}
