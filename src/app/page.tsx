@@ -139,7 +139,8 @@ export default async function Home() {
       </section>
 
       {/* Categorías destacadas */}
-      <section className="mx-auto max-w-6xl px-6 py-16">
+      <section className="bg-brand-soft px-6 py-16">
+        <div className="mx-auto max-w-6xl">
         <h2 className="text-2xl font-bold text-brand-ink">Explorá por categoría</h2>
         <p className="mt-1 text-brand-muted">Los rubros más elegidos de la tienda.</p>
 
@@ -158,6 +159,7 @@ export default async function Home() {
           <Link href="/tienda" className="text-sm font-medium text-brand-pink-dark hover:underline">
             Ver todas las categorías →
           </Link>
+        </div>
         </div>
       </section>
 
