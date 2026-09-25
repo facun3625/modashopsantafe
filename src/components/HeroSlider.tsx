@@ -48,10 +48,10 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -14 }}
           transition={{ duration: 0.45, ease: "easeOut" }}
-          className="grid grid-cols-1 items-center gap-8 sm:grid-cols-2 sm:gap-10"
+          className="grid grid-cols-1 items-stretch gap-8 sm:min-h-[380px] sm:grid-cols-2 sm:gap-10"
         >
           {/* Texto */}
-          <div className="order-2 text-center sm:order-1 sm:text-left">
+          <div className="order-2 flex flex-col justify-center text-center sm:order-1 sm:text-left">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-muted sm:text-sm">
               {slide.eyebrow}
             </p>
@@ -98,7 +98,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
             <HeartIcon className="pointer-events-none absolute -left-2 -top-2 h-8 w-8 -rotate-12 text-brand-pink/50 sm:h-10 sm:w-10" />
 
             <div
-              className="aspect-[4/3] w-full rounded-2xl bg-cover bg-center shadow-sm sm:aspect-[5/4]"
+              className="aspect-[4/3] w-full rounded-2xl bg-cover bg-center shadow-sm sm:aspect-auto sm:h-full"
               style={{ backgroundImage: `url(${slide.image})` }}
             />
 
