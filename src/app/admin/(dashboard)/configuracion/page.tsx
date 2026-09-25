@@ -453,13 +453,17 @@ export default async function AdminConfiguracionPage({
             maxLength={6000}
             defaultValue={settings.aiInstructions ?? ""}
             placeholder={
-              "Ejemplo:\n- Priorizá la nueva colección.\n- Preguntá para qué ocasión busca la prenda.\n- Mencioná el descuento por transferencia cuando corresponda."
+              "Ejemplo:\n- Priorizá la nueva colección.\n- Preguntá para qué ocasión busca la prenda.\n- Mantené un tono cercano y alegre."
             }
             className={`${fieldClasses} resize-y`}
           />
           <p className="mt-1 text-xs text-brand-muted">
             Estas reglas complementan las protecciones fijas: la vendedora no puede inventar stock, precios ni
             descuentos.
+          </p>
+          <p className="mt-1 text-xs font-medium text-brand-ink">
+            No hace falta copiar dirección, contacto, horarios, medios de pago ni envíos: la vendedora los consulta
+            automáticamente desde la configuración vigente de la tienda.
           </p>
         </div>
       </div>

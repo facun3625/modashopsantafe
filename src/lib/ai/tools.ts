@@ -5,7 +5,13 @@ import { getAllShippingMethods } from "@/lib/shipping";
 import { optionalNumber, optionalText, safeToolArgs } from "@/lib/ai/validation";
 import type { AssistantProduct } from "@/lib/ai/types";
 import { getHumanSellerAvailability } from "@/lib/ai/availability";
-import { WHATSAPP_NUMBER } from "@/lib/contact";
+import {
+  DEFAULT_ADDRESS,
+  DEFAULT_CONTACT_EMAIL,
+  DEFAULT_FRANCHISE_LOCATION,
+  INSTAGRAM_HANDLE,
+  WHATSAPP_NUMBER,
+} from "@/lib/contact";
 
 export type AssistantToolName = "search_products" | "list_categories" | "get_store_options";
 
@@ -47,7 +53,8 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
   },
   {
     name: "get_store_options",
-    description: "Consulta medios de pago habilitados, descuentos generales y métodos de envío vigentes.",
+    description:
+      "Consulta la información oficial y vigente de la tienda: nombre, sucursal, dirección, contacto, Instagram, WhatsApp, horarios de atención, medios de pago, descuentos y métodos de envío. Usala antes de responder cualquier pregunta sobre el negocio o sus condiciones de compra.",
     parameters: { type: "object", properties: {}, required: [], additionalProperties: false },
   },
 ];
@@ -120,7 +127,16 @@ export async function executeAssistantTool(
     const [payments, shipping, settings] = await Promise.all([
       prisma.paymentMethodConfig.findMany({
         where: { enabled: true },
-        select: { method: true, discountPct: true },
+        select: {
+          method: true,
+          discountPct: true,
+          bankCbu: true,
+          bankAlias: true,
+          bankHolderName: true,
+          allowedShipping: {
+            select: { shippingMethod: { select: { name: true, enabled: true } } },
+          },
+        },
       }),
       getAllShippingMethods(),
       prisma.storeSettings.findUnique({ where: { id: "global" } }),
@@ -134,16 +150,45 @@ export async function executeAssistantTool(
     });
     return {
       output: JSON.stringify({
+        store: {
+          name: settings?.franchiseName?.trim() || "ModaShop",
+          branch: settings?.franchiseLocation?.trim() || DEFAULT_FRANCHISE_LOCATION,
+          address: settings?.address?.trim() || DEFAULT_ADDRESS,
+          contactEmail: settings?.contactEmail?.trim() || DEFAULT_CONTACT_EMAIL,
+          instagram: `@${settings?.instagramHandle?.trim() || INSTAGRAM_HANDLE}`,
+          whatsapp: settings?.whatsappPhone || WHATSAPP_NUMBER,
+        },
         paymentMethods: payments.map((payment) => ({
           name: PAYMENT_LABELS[payment.method] ?? payment.method,
           generalDiscountPct: payment.discountPct,
+          allowedShippingMethods:
+            payment.allowedShipping.length > 0
+              ? payment.allowedShipping
+                  .filter((item) => item.shippingMethod.enabled)
+                  .map((item) => item.shippingMethod.name)
+              : shipping.filter((method) => method.enabled).map((method) => method.name),
+          ...(payment.method === "transferencia"
+            ? {
+                transferDetails: {
+                  cbu: payment.bankCbu,
+                  alias: payment.bankAlias,
+                  holder: payment.bankHolderName,
+                },
+              }
+            : {}),
         })),
         shippingMethods: shipping
           .filter((method) => method.enabled)
-          .map((method) => ({ name: method.name, cost: method.cost, description: method.description })),
+          .map((method) => ({
+            name: method.name,
+            cost: method.cost,
+            description: method.description,
+            requiresAddress: method.requiresAddress,
+          })),
         humanSupport: {
           available: humanSupport.available,
           schedule: humanSupport.scheduleText,
+          whatsappUrl: humanSupport.whatsappUrl,
         },
       }),
     };

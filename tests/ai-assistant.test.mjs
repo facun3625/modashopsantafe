@@ -99,4 +99,6 @@ test("custom sales instructions cannot replace catalog safety rules", () => {
   assert.match(result, /Odoo y las herramientas son la única fuente válida/);
   assert.match(result, /Priorizá la nueva colección/);
   assert.match(result, /WhatsApp/);
+  assert.match(result, /dirección, contacto, Instagram/);
+  assert.match(result, /get_store_options/);
 });

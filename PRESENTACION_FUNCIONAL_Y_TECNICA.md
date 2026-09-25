@@ -449,6 +449,8 @@ Los errores de email, Telegram o push se procesan por separado y no anulan una v
 
 La vendedora virtual atiende consultas comerciales, interpreta necesidades y recomienda artículos del catálogo. Puede utilizar **OpenAI** o **Google Gemini** sin cambiar la experiencia del cliente.
 
+El administrador no necesita copiar en las instrucciones los datos que ya existen en la plataforma. La asistente consulta la configuración vigente antes de responder sobre dirección, contacto, redes, WhatsApp, horarios, medios de pago, descuentos, datos de transferencia y alternativas de envío.
+
 ### 7.2 Información que puede consultar
 
 - Productos por texto.
