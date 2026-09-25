@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { getAllCategories } from "@/lib/categories";
@@ -8,8 +9,6 @@ import { CardAccordion } from "@/components/admin/CardAccordion";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
 import { ImagePreviewInput } from "@/components/admin/ImagePreviewInput";
 import { TelegramTestButton } from "./TelegramTestButton";
-import { MailProviderFields } from "./MailProviderFields";
-import { MailTestButton } from "./MailTestButton";
 import { SettingsTabs } from "./SettingsTabs";
 import { CategoryChipSelector } from "./CategoryChipSelector";
 import { WrenchIcon, PackageIcon } from "@/components/icons";
@@ -24,6 +23,7 @@ import {
   createHeroSlide,
   updateHeroSlide,
   deleteHeroSlide,
+  updateAiAssistantSettings,
 } from "./actions";
 
 const fieldClasses =
@@ -171,7 +171,10 @@ export default async function AdminConfiguracionPage() {
     </div>
   );
 
-  // --- Panel: Mailing (franquicia + proveedor + remitente) ---
+  // --- Panel: Mailing (solo identidad de la franquicia) ---
+  // El proveedor de envío (SMTP/Resend), sus credenciales y el remitente son
+  // configuración técnica y viven en /odoo_api junto con Odoo y la IA — ver
+  // el comentario en esa página.
   const mailingPanel = (
     <form action={updateMailSettings} className="rounded-xl border border-black/10 bg-white p-5">
       <p className={labelClasses}>Identidad de la franquicia</p>
@@ -201,44 +204,6 @@ export default async function AdminConfiguracionPage() {
           </p>
         </div>
       </div>
-
-      <MailProviderFields
-        provider={settings.mailProvider === "resend" ? "resend" : "smtp"}
-        smtp={{
-          host: settings.smtpHost ?? "",
-          port: settings.smtpPort ?? 587,
-          secure: settings.smtpSecure,
-          user: settings.smtpUser ?? "",
-          passwordConfigured: Boolean(settings.smtpPassword),
-        }}
-        resendConfigured={Boolean(settings.resendApiKey)}
-      />
-
-      <p className={`${labelClasses} mt-5 border-t border-black/5 pt-4`}>Remitente (para ambos proveedores)</p>
-      <div className="flex flex-wrap gap-4">
-        <div className="w-56">
-          <label className={labelClasses}>Nombre del remitente</label>
-          <input
-            type="text"
-            name="mailFromName"
-            defaultValue={settings.mailFromName ?? ""}
-            placeholder="ModaShop"
-            className={fieldClasses}
-          />
-        </div>
-        <div className="min-w-[200px] flex-1">
-          <label className={labelClasses}>Email remitente</label>
-          <input
-            type="email"
-            name="mailFromEmail"
-            defaultValue={settings.mailFromEmail ?? ""}
-            placeholder="hola@modashop.com.ar"
-            className={fieldClasses}
-          />
-        </div>
-      </div>
-
-      <MailTestButton />
 
       <div className="mt-5 border-t border-black/5 pt-4">
         <SaveButton trackDirty />
@@ -359,6 +324,84 @@ export default async function AdminConfiguracionPage() {
       <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-black/5 pt-4">
         <SaveButton trackDirty />
         <TelegramTestButton />
+      </div>
+    </form>
+  );
+
+  const weekDays = [
+    { value: 1, label: "Lun" },
+    { value: 2, label: "Mar" },
+    { value: 3, label: "Mié" },
+    { value: 4, label: "Jue" },
+    { value: 5, label: "Vie" },
+    { value: 6, label: "Sáb" },
+    { value: 0, label: "Dom" },
+  ];
+  // El proveedor, modelo, API key e instrucciones son configuración técnica
+  // (secretos incluidos) y se cargan en /odoo_api junto con la conexión a
+  // Odoo — no en este panel, al que tiene acceso cualquiera que administre
+  // la tienda. Acá solo queda prender/apagar la vendedora y el horario de
+  // WhatsApp.
+  const aiPanel = (
+    <form action={updateAiAssistantSettings} className="rounded-xl border border-black/10 bg-white p-5">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 pb-5">
+        <div>
+          <p className="font-semibold text-brand-ink">Vendedora virtual</p>
+          <p className="mt-1 max-w-2xl text-xs text-brand-muted">
+            Recomienda productos consultando catálogo, precios y stock reales de Odoo. Mientras está apagada (o falta
+            configurarla), la tienda muestra en su lugar un botón directo de WhatsApp.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <ToggleSwitch name="aiAssistantEnabled" defaultChecked={settings.aiAssistantEnabled} />
+          <span className="text-sm text-brand-ink">Habilitada</span>
+        </div>
+      </div>
+
+      {(!settings.aiProvider || !settings.aiApiKey) && (
+        <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Todavía falta cargar el proveedor y la API key en{" "}
+          <Link href="/odoo_api" className="font-semibold underline">
+            Conexión con Odoo
+          </Link>
+          . Hasta entonces, la vendedora permanece oculta y la tienda muestra el botón de WhatsApp.
+        </p>
+      )}
+
+      <div className="mt-5 border-t border-black/5 pt-5">
+        <p className="text-sm font-semibold text-brand-ink">Horario de WhatsApp</p>
+        <p className="mt-1 text-xs text-brand-muted">
+          Días y horario en que se ofrece hablar por WhatsApp con una persona: como opción dentro del chat de la
+          vendedora, o como botón directo en la tienda mientras la vendedora esté apagada.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {weekDays.map((day) => (
+            <label key={day.value} className="flex cursor-pointer items-center gap-1.5 rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-brand-ink">
+              <input
+                type="checkbox"
+                name="aiHumanDays"
+                value={day.value}
+                defaultChecked={(settings.aiHumanDays ?? [1, 2, 3, 4, 5, 6]).includes(day.value)}
+                className="accent-brand-pink"
+              />
+              {day.label}
+            </label>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-4">
+          <div className="w-36">
+            <label className={labelClasses}>Desde</label>
+            <input type="time" name="aiHumanStartTime" defaultValue={settings.aiHumanStartTime} className={fieldClasses} />
+          </div>
+          <div className="w-36">
+            <label className={labelClasses}>Hasta</label>
+            <input type="time" name="aiHumanEndTime" defaultValue={settings.aiHumanEndTime} className={fieldClasses} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-black/5 pt-4">
+        <SaveButton trackDirty />
       </div>
     </form>
   );
@@ -567,9 +610,10 @@ export default async function AdminConfiguracionPage() {
       <SettingsTabs
         tabs={[
           { id: "general", label: "General", content: generalPanel },
-          { id: "mailing", label: "Mailing", content: mailingPanel },
+          { id: "mailing", label: "Franquicia", content: mailingPanel },
           { id: "mail-compra", label: "Mail de compra", content: orderEmailPanel },
           { id: "telegram", label: "Telegram", content: telegramPanel },
+          { id: "vendedora", label: "Vendedora IA", content: aiPanel },
           { id: "slider", label: "Slider", content: sliderPanel },
         ]}
       />

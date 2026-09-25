@@ -3,7 +3,10 @@ import { auth } from "@/lib/auth";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
 import { SaveButton } from "@/components/admin/SaveButton";
-import { updateOdooSettings } from "./actions";
+import { DEFAULT_AI_MODELS } from "@/lib/ai/types";
+import { MailProviderFields } from "./MailProviderFields";
+import { MailTestButton } from "./MailTestButton";
+import { updateOdooSettings, updateAiSecretSettings, updateMailProviderSettings } from "./actions";
 
 const fieldClasses =
   "w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none";
@@ -75,6 +78,145 @@ export default async function OdooApiPage() {
             placeholder="Clave de API de Odoo"
           />
         </div>
+
+        <div className="mt-5 border-t border-black/5 pt-4">
+          <SaveButton trackDirty />
+        </div>
+      </form>
+
+      <h1 className="mt-12 text-2xl font-bold text-brand-ink">Vendedora IA — configuración técnica</h1>
+      <p className="mt-1 text-sm text-brand-muted">
+        Proveedor, modelo, API key e instrucciones de venta. Prender/apagar la vendedora y el horario de WhatsApp se
+        maneja desde el panel de la tienda, en Configuración.
+      </p>
+
+      <form action={updateAiSecretSettings} className="mt-6 rounded-xl border border-black/10 bg-white p-5">
+        <div className="flex flex-wrap gap-4">
+          <div className="min-w-[220px] flex-1">
+            <label className={labelClasses}>Proveedor</label>
+            <select name="aiProvider" defaultValue={settings.aiProvider ?? ""} className={fieldClasses}>
+              <option value="">Elegir más adelante</option>
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Google Gemini</option>
+            </select>
+            <p className="mt-1 text-xs text-brand-muted">Si cambiás de proveedor, cargá también su nueva API key.</p>
+          </div>
+          <div className="min-w-[220px] flex-1">
+            <label className={labelClasses}>Modelo</label>
+            <input
+              type="text"
+              name="aiModel"
+              defaultValue={settings.aiModel ?? ""}
+              placeholder="Se completa según el proveedor"
+              className={fieldClasses}
+            />
+            <p className="mt-1 text-xs text-brand-muted">
+              Recomendados: {DEFAULT_AI_MODELS.openai} o {DEFAULT_AI_MODELS.gemini}.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-4">
+          <MaskedCredentialField
+            name="aiApiKey"
+            label="API key del proveedor"
+            configured={Boolean(settings.aiApiKey)}
+            placeholder="Pegá la clave privada"
+            type="password"
+          />
+        </div>
+        <p className="mt-1 text-xs text-brand-muted">La clave se usa únicamente en el servidor y nunca se envía al navegador.</p>
+
+        <div className="mt-5 grid grid-cols-1 gap-4 border-t border-black/5 pt-5 sm:grid-cols-2">
+          <div>
+            <label className={labelClasses}>Nombre visible</label>
+            <input
+              type="text"
+              name="aiAssistantName"
+              maxLength={60}
+              defaultValue={settings.aiAssistantName ?? ""}
+              placeholder="Vendedora virtual"
+              className={fieldClasses}
+            />
+          </div>
+          <div>
+            <label className={labelClasses}>Mensaje de bienvenida</label>
+            <input
+              type="text"
+              name="aiWelcomeMessage"
+              maxLength={500}
+              defaultValue={settings.aiWelcomeMessage ?? ""}
+              placeholder="¡Hola! Contame qué estás buscando…"
+              className={fieldClasses}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className={labelClasses}>Instrucciones para vender</label>
+          <textarea
+            name="aiInstructions"
+            rows={7}
+            maxLength={6000}
+            defaultValue={settings.aiInstructions ?? ""}
+            placeholder={"Ejemplo:\n- Priorizá la nueva colección.\n- Preguntá para qué ocasión busca la prenda.\n- Mencioná el descuento por transferencia cuando corresponda."}
+            className={`${fieldClasses} resize-y`}
+          />
+          <p className="mt-1 text-xs text-brand-muted">
+            Estas reglas complementan las protecciones fijas: la vendedora no puede inventar stock, precios ni
+            descuentos.
+          </p>
+        </div>
+
+        <div className="mt-5 border-t border-black/5 pt-4">
+          <SaveButton label="Guardar configuración" trackDirty />
+        </div>
+      </form>
+
+      <h1 className="mt-12 text-2xl font-bold text-brand-ink">Envío de mail — configuración técnica</h1>
+      <p className="mt-1 text-sm text-brand-muted">
+        Proveedor (SMTP o Resend), credenciales y remitente. El nombre y la sucursal de la franquicia se manejan
+        desde el panel de la tienda, en Configuración.
+      </p>
+
+      <form action={updateMailProviderSettings} className="mt-6 rounded-xl border border-black/10 bg-white p-5">
+        <MailProviderFields
+          provider={settings.mailProvider === "resend" ? "resend" : "smtp"}
+          smtp={{
+            host: settings.smtpHost ?? "",
+            port: settings.smtpPort ?? 587,
+            secure: settings.smtpSecure,
+            user: settings.smtpUser ?? "",
+            passwordConfigured: Boolean(settings.smtpPassword),
+          }}
+          resendConfigured={Boolean(settings.resendApiKey)}
+        />
+
+        <p className={`${labelClasses} mt-5 border-t border-black/5 pt-4`}>Remitente (para ambos proveedores)</p>
+        <div className="flex flex-wrap gap-4">
+          <div className="w-56">
+            <label className={labelClasses}>Nombre del remitente</label>
+            <input
+              type="text"
+              name="mailFromName"
+              defaultValue={settings.mailFromName ?? ""}
+              placeholder="ModaShop"
+              className={fieldClasses}
+            />
+          </div>
+          <div className="min-w-[200px] flex-1">
+            <label className={labelClasses}>Email remitente</label>
+            <input
+              type="email"
+              name="mailFromEmail"
+              defaultValue={settings.mailFromEmail ?? ""}
+              placeholder="hola@modashop.com.ar"
+              className={fieldClasses}
+            />
+          </div>
+        </div>
+
+        <MailTestButton />
 
         <div className="mt-5 border-t border-black/5 pt-4">
           <SaveButton trackDirty />

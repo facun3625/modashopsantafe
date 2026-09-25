@@ -4,16 +4,11 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { sendTelegram } from "@/lib/telegram";
-import { buildMailSender } from "@/lib/mailer";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (session?.user?.role !== "admin") throw new Error("No autorizado");
-}
+import { normalizeTime } from "@/lib/ai/availability";
 
 export async function updateMaintenanceMode(formData: FormData) {
   await requireAdmin();
@@ -40,6 +35,38 @@ export async function updateHideOutOfStock(formData: FormData) {
   revalidatePath("/admin/configuracion");
   revalidatePath("/tienda");
   revalidatePath("/");
+}
+
+// Solo lo que le compete al dueño de la tienda: prender/apagar la vendedora
+// IA y marcar el horario en que se ofrece WhatsApp (ya sea dentro del chat
+// de la IA, o como botón flotante cuando la IA está apagada/sin configurar
+// — ver getSiteSettings). El proveedor, modelo, API key e instrucciones son
+// configuración técnica/secreta y se cargan en /odoo_api, junto con Odoo.
+export async function updateAiAssistantSettings(formData: FormData) {
+  await requireAdmin();
+
+  const humanDays = [...new Set(
+    formData
+      .getAll("aiHumanDays")
+      .map(Number)
+      .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6),
+  )].sort((a, b) => a - b);
+
+  const data = {
+    aiAssistantEnabled: formData.get("aiAssistantEnabled") === "on",
+    aiHumanDays: humanDays,
+    aiHumanStartTime: normalizeTime(formData.get("aiHumanStartTime"), "09:00"),
+    aiHumanEndTime: normalizeTime(formData.get("aiHumanEndTime"), "18:00"),
+  };
+
+  await prisma.storeSettings.upsert({
+    where: { id: "global" },
+    create: { id: "global", ...data },
+    update: data,
+  });
+
+  revalidatePath("/admin/configuracion");
+  revalidatePath("/", "layout");
 }
 
 const MAX_HERO_SLIDES = 3;
@@ -88,29 +115,18 @@ export async function updateSiteSettings(formData: FormData) {
   revalidatePath("/");
 }
 
+// El proveedor de envío (SMTP/Resend), sus credenciales y el remitente son
+// configuración técnica y se cargan en /odoo_api junto con Odoo y la IA —
+// ver updateMailProviderSettings ahí. Acá solo queda la identidad de la
+// franquicia (nombre/sucursal), que sí es algo que cualquiera que administre
+// la tienda puede querer tocar.
 export async function updateMailSettings(formData: FormData) {
   await requireAdmin();
 
-  const port = formData.get("smtpPort");
-  const password = formData.get("smtpPassword") as string;
-  const resendKey = formData.get("resendApiKey") as string;
-  const provider = formData.get("mailProvider") === "resend" ? "resend" : "smtp";
-
-  const data: Record<string, unknown> = {
+  const data = {
     franchiseName: (formData.get("franchiseName") as string) || null,
     franchiseLocation: (formData.get("franchiseLocation") as string) || null,
-    mailProvider: provider,
-    smtpHost: (formData.get("smtpHost") as string) || null,
-    smtpPort: port ? Number(port) : null,
-    smtpSecure: formData.get("smtpSecure") === "on",
-    smtpUser: (formData.get("smtpUser") as string) || null,
-    mailFromName: (formData.get("mailFromName") as string) || null,
-    mailFromEmail: (formData.get("mailFromEmail") as string) || null,
   };
-  // Igual que con las credenciales de Mercado Pago: si dejaron el campo de
-  // contraseña/API key vacío (porque ya estaba cargado y no lo tocaron), no lo pisamos.
-  if (password) data.smtpPassword = password;
-  if (resendKey) data.resendApiKey = resendKey.trim();
 
   await prisma.storeSettings.upsert({
     where: { id: "global" },
@@ -119,54 +135,6 @@ export async function updateMailSettings(formData: FormData) {
   });
 
   revalidatePath("/admin/configuracion");
-}
-
-export type MailTestState = { ok: boolean; error?: string };
-
-// Botón "Probar mail" de la card de Mailing. Igual que Telegram: prueba con
-// lo que hay tipeado en el form (sin guardar nada), y si un campo vino vacío
-// porque está enmascarado (contraseña/API key ya guardadas), cae a lo que ya
-// hay en la base — así se puede probar sin tener que reescribir credenciales.
-export async function testMailSending(to: string, form: Record<string, string>): Promise<MailTestState> {
-  await requireAdmin();
-
-  const email = to.trim();
-  if (!email || !email.includes("@")) {
-    return { ok: false, error: "Ingresá un email válido para la prueba." };
-  }
-
-  const saved = await getStoreSettingsRow();
-  const provider = form.mailProvider === "resend" ? "resend" : "smtp";
-
-  const sender = buildMailSender({
-    mailFromEmail: form.mailFromEmail?.trim() || saved.mailFromEmail,
-    mailFromName: form.mailFromName?.trim() || saved.mailFromName,
-    franchiseName: saved.franchiseName,
-    mailProvider: provider,
-    smtpHost: form.smtpHost?.trim() || saved.smtpHost,
-    smtpPort: Number(form.smtpPort) || saved.smtpPort,
-    smtpSecure: form.smtpSecure === "on",
-    smtpUser: form.smtpUser?.trim() || saved.smtpUser,
-    smtpPassword: form.smtpPassword || saved.smtpPassword,
-    resendApiKey: form.resendApiKey?.trim() || saved.resendApiKey,
-  });
-
-  if (!sender) {
-    return {
-      ok: false,
-      error:
-        provider === "resend"
-          ? "Faltan datos de Resend (email remitente y/o API key)."
-          : "Faltan datos del SMTP (remitente, host, usuario y/o contraseña).",
-    };
-  }
-
-  const result = await sender.send(
-    email,
-    "Prueba de ModaShop",
-    "<p>✅ Si ves este mail, el envío está funcionando bien.</p>"
-  );
-  return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 
 export async function updateTelegramSettings(formData: FormData) {
