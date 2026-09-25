@@ -30,7 +30,7 @@ async function isMaintenanceOn(): Promise<boolean> {
   return cachedMaintenance;
 }
 
-// Chequeo optimista de rol (lee el JWT de la cookie, sin ir a la DB) para
+// Auth revalida el rol del JWT contra la base en cada solicitud para
 // proteger /admin. No hay login propio del panel: se usa el mismo login del
 // sitio (AuthModal); si esa cuenta no es admin, se manda al home.
 export default auth(async (req) => {

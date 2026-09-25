@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/adminAuth";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
 export default async function AdminDashboardLayout({ children }: { children: ReactNode }) {
-  const session = await auth();
+  const session = await requireAdmin();
   const userLabel = session?.user?.name ?? session?.user?.email ?? "Admin";
 
   return (

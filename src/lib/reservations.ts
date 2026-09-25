@@ -1,3 +1,4 @@
+import { normalizeCheckoutItems } from "@/lib/checkoutItems";
 import { prisma } from "@/lib/prisma";
 import { executeKw } from "@/lib/odoo";
 import type { OrderStatus } from "@/generated/prisma/enums";
@@ -89,7 +90,9 @@ export async function createOrderWithStockGuard<T>(
   items: { productId: number; quantity: number; name: string }[],
   build: (tx: Tx) => Promise<T>
 ): Promise<T> {
-  const ids = [...new Set(items.map((i) => i.productId))];
+  const names = new Map(items.map((item) => [item.productId, item.name]));
+  items = normalizeCheckoutItems(items).map((item) => ({ ...item, name: names.get(item.productId)! }));
+  const ids = items.map((item) => item.productId);
   const odooProducts = await executeKw<{ id: number; name: string; qty_available: number }[]>(
     "product.template",
     "read",

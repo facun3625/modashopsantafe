@@ -22,7 +22,7 @@ export type MercadoPagoIdentification = { type: string; number: string };
 // probar tarjetas robadas una por una.
 export type MercadoPagoPaymentResult =
   | { ok: true; id: number; status: string }
-  | { ok: false; error: string; detail: string };
+  | { ok: false; error: string; detail: string; rejected?: boolean };
 
 const GENERIC_DECLINE_MESSAGE = "El pago fue rechazado. Probá con otra tarjeta o con otro medio de pago.";
 const GENERIC_SYSTEM_ERROR_MESSAGE = "No se pudo procesar el pago. Probá de nuevo en un momento.";
@@ -78,6 +78,7 @@ export async function createMercadoPagoPayment(
       if (data.status !== "approved") {
         return {
           ok: false,
+          rejected: data.status === "rejected",
           error: GENERIC_DECLINE_MESSAGE,
           detail: `Pago ${data.status} (${data.status_detail ?? "sin detalle"})`,
         };

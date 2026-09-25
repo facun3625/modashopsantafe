@@ -2,15 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { syncDeliveredOrders } from "@/lib/points";
 import type { DiscountType } from "@/generated/prisma/enums";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (session?.user?.role !== "admin") throw new Error("No autorizado");
-}
 
 export async function updatePointsSettings(formData: FormData) {
   await requireAdmin();

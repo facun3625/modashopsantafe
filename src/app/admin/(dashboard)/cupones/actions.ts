@@ -1,14 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import type { DiscountType, PaymentMethod } from "@/generated/prisma/enums";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (session?.user?.role !== "admin") throw new Error("No autorizado");
-}
 
 function readCouponData(formData: FormData) {
   const categoryId = formData.get("categoryId");

@@ -1,16 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/adminLog";
 import { paymentMethodLabel } from "@/lib/orderLabels";
 import type { PaymentMethod } from "@/generated/prisma/enums";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (session?.user?.role !== "admin") throw new Error("No autorizado");
-}
 
 // Activar/desactivar un medio de pago se guarda solo, al instante (el toggle
 // del admin lo llama en onChange). Se maneja aparte del resto del form para no

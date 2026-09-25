@@ -1,3 +1,4 @@
+import { normalizeCheckoutItems } from "@/lib/checkoutItems";
 import { executeKw } from "@/lib/odoo";
 import { getReservedQuantities } from "@/lib/reservations";
 import { getStoreSettingsRow } from "@/lib/settings";
@@ -12,6 +13,7 @@ const PRODUCT_LIST_FIELDS = ["name", "list_price", "qty_available", "image_128",
 export async function checkStock(
   items: { productId: number; quantity: number }[]
 ): Promise<{ ok: boolean; shortages: { productId: number; name: string; available: number; requested: number }[] }> {
+  items = normalizeCheckoutItems(items);
   const ids = items.map((i) => i.productId);
   const [products, reserved] = await Promise.all([
     executeKw<{ id: number; name: string; qty_available: number }[]>(
@@ -75,6 +77,35 @@ export async function getProductsPage(opts: {
   ]);
 
   return { products: await applyReservations(products), total };
+}
+
+// Búsqueda acotada para la vendedora virtual. Solo devuelve productos
+// vendibles y con imagen, con el stock neto de reservas igual que la tienda.
+export async function searchProductsForAssistant(opts: {
+  query?: string;
+  categoryId?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  inStockOnly?: boolean;
+  limit?: number;
+}): Promise<OdooProductListItem[]> {
+  const domain: unknown[] = [["sale_ok", "=", true], HAS_IMAGE_DOMAIN];
+  if (opts.query) domain.push(["name", "ilike", opts.query]);
+  if (opts.categoryId) domain.push(["categ_id", "child_of", opts.categoryId]);
+  if (opts.minPrice !== undefined) domain.push(["list_price", ">=", opts.minPrice]);
+  if (opts.maxPrice !== undefined) domain.push(["list_price", "<=", opts.maxPrice]);
+  if (opts.inStockOnly) domain.push(["qty_available", ">", 0]);
+
+  // Pedimos algunas filas extra porque una reserva web puede llevar el stock
+  // neto a cero aunque Odoo todavía informe stock físico.
+  const limit = Math.min(Math.max(opts.limit ?? 6, 1), 8);
+  const products = await executeKw<OdooProductListItem[]>("product.template", "search_read", [domain], {
+    fields: PRODUCT_LIST_FIELDS,
+    limit: opts.inStockOnly ? limit * 3 : limit,
+    order: "name asc",
+  });
+  const available = await applyReservations(products);
+  return (opts.inStockOnly ? available.filter((product) => product.qty_available > 0) : available).slice(0, limit);
 }
 
 // Para la página de favoritos: re-consulta a Odoo el estado actual (precio,

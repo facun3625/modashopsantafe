@@ -51,6 +51,8 @@ export function CheckoutForm() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [comprobante, setComprobante] = useState<File | null>(null);
+  const checkoutIdRef = useRef<string | null>(null);
+  const [requiresReview, setRequiresReview] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shortages, setShortages] = useState<{ name: string; available: number; requested: number }[] | null>(null);
@@ -218,29 +220,42 @@ export function CheckoutForm() {
     }
   }
 
-  function handleOrderResponse(res: Response, data: { orderId?: string; error?: string; shortages?: typeof shortages }) {
+  function handleOrderResponse(res: Response, data: { orderId?: string; requiresReview?: boolean; resetAttempt?: boolean; error?: string; shortages?: typeof shortages }) {
     if (!res.ok) {
+      if (data.requiresReview) {
+        setRequiresReview(true);
+      } else if (res.status === 402 || data.resetAttempt) {
+        checkoutIdRef.current = null;
+        try { sessionStorage.removeItem("moda-checkout-id"); } catch {}
+      }
       if (res.status === 409 && data.shortages) {
         setShortages(data.shortages);
-        setError("Algunos productos no tienen stock suficiente.");
+        setError(data.error ?? "Algunos productos no tienen stock suficiente.");
       } else {
         setError(data.error ?? "No se pudo crear el pedido.");
       }
       setLoading(false);
       return;
     }
+    checkoutIdRef.current = null;
+    try { sessionStorage.removeItem("moda-checkout-id"); } catch {}
     clear();
     router.push(`/carrito/gracias?id=${data.orderId}`);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedMethod) return;
+    if (!selectedMethod || loading || requiresReview) return;
+    if (!checkoutIdRef.current) {
+      try { checkoutIdRef.current = sessionStorage.getItem("moda-checkout-id"); } catch {}
+      checkoutIdRef.current ??= crypto.randomUUID();
+      try { sessionStorage.setItem("moda-checkout-id", checkoutIdRef.current); } catch {}
+    }
     setLoading(true);
     setError(null);
     setShortages(null);
 
-    const itemsPayload = items.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price, name: i.name }));
+    const itemsPayload = items.map((i) => ({ productId: i.productId, quantity: i.quantity }));
     const customer = { name, email, phone: phone || undefined };
 
     // Payway tiene su propio flujo: primero tokeniza la tarjeta en el
@@ -266,6 +281,7 @@ export function CheckoutForm() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            checkoutId: checkoutIdRef.current,
             items: itemsPayload,
             customer,
             shippingMethodId: selectedShippingId,
@@ -326,6 +342,7 @@ export function CheckoutForm() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            checkoutId: checkoutIdRef.current,
             items: itemsPayload,
             customer,
             shippingMethodId: selectedShippingId,
@@ -348,6 +365,7 @@ export function CheckoutForm() {
     }
 
     const form = new FormData();
+    form.set("checkoutId", checkoutIdRef.current!);
     form.set("items", JSON.stringify(itemsPayload));
     form.set("customer", JSON.stringify(customer));
     form.set("paymentMethod", selectedMethod);
@@ -848,7 +866,7 @@ export function CheckoutForm() {
 
         <button
           type="submit"
-          disabled={loading || !selectedShippingId}
+          disabled={loading || requiresReview || !selectedShippingId}
           className="w-full cursor-pointer rounded-full bg-brand-pink px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-pink-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading

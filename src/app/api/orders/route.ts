@@ -1,5 +1,7 @@
+import { getCheckoutItems } from "@/lib/checkout";
+import { InvalidCheckoutError } from "@/lib/checkoutItems";
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { auth } from "@/lib/auth";
@@ -30,13 +32,11 @@ import { resolvePartnerId, type OrderCustomer } from "@/lib/orders";
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "comprobantes");
 
-type CartItem = { productId: number; quantity: number; price: number; name: string };
+
 
 // Esta ruta es para los métodos "instantáneos" (transferencia, contra
-// entrega): el pedido se crea al toque, en estado "pending" (pago sin
-// confirmar), y alguien del equipo lo confirma a mano desde el admin cuando
-// llega la plata. Mercado Pago va a usar un flujo aparte (vía webhook) que
-// recién crea el pedido cuando el pago ya está aprobado.
+// entrega): el pedido queda "pending" hasta que el equipo confirma el pago
+// desde el admin. Las tarjetas usan rutas separadas con reserva previa al cobro.
 const DIRECT_PAYMENT_METHODS = ["transferencia", "contra_entrega"] as const;
 type DirectPaymentMethod = (typeof DIRECT_PAYMENT_METHODS)[number];
 
@@ -56,16 +56,31 @@ async function saveComprobante(file: File): Promise<string> {
 }
 
 export async function POST(req: Request) {
-  const form = await req.formData();
-  const items = JSON.parse(String(form.get("items") ?? "[]")) as CartItem[];
-  const customer = JSON.parse(String(form.get("customer") ?? "{}")) as OrderCustomer;
+  let form: FormData;
+  let rawItems: unknown;
+  let customer: OrderCustomer;
+  try {
+    form = await req.formData();
+    rawItems = JSON.parse(String(form.get("items") ?? "[]"));
+    customer = JSON.parse(String(form.get("customer") ?? "{}"));
+  } catch {
+    return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
+  }
+  const checkoutId = form.get("checkoutId");
+  if (checkoutId !== null && (typeof checkoutId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(checkoutId))) {
+    return NextResponse.json({ error: "Identificador de compra inválido" }, { status: 400 });
+  }
+  const orderId = typeof checkoutId === "string"
+    ? createHash("sha256").update("checkout:" + checkoutId).digest("hex").slice(0, 36)
+    : randomUUID();
   const paymentMethod = form.get("paymentMethod");
   const comprobante = form.get("comprobante");
   const shippingMethodId = form.get("shippingMethodId");
   const shippingAddress = form.get("shippingAddress");
   const couponCode = form.get("couponCode");
 
-  if (!items?.length) {
+  if (!Array.isArray(rawItems) || !rawItems.length) {
     return NextResponse.json({ error: "El carrito está vacío" }, { status: 400 });
   }
   if (!customer?.email || !customer?.name || !customer?.phone) {
@@ -79,6 +94,17 @@ export async function POST(req: Request) {
   }
 
   try {
+    const existing = await prisma.order.findUnique({ where: { id: orderId } });
+    if (existing) {
+      if (existing.status === "cancelled") {
+        return NextResponse.json({ resetAttempt: true, error: "Este intento fue cancelado. Podés iniciar otra compra." }, { status: 400 });
+      }
+      if (existing.status === "pending" && !isDirectPaymentMethod(existing.paymentMethod)) {
+        return NextResponse.json({ orderId, requiresReview: true, error: "El pago anterior está pendiente de verificación. Contactá a la tienda antes de volver a pagar." }, { status: 409 });
+      }
+      return NextResponse.json({ orderId }, { status: 201 });
+    }
+    const items = await getCheckoutItems(rawItems);
     const config = await prisma.paymentMethodConfig.findUnique({
       where: { method: paymentMethod },
       include: { categoryDiscounts: true },
@@ -151,6 +177,7 @@ export async function POST(req: Request) {
         (tx) =>
           tx.order.create({
             data: {
+              id: orderId,
               userId: session?.user?.id,
               customerName: customer.name,
               customerEmail: customer.email,
@@ -186,7 +213,10 @@ export async function POST(req: Request) {
       throw err;
     }
 
-    if (couponId) await registerCouponUse(couponId);
+    if (couponId) {
+      try { await registerCouponUse(couponId); }
+      catch (err) { console.error("Could not register coupon for order", order.id, couponId, err); }
+    }
 
     // Aviso al equipo por Telegram (si está configurado). Fire and forget: no
     // lo esperamos para no demorarle la respuesta al cliente, y si falla no
@@ -200,7 +230,7 @@ export async function POST(req: Request) {
       items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
       shippingName: shipping.name,
       shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
-    });
+    }).catch((err) => console.error("Order notification failed", order.id, err));
 
     // Mail de confirmación al cliente (según el proveedor configurado, SMTP o
     // Resend). También fire and forget.
@@ -216,13 +246,16 @@ export async function POST(req: Request) {
       total,
       paymentMethod,
       shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
-    });
+    }).catch((err) => console.error("Order notification failed", order.id, err));
 
     // No se crea el picking en Odoo acá: el pedido queda "pending" y el stock
     // ya quedó reservado en la web. La orden va a Odoo al confirmar el pago
     // (ver createPickingForOrder, disparado desde /admin/ventas).
     return NextResponse.json({ orderId: order.id, partnerId }, { status: 201 });
   } catch (err) {
+    if (err instanceof InvalidCheckoutError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     console.error("POST /api/orders failed", err);
     return NextResponse.json({ error: "No se pudo crear el pedido" }, { status: 502 });
   }

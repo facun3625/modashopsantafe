@@ -1,17 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { getMailSender } from "@/lib/mailer";
 import { buildMailHtml } from "@/lib/mailTemplate";
 import { getAudienceEmails } from "@/lib/audiences";
 import type { MailAudience } from "@/generated/prisma/enums";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (session?.user?.role !== "admin") throw new Error("No autorizado");
-}
 
 // Corre después de que createCampaign ya respondió — no se espera (no
 // `await` en el caller). Como el server corre como proceso persistente

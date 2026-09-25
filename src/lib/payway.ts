@@ -56,7 +56,7 @@ export const PAYWAY_CARD_BRANDS = [
 // robadas una por una hasta encontrar cuál "sí anda".
 export type PaywayPaymentResult =
   | { ok: true; id: number; status: string }
-  | { ok: false; error: string; detail: string };
+  | { ok: false; error: string; detail: string; rejected?: boolean };
 
 const GENERIC_DECLINE_MESSAGE = "El pago fue rechazado. Probá con otra tarjeta o con otro medio de pago.";
 const GENERIC_SYSTEM_ERROR_MESSAGE = "No se pudo procesar el pago. Probá de nuevo en un momento.";
@@ -215,7 +215,7 @@ export async function createPaywayPayment(args: CreatePaywayPaymentArgs): Promis
           data?.status_details?.error?.reason?.description ||
           data?.status_details?.error?.type ||
           data.status;
-        return { ok: false, error: GENERIC_DECLINE_MESSAGE, detail: `Pago ${data.status}${detail ? ` (${detail})` : ""}` };
+        return { ok: false, rejected: data.status === "rejected", error: GENERIC_DECLINE_MESSAGE, detail: `Pago ${data.status}${detail ? ` (${detail})` : ""}` };
       }
       return { ok: true, id: data.id, status: data.status };
     }

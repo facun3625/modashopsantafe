@@ -1,16 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { logAdminAction } from "@/lib/adminLog";
 import { createPickingForOrder } from "@/lib/odooPicking";
 import type { OrderStatus } from "@/generated/prisma/enums";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (session?.user?.role !== "admin") throw new Error("No autorizado");
-}
 
 // Texto legible del pedido para el log ("Juan Pérez — $1200").
 async function orderLabel(orderId: string): Promise<string> {

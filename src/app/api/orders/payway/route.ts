@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
+import { getCheckoutItems } from "@/lib/checkout";
+import { InvalidCheckoutError } from "@/lib/checkoutItems";
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { checkStock } from "@/lib/products";
 import { createOrderWithStockGuard, InsufficientStockError } from "@/lib/reservations";
@@ -13,17 +15,13 @@ import { createPaywayPayment, refundPaywayPayment, type PaywayBillTo } from "@/l
 import { createPickingForOrder } from "@/lib/odooPicking";
 import { auth } from "@/lib/auth";
 
-// Pago con tarjeta vía Payway (gateway Decidir). A diferencia de
-// transferencia/contra-entrega, el cobro es SÍNCRONO: el cliente ya tokenizó
-// la tarjeta con decidir.js (nunca vemos el número real) y acá cobramos
-// contra la API con la private key ANTES de crear el pedido. Solo si Payway
-// aprueba, el pedido se crea directo en estado "confirmed" (el pago ya está
-// hecho) y se genera la orden en Odoo al toque — no hace falta que nadie
-// confirme nada a mano.
-type CartItem = { productId: number; quantity: number; price: number; name: string };
+// El pedido y su reserva se guardan antes de cobrar. Solo una aprobación
+// confirma la compra y dispara el picking de Odoo y los avisos. Un resultado
+// incierto conserva el pedido pendiente para que el equipo concilie el pago.
 
 type PaywayOrderBody = {
-  items: CartItem[];
+  checkoutId?: string;
+  items: unknown;
   customer: OrderCustomer;
   shippingMethodId?: string;
   shippingAddress?: string;
@@ -39,7 +37,7 @@ export async function POST(req: Request) {
   if (!body) return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
 
   const {
-    items,
+    items: rawItems,
     customer,
     shippingMethodId,
     shippingAddress,
@@ -50,7 +48,7 @@ export async function POST(req: Request) {
     paywayBillTo,
   } = body;
 
-  if (!items?.length) {
+  if (!Array.isArray(rawItems) || !rawItems.length) {
     return NextResponse.json({ error: "El carrito está vacío" }, { status: 400 });
   }
   if (!customer?.email || !customer?.name || !customer?.phone) {
@@ -63,7 +61,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Faltan datos de facturación" }, { status: 400 });
   }
 
+  if (body.checkoutId !== undefined &&
+      (typeof body.checkoutId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.checkoutId))) {
+    return NextResponse.json({ error: "Identificador de compra inválido" }, { status: 400 });
+  }
+  const orderId = createHash("sha256").update("checkout:" + (body.checkoutId ?? "payway:" + paywayToken)).digest("hex").slice(0, 36);
+  const reviewResponse = () => NextResponse.json({
+    orderId,
+    requiresReview: true,
+    error: `El pago del pedido #${orderId.slice(0, 8)} está pendiente de verificación. Contactá a la tienda antes de volver a pagar.`,
+  }, { status: 409 });
+
   try {
+    const existing = await prisma.order.findUnique({ where: { id: orderId } });
+    if (existing) {
+      if (existing.status === "confirmed" || existing.status === "delivered") {
+        return NextResponse.json({ orderId }, { status: 201 });
+      }
+      if (existing.status === "cancelled") {
+        return NextResponse.json({ resetAttempt: true, error: "Este intento fue cancelado. Podés iniciar otra compra." }, { status: 400 });
+      }
+      return reviewResponse();
+    }
+    const items = await getCheckoutItems(rawItems);
     const config = await prisma.paymentMethodConfig.findUnique({
       where: { method: "payway" },
       include: { categoryDiscounts: true },
@@ -117,34 +137,10 @@ export async function POST(req: Request) {
     const paymentMethodDiscount = await calculatePaymentMethodDiscount(items, config);
     const total = Math.max(0, subtotal - paymentMethodDiscount - couponDiscount) + shipping.cost;
 
-    // Cobro síncrono contra Payway ANTES de crear el pedido.
-    const charge = await createPaywayPayment({
-      privateKey: config.paywayPrivateKey,
-      sandbox: config.paywaySandbox,
-      token: paywayToken,
-      bin: paywayBin,
-      paymentMethodId: paywayPaymentMethodId,
-      amount: total,
-      siteTransactionId: randomUUID(),
-      description: `Pedido ModaShop — ${customer.email}`,
-      customerEmail: customer.email,
-      billTo: paywayBillTo,
-      items: items.map((i) => ({ name: i.name, sku: String(i.productId), quantity: i.quantity, unitPrice: i.price })),
-    });
-
-    if (!charge.ok) {
-      // charge.error es siempre un mensaje genérico y seguro para el cliente.
-      // El motivo técnico real (charge.detail) solo va al log — mostrar el
-      // motivo específico de un rechazo le sirve a un atacante para probar
-      // tarjetas robadas una por una hasta encontrar cuál pasa.
-      console.error("Payway payment declined/error:", charge.detail);
-      return NextResponse.json({ error: charge.error }, { status: 402 });
-    }
-
     const partnerId = await resolvePartnerId(session?.user?.id, customer);
 
-    // Pago ya aprobado → el pedido nace "confirmed" directo (candado de
-    // reserva igual que las demás rutas, para no sobrevender).
+    // Persist the order and reserve stock before making any charge. Its ID
+    // is also the provider reference, so an uncertain payment can be reconciled.
     let order;
     try {
       order = await createOrderWithStockGuard(
@@ -152,15 +148,15 @@ export async function POST(req: Request) {
         (tx) =>
           tx.order.create({
             data: {
+              id: orderId,
               userId: session?.user?.id,
               customerName: customer.name,
               customerEmail: customer.email,
               customerPhone: customer.phone,
               subtotal,
               total,
-              status: "confirmed",
+              status: "pending",
               paymentMethod: "payway",
-              paywayPaymentId: charge.id,
               shippingMethodId: shipping.id,
               shippingCost: shipping.cost,
               shippingAddress: shipping.requiresAddress ? String(shippingAddress) : undefined,
@@ -179,25 +175,60 @@ export async function POST(req: Request) {
           })
       );
     } catch (err) {
-      // Rarísimo (carrera de milisegundos con otra compra), pero si pasa ya
-      // le cobramos al cliente — hay que devolverle la plata.
+      if (err instanceof InsufficientStockError) {
+        return NextResponse.json({ error: "No hay stock suficiente para algunos productos", shortages: err.shortages }, { status: 409 });
+      }
+      // Concurrent retries may race on the unique order ID. Only the request
+      // that created the order is allowed to call the payment provider.
+      if (await prisma.order.findUnique({ where: { id: orderId } })) return reviewResponse();
+      throw err;
+    }
+
+    const charge = await createPaywayPayment({
+      privateKey: config.paywayPrivateKey,
+      sandbox: config.paywaySandbox,
+      token: paywayToken,
+      bin: paywayBin,
+      paymentMethodId: paywayPaymentMethodId,
+      amount: total,
+      siteTransactionId: orderId,
+      description: `Pedido ModaShop — ${customer.email}`,
+      customerEmail: customer.email,
+      billTo: paywayBillTo,
+      items: items.map((i) => ({ name: i.name, sku: String(i.productId), quantity: i.quantity, unitPrice: i.price })),
+    });
+
+    if (!charge.ok) {
+      console.error("Payment was not approved for order", orderId, charge.detail);
+      if (!charge.rejected) return reviewResponse();
+      await prisma.order.update({ where: { id: orderId }, data: { status: "cancelled" } });
+      return NextResponse.json({ error: charge.error }, { status: 402 });
+    }
+
+    try {
+      order = await prisma.order.update({
+        where: { id: orderId, status: "pending" },
+        data: { status: "confirmed", paywayPaymentId: charge.id },
+      });
+    } catch (err) {
       const refund = await refundPaywayPayment({
         privateKey: config.paywayPrivateKey,
         sandbox: config.paywaySandbox,
         paymentId: charge.id,
       });
-      if (!refund.ok) console.error("No se pudo reembolsar pago Payway", charge.id, refund.error);
-
-      if (err instanceof InsufficientStockError) {
-        return NextResponse.json(
-          { error: "No hay stock suficiente para algunos productos — el cobro se reembolsó.", shortages: err.shortages },
-          { status: 409 }
-        );
+      console.error("Could not confirm paid order", orderId, charge.id, err);
+      if (!refund.ok) {
+        console.error("Refund pending for order", orderId, charge.id, refund.error);
+        return reviewResponse();
       }
-      throw err;
+      await prisma.order.update({ where: { id: orderId }, data: { status: "cancelled", paywayPaymentId: charge.id } });
+      return NextResponse.json({ resetAttempt: true, error: "No se pudo confirmar el pedido. El cobro se reembolsó." }, { status: 409 });
     }
 
-    if (couponId) await registerCouponUse(couponId);
+    if (couponId) {
+      try { await registerCouponUse(couponId); }
+      catch (err) { console.error("Could not register coupon for order", order.id, couponId, err); }
+    }
 
     void notifyNewOrder({
       orderId: order.id,
@@ -208,7 +239,7 @@ export async function POST(req: Request) {
       items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
       shippingName: shipping.name,
       shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
-    });
+    }).catch((err) => console.error("Order notification failed", order.id, err));
 
     void sendOrderConfirmation({
       orderId: order.id,
@@ -222,7 +253,7 @@ export async function POST(req: Request) {
       total,
       paymentMethod: "payway",
       shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
-    });
+    }).catch((err) => console.error("Order notification failed", order.id, err));
 
     // El pago ya está confirmado → genera la orden en Odoo al toque (no hace
     // falta que nadie la confirme a mano). Si Odoo falla, no se cae la venta.
@@ -234,7 +265,14 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ orderId: order.id, partnerId, paywayPaymentId: charge.id }, { status: 201 });
   } catch (err) {
+    if (err instanceof InvalidCheckoutError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     console.error("POST /api/orders/payway failed", err);
+    try {
+      const persisted = await prisma.order.findUnique({ where: { id: orderId } });
+      if (persisted?.status === "pending") return reviewResponse();
+    } catch { return reviewResponse(); }
     return NextResponse.json({ error: "No se pudo crear el pedido" }, { status: 502 });
   }
 }
