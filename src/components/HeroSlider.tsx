@@ -65,7 +65,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
         </div>
       )}
 
-      <div className="relative z-10 w-full px-6 py-10 sm:px-10">
+      <div className="relative z-10 flex h-full w-full flex-col justify-center px-8 py-10 sm:px-16">
         <AnimatePresence mode="wait">
           <motion.div
             key={index}
