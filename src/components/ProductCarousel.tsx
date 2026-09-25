@@ -16,7 +16,7 @@ export function ProductCarousel({ products }: { products: OdooProductListItem[] 
   }
 
   const arrowClasses =
-    "flex shrink-0 cursor-pointer items-center justify-center rounded-full bg-white p-3 text-brand-pink-dark shadow-md transition-transform hover:scale-105";
+    "flex shrink-0 cursor-pointer items-center justify-center rounded-full bg-white p-3 text-brand-pink-dark shadow-md transition-colors hover:bg-brand-pink hover:text-white";
 
   return (
     <div>

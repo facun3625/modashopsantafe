@@ -19,7 +19,7 @@ export function CategoryCarousel({
   }
 
   const arrowClasses =
-    "flex shrink-0 cursor-pointer items-center justify-center rounded-full bg-white p-3 text-brand-pink-dark shadow-md ring-1 ring-black/10 transition-transform hover:scale-105";
+    "flex shrink-0 cursor-pointer items-center justify-center rounded-full bg-white p-3 text-brand-pink-dark shadow-md ring-1 ring-black/10 transition-colors hover:bg-brand-pink hover:text-white";
 
   return (
     <div>
