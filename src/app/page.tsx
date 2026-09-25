@@ -139,7 +139,7 @@ export default async function Home() {
       </section>
 
       {/* Categorías destacadas */}
-      <section className="px-6 pb-16 pt-6">
+      <section className="px-6 pb-16 pt-2">
         <div className="mx-auto max-w-6xl">
         <div className="flex items-end justify-between gap-4">
           <div>
