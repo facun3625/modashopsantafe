@@ -205,7 +205,7 @@ export default async function Home() {
       )}
 
       {/* Dónde estamos */}
-      <section id="donde-estamos" className="scroll-mt-24 px-6 py-5">
+      <section id="donde-estamos" className="scroll-mt-36 px-6 py-5">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-start">
             <div className="w-full lg:w-[30%]">

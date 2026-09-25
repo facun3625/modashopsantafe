@@ -7,7 +7,7 @@ export function Footer({ settings }: { settings: SiteSettings }) {
   const year = new Date().getFullYear();
 
   return (
-    <footer id="contacto" className="scroll-mt-24 border-t border-black/5 bg-white">
+    <footer id="contacto" className="scroll-mt-36 border-t border-black/5 bg-white">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-14 sm:grid-cols-3">
         <div>
           <Image src="/logo2.png" alt="ModaShop" width={300} height={120} className="h-8 w-auto" />
