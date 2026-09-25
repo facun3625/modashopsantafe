@@ -177,7 +177,7 @@ export default async function Home() {
 
       {/* Productos destacados */}
       {carouselProducts.length > 0 && (
-        <section className="px-6 pb-10 pt-0">
+        <section className="px-6 pb-5 pt-0">
           <div className="mx-auto max-w-6xl">
             <div className="flex items-end justify-between gap-4">
               <div>
@@ -204,7 +204,7 @@ export default async function Home() {
       )}
 
       {/* Dónde estamos */}
-      <section id="donde-estamos" className="scroll-mt-24 px-6 py-10">
+      <section id="donde-estamos" className="scroll-mt-24 px-6 py-5">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-start">
             <div className="w-full lg:w-[30%]">
