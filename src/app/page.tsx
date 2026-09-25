@@ -139,7 +139,7 @@ export default async function Home() {
       </section>
 
       {/* Categorías destacadas */}
-      <section className="px-6 pb-16 pt-2">
+      <section className="px-6 pb-16 pt-0">
         <div className="mx-auto max-w-6xl">
         <div className="flex items-end justify-between gap-4">
           <div>
@@ -169,7 +169,7 @@ export default async function Home() {
 
       {/* Productos destacados */}
       {carouselProducts.length > 0 && (
-        <section className="px-6 py-14">
+        <section className="px-6 pb-16 pt-0">
           <div className="mx-auto max-w-6xl">
             <div className="flex items-end justify-between gap-4">
               <div>
