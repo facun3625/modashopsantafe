@@ -37,11 +37,15 @@ export async function updateHideOutOfStock(formData: FormData) {
   revalidatePath("/");
 }
 
-// Solo lo que le compete al dueño de la tienda: prender/apagar la vendedora
-// IA y marcar el horario en que se ofrece WhatsApp (ya sea dentro del chat
-// de la IA, o como botón flotante cuando la IA está apagada/sin configurar
-// — ver getSiteSettings). El proveedor, modelo, API key e instrucciones son
-// configuración técnica/secreta y se cargan en /odoo_api, junto con Odoo.
+function optionalText(formData: FormData, name: string, maxLength: number): string | null {
+  const value = formData.get(name);
+  if (typeof value !== "string") return null;
+  return value.trim().slice(0, maxLength) || null;
+}
+
+// Configuración comercial que maneja el dueño: contenido de la vendedora,
+// on/off y horario de WhatsApp. Solo proveedor, modelo y API key permanecen
+// en /odoo_api porque son datos técnicos y secretos.
 export async function updateAiAssistantSettings(formData: FormData) {
   await requireAdmin();
 
@@ -54,6 +58,9 @@ export async function updateAiAssistantSettings(formData: FormData) {
 
   const data = {
     aiAssistantEnabled: formData.get("aiAssistantEnabled") === "on",
+    aiAssistantName: optionalText(formData, "aiAssistantName", 60),
+    aiWelcomeMessage: optionalText(formData, "aiWelcomeMessage", 500),
+    aiInstructions: optionalText(formData, "aiInstructions", 6000),
     aiHumanDays: humanDays,
     aiHumanStartTime: normalizeTime(formData.get("aiHumanStartTime"), "09:00"),
     aiHumanEndTime: normalizeTime(formData.get("aiHumanEndTime"), "18:00"),

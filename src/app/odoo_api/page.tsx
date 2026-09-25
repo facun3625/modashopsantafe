@@ -86,8 +86,8 @@ export default async function OdooApiPage() {
 
       <h1 className="mt-12 text-2xl font-bold text-brand-ink">Vendedora IA — configuración técnica</h1>
       <p className="mt-1 text-sm text-brand-muted">
-        Proveedor, modelo, API key e instrucciones de venta. Prender/apagar la vendedora y el horario de WhatsApp se
-        maneja desde el panel de la tienda, en Configuración.
+        Proveedor, modelo y API key. El nombre, mensaje, instrucciones de venta, activación y horario de WhatsApp se
+        manejan desde el panel de la tienda, en Configuración → Vendedora IA.
       </p>
 
       <form action={updateAiSecretSettings} className="mt-6 rounded-xl border border-black/10 bg-white p-5">
@@ -126,47 +126,6 @@ export default async function OdooApiPage() {
           />
         </div>
         <p className="mt-1 text-xs text-brand-muted">La clave se usa únicamente en el servidor y nunca se envía al navegador.</p>
-
-        <div className="mt-5 grid grid-cols-1 gap-4 border-t border-black/5 pt-5 sm:grid-cols-2">
-          <div>
-            <label className={labelClasses}>Nombre visible</label>
-            <input
-              type="text"
-              name="aiAssistantName"
-              maxLength={60}
-              defaultValue={settings.aiAssistantName ?? ""}
-              placeholder="Vendedora virtual"
-              className={fieldClasses}
-            />
-          </div>
-          <div>
-            <label className={labelClasses}>Mensaje de bienvenida</label>
-            <input
-              type="text"
-              name="aiWelcomeMessage"
-              maxLength={500}
-              defaultValue={settings.aiWelcomeMessage ?? ""}
-              placeholder="¡Hola! Contame qué estás buscando…"
-              className={fieldClasses}
-            />
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <label className={labelClasses}>Instrucciones para vender</label>
-          <textarea
-            name="aiInstructions"
-            rows={7}
-            maxLength={6000}
-            defaultValue={settings.aiInstructions ?? ""}
-            placeholder={"Ejemplo:\n- Priorizá la nueva colección.\n- Preguntá para qué ocasión busca la prenda.\n- Mencioná el descuento por transferencia cuando corresponda."}
-            className={`${fieldClasses} resize-y`}
-          />
-          <p className="mt-1 text-xs text-brand-muted">
-            Estas reglas complementan las protecciones fijas: la vendedora no puede inventar stock, precios ni
-            descuentos.
-          </p>
-        </div>
 
         <div className="mt-5 border-t border-black/5 pt-4">
           <SaveButton label="Guardar configuración" trackDirty />

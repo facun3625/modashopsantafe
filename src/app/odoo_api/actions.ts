@@ -39,10 +39,9 @@ function textField(formData: FormData, name: string, maxLength: number): string 
   return value.trim().slice(0, maxLength) || null;
 }
 
-// Configuración técnica/secreta de la vendedora IA (proveedor, modelo, API
-// key, instrucciones). El on/off y el horario de WhatsApp los sigue
-// manejando el dueño de la tienda desde /admin/configuracion — ver
-// updateAiAssistantSettings ahí.
+// Configuración técnica/secreta de la vendedora IA (proveedor, modelo y API
+// key). El nombre, bienvenida, instrucciones de venta, on/off y horario de
+// WhatsApp los maneja el dueño desde /admin/configuracion.
 export async function updateAiSecretSettings(formData: FormData) {
   await requireAdmin();
 
@@ -57,9 +56,6 @@ export async function updateAiSecretSettings(formData: FormData) {
     aiModel: provider
       ? textField(formData, "aiModel", 100) || DEFAULT_AI_MODELS[provider]
       : null,
-    aiAssistantName: textField(formData, "aiAssistantName", 60),
-    aiWelcomeMessage: textField(formData, "aiWelcomeMessage", 500),
-    aiInstructions: textField(formData, "aiInstructions", 6000),
     ...(newApiKey
       ? { aiApiKey: newApiKey }
       : provider !== saved.aiProvider

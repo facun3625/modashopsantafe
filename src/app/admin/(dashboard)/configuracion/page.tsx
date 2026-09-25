@@ -388,11 +388,9 @@ export default async function AdminConfiguracionPage({
     { value: 6, label: "Sáb" },
     { value: 0, label: "Dom" },
   ];
-  // El proveedor, modelo, API key e instrucciones son configuración técnica
-  // (secretos incluidos) y se cargan en /odoo_api junto con la conexión a
-  // Odoo — no en este panel, al que tiene acceso cualquiera que administre
-  // la tienda. Acá solo queda prender/apagar la vendedora y el horario de
-  // WhatsApp.
+  // El dueño maneja acá el contenido comercial y la disponibilidad. Solo el
+  // proveedor, modelo y API key quedan en /odoo_api como configuración
+  // técnica de la instalación.
   const aiPanel = (
     <form action={updateAiAssistantSettings} className="rounded-xl border border-black/10 bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 pb-5">
@@ -415,6 +413,56 @@ export default async function AdminConfiguracionPage({
           la tienda mostrará el botón de WhatsApp.
         </p>
       )}
+
+      <div className="mt-5 border-t border-black/5 pt-5">
+        <p className="text-sm font-semibold text-brand-ink">Identidad e instrucciones de venta</p>
+        <p className="mt-1 text-xs text-brand-muted">
+          Estos textos definen cómo se presenta la vendedora y qué criterios comerciales debe seguir al responder.
+        </p>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className={labelClasses}>Nombre visible</label>
+            <input
+              type="text"
+              name="aiAssistantName"
+              maxLength={60}
+              defaultValue={settings.aiAssistantName ?? ""}
+              placeholder="Vendedora virtual"
+              className={fieldClasses}
+            />
+          </div>
+          <div>
+            <label className={labelClasses}>Mensaje de bienvenida</label>
+            <input
+              type="text"
+              name="aiWelcomeMessage"
+              maxLength={500}
+              defaultValue={settings.aiWelcomeMessage ?? ""}
+              placeholder="¡Hola! Contame qué estás buscando…"
+              className={fieldClasses}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className={labelClasses}>Instrucciones para vender</label>
+          <textarea
+            name="aiInstructions"
+            rows={7}
+            maxLength={6000}
+            defaultValue={settings.aiInstructions ?? ""}
+            placeholder={
+              "Ejemplo:\n- Priorizá la nueva colección.\n- Preguntá para qué ocasión busca la prenda.\n- Mencioná el descuento por transferencia cuando corresponda."
+            }
+            className={`${fieldClasses} resize-y`}
+          />
+          <p className="mt-1 text-xs text-brand-muted">
+            Estas reglas complementan las protecciones fijas: la vendedora no puede inventar stock, precios ni
+            descuentos.
+          </p>
+        </div>
+      </div>
 
       <div className="mt-5 border-t border-black/5 pt-5">
         <p className="text-sm font-semibold text-brand-ink">Horario de WhatsApp</p>

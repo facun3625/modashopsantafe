@@ -467,6 +467,8 @@ Las recomendaciones aparecen como tarjetas de producto y pueden agregarse al car
 El administrador de la tienda puede:
 
 - Activar o desactivar la vendedora.
+- Definir el nombre visible y el mensaje de bienvenida.
+- Escribir instrucciones comerciales para orientar la forma de vender.
 - Elegir los días de atención humana.
 - Definir hora de inicio y fin de WhatsApp.
 
@@ -475,9 +477,6 @@ La configuración técnica se mantiene en una sección separada y protegida:
 - Proveedor de IA.
 - Modelo.
 - API key.
-- Nombre visible de la asistente.
-- Mensaje inicial.
-- Instrucciones comerciales personalizadas.
 
 ### 7.4 Reglas de seguridad de la conversación
 
@@ -784,6 +783,8 @@ La sección se organiza en pestañas:
 #### Vendedora IA
 
 - Activación o desactivación.
+- Nombre visible y mensaje de bienvenida.
+- Instrucciones comerciales para vender.
 - Días y horario de atención por WhatsApp.
 
 #### Slider
@@ -795,7 +796,7 @@ La sección se organiza en pestañas:
 Existe una ruta protegida y separada del menú comercial para reducir cambios accidentales. Permite configurar:
 
 - URL, base, usuario y API key de Odoo.
-- Proveedor, modelo, API key e instrucciones de la IA.
+- Proveedor, modelo y API key de la IA.
 - Proveedor de correo, SMTP o Resend.
 - Remitente y credenciales de correo.
 - Prueba de envío.
