@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { SalesAssistant } from "@/components/SalesAssistant";
+import { WhatsAppFloatingButton } from "@/components/WhatsAppFloatingButton";
 import { VisitTracker } from "@/components/VisitTracker";
 import type { SiteSettings } from "@/lib/settings";
 
@@ -21,12 +22,6 @@ export function SiteChrome({
 }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin");
-  // En /carrito el botón fijo de WhatsApp queda tapando controles del
-  // checkout en mobile (el botón "Confirmar pedido", el CVV de la tarjeta,
-  // el resumen con el total) — cualquier contenido que coincida con esa
-  // esquina al scrollear se ve tapado, porque el botón es fixed. Ahí el CTA
-  // de la propia página tiene prioridad.
-  const isCart = pathname?.startsWith("/carrito");
   // Página de conexión a Odoo: aparte de /admin a propósito, pero misma
   // idea — pantalla propia, sin navbar/footer/whatsapp del sitio público.
   const isOdooApi = pathname === "/odoo_api";
@@ -59,7 +54,11 @@ export function SiteChrome({
       <Navbar settings={settings} />
       <div className="flex-1">{children}</div>
       <Footer settings={settings} />
-      {!isCart && <WhatsAppButton phone={settings.whatsappNumber} />}
+      {settings.assistant.enabled ? (
+        <SalesAssistant settings={settings.assistant} />
+      ) : (
+        <WhatsAppFloatingButton humanSeller={settings.assistant.humanSeller} />
+      )}
     </>
   );
 }

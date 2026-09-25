@@ -13,9 +13,9 @@ enum Role {
 }
 
 model User {
-  id   String  @id @default(cuid())
-  name String?
-  email String @unique
+  id           String  @id @default(cuid())
+  name         String?
+  email        String  @unique
   // Null para cuentas creadas por Google (no tienen contraseña propia) —
   // ver el guard en lib/auth.ts que evita loguearse con Credentials en ese caso.
   passwordHash String?
@@ -32,7 +32,8 @@ model User {
   pointTransactions PointTransaction[]
   redeemedCoupons   Coupon[]
 
-  favorites Favorite[]
+  favorites       Favorite[]
+  aiConversations AiConversation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -57,7 +58,7 @@ model Favorite {
 // listado para que el equipo decida qué hacer (contactar a mano, mailing,
 // etc.) cuando el producto vuelve a tener stock en Odoo.
 model WaitlistEntry {
-  id           String @id @default(cuid())
+  id           String  @id @default(cuid())
   productId    Int // product.template id en Odoo
   productName  String
   categoryName String?
@@ -75,9 +76,9 @@ model StoreSettings {
   id String @id @default("global")
 
   // Sistema de puntos de fidelidad
-  pointsEnabled   Boolean   @default(false)
-  pointsRatio     Float     @default(0.01) // puntos otorgados por cada $1 de subtotal
-  pointsLastSync  DateTime?
+  pointsEnabled  Boolean   @default(false)
+  pointsRatio    Float     @default(0.01) // puntos otorgados por cada $1 de subtotal
+  pointsLastSync DateTime?
 
   // Apaga el sitio para clientes (ver proxy.ts + /mantenimiento) — los
   // admins entran igual, tanto al panel como al sitio público normal.
@@ -90,6 +91,20 @@ model StoreSettings {
   // admin la opción de ocultarlos directamente si prefiere una vidriera más
   // "limpia".
   hideOutOfStock Boolean @default(false)
+
+  // Vendedora virtual. El proveedor se puede cambiar sin alterar el chat ni
+  // las herramientas: Odoo sigue siendo la fuente real de catálogo y stock.
+  aiAssistantEnabled    Boolean     @default(false)
+  aiProvider            AiProvider?
+  aiApiKey              String?
+  aiModel               String?
+  aiAssistantName       String?
+  aiWelcomeMessage      String?
+  aiInstructions        String?
+  aiHumanHandoffEnabled Boolean     @default(true)
+  aiHumanDays           Int[]       @default([1, 2, 3, 4, 5, 6])
+  aiHumanStartTime      String      @default("09:00")
+  aiHumanEndTime        String      @default("18:00")
 
   // Conexión con la API externa de Odoo (ver lib/odoo.ts) — cada franquicia
   // tiene su propia instancia de Odoo, así que esto NO va en variables de
@@ -132,11 +147,11 @@ model StoreSettings {
   // SMTP para el mailing (ver lib/mailer.ts). La contraseña queda en texto
   // plano en la base — mismo nivel de exposición que las credenciales de
   // Mercado Pago en PaymentMethodConfig, nunca se devuelve al cliente.
-  smtpHost     String?
-  smtpPort     Int?
-  smtpSecure   Boolean @default(true)
-  smtpUser     String?
-  smtpPassword String?
+  smtpHost      String?
+  smtpPort      Int?
+  smtpSecure    Boolean @default(true)
+  smtpUser      String?
+  smtpPassword  String?
   mailFromName  String?
   mailFromEmail String?
 
@@ -183,19 +198,56 @@ enum MailProvider {
   resend
 }
 
+enum AiProvider {
+  openai
+  gemini
+}
+
+enum AiMessageRole {
+  user
+  assistant
+}
+
+// Una conversación por navegador. Guardamos nuestro propio historial para
+// poder cambiar de proveedor sin perder contexto ni depender de IDs externos.
+model AiConversation {
+  id        String      @id @default(cuid())
+  sessionId String      @unique
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages  AiMessage[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([updatedAt])
+}
+
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           AiMessageRole
+  content        String
+  productIds     Int[]          @default([])
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
 // Registro de cada mailing mandado desde /admin/mailing — a qué listas se
 // mandó, cuántos destinatarios tenía y cómo va el envío. El envío en sí
 // pasa en segundo plano (ver actions.ts): esta fila se crea al toque con
 // status "sending" y se va actualizando sentCount a medida que manda.
 model MailCampaign {
-  id             String              @id @default(cuid())
+  id             String             @id @default(cuid())
   subject        String
   title          String
   body           String
   audiences      MailAudience[]
-  recipientCount Int                 @default(0)
-  sentCount      Int                 @default(0)
-  status         MailCampaignStatus  @default(sending)
+  recipientCount Int                @default(0)
+  sentCount      Int                @default(0)
+  status         MailCampaignStatus @default(sending)
 
   createdAt  DateTime  @default(now())
   finishedAt DateTime?
@@ -370,11 +422,11 @@ model ShippingMethod {
 // filas para un medio de pago = sin restricción (acepta todos los envíos
 // habilitados).
 model PaymentMethodShipping {
-  id                     String              @id @default(cuid())
-  paymentMethodConfigId  String
-  paymentMethodConfig    PaymentMethodConfig @relation(fields: [paymentMethodConfigId], references: [id], onDelete: Cascade)
-  shippingMethodId       String
-  shippingMethod         ShippingMethod      @relation(fields: [shippingMethodId], references: [id], onDelete: Cascade)
+  id                    String              @id @default(cuid())
+  paymentMethodConfigId String
+  paymentMethodConfig   PaymentMethodConfig @relation(fields: [paymentMethodConfigId], references: [id], onDelete: Cascade)
+  shippingMethodId      String
+  shippingMethod        ShippingMethod      @relation(fields: [shippingMethodId], references: [id], onDelete: Cascade)
 
   @@unique([paymentMethodConfigId, shippingMethodId])
 }
@@ -390,21 +442,21 @@ enum DiscountType {
 // pedido (no solo sobre los ítems que matchean categoría/producto) una vez
 // que se cumplen las condiciones de alcance.
 model Coupon {
-  id      String @id @default(cuid())
-  code    String @unique
+  id      String  @id @default(cuid())
+  code    String  @unique
   enabled Boolean @default(true)
 
   discountType  DiscountType
   discountValue Float // % (0-100) si es percentage, o $ si es fixed
 
   // Alcance — todo opcional
-  categoryId    Int? // product.category id en Odoo
-  productId     Int? // product.template id en Odoo
-  paymentMethod PaymentMethod?
+  categoryId        Int? // product.category id en Odoo
+  productId         Int? // product.template id en Odoo
+  paymentMethod     PaymentMethod?
   minPurchaseAmount Float?
   expiresAt         DateTime?
   maxUses           Int?
-  usedCount         Int      @default(0)
+  usedCount         Int            @default(0)
 
   // Solo presente en cupones generados por un canje de puntos (código con
   // prefijo "CANJE-"): quedan atados a ese usuario y son de un solo uso (se
@@ -510,9 +562,9 @@ model Order {
 }
 
 model OrderItem {
-  id        String @id @default(cuid())
-  orderId   String
-  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   // id del product.template en Odoo
   productId Int

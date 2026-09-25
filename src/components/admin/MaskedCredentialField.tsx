@@ -8,12 +8,14 @@ export function MaskedCredentialField({
   configured,
   placeholder,
   type = "text",
+  required = false,
 }: {
   name: string;
   label: string;
   configured: boolean;
   placeholder: string;
   type?: string;
+  required?: boolean;
 }) {
   const [editing, setEditing] = useState(!configured);
 
@@ -24,6 +26,7 @@ export function MaskedCredentialField({
         <input
           type={type}
           name={name}
+          required={required}
           placeholder={placeholder}
           autoFocus={configured}
           className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none"

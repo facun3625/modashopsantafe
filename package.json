@@ -11,12 +11,14 @@
     "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
+    "@google/genai": "^2.24.0",
     "@prisma/adapter-pg": "^7.9.0",
     "bcryptjs": "^3.0.3",
     "framer-motion": "^12.42.2",
     "next": "16.2.11",
     "next-auth": "^5.0.0-beta.32",
     "nodemailer": "^8.0.11",
+    "openai": "^6.49.0",
     "pg": "^8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
