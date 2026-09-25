@@ -169,10 +169,24 @@ export default async function Home() {
 
       {/* Productos destacados */}
       {carouselProducts.length > 0 && (
-        <section className="bg-brand-pink px-6 py-14">
+        <section className="px-6 py-14">
           <div className="mx-auto max-w-6xl">
-            <h2 className="text-2xl font-bold text-white">Productos destacados</h2>
-            <p className="mt-1 text-white/80">Lo más elegido de la tienda.</p>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-brand-pink-dark">
+                  <span className="h-px w-4 bg-brand-pink" />
+                  Productos destacados
+                </p>
+                <h2 className="mt-1 text-2xl font-bold text-brand-ink">Lo más elegido de la tienda</h2>
+                <p className="mt-1 text-brand-muted">Descubrí nuestros productos más populares.</p>
+              </div>
+              <Link
+                href="/tienda"
+                className="shrink-0 text-sm font-medium text-brand-pink-dark hover:underline"
+              >
+                Ver todos los productos →
+              </Link>
+            </div>
 
             <div className="mt-8">
               <ProductCarousel products={carouselProducts} />

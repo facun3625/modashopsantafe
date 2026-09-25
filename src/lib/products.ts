@@ -77,6 +77,20 @@ export async function getProductsPage(opts: {
   return { products: await applyReservations(products), total };
 }
 
+// Para la página de favoritos: re-consulta a Odoo el estado actual (precio,
+// stock, imagen) de una lista puntual de ids — nunca se cachea un producto
+// local, así que un favorito viejo siempre muestra datos frescos.
+export async function getProductsByIds(ids: number[]): Promise<OdooProductListItem[]> {
+  if (ids.length === 0) return [];
+  const products = await executeKw<OdooProductListItem[]>(
+    "product.template",
+    "read",
+    [ids],
+    { fields: PRODUCT_LIST_FIELDS }
+  );
+  return applyReservations(products);
+}
+
 // Descuenta del qty_available que ve el cliente el stock ya reservado por
 // pedidos web sin despachar. Se aplica solo a lo que muestra la tienda (no al
 // catálogo del admin, que ve el stock físico real de Odoo).

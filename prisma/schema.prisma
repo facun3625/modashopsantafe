@@ -32,8 +32,24 @@ model User {
   pointTransactions PointTransaction[]
   redeemedCoupons   Coupon[]
 
+  favorites Favorite[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Productos que el usuario guardó como favoritos ("corazón" en las cards).
+// Solo guarda el id de Odoo — el resto de los datos del producto (precio,
+// imagen, stock) se re-consulta a Odoo al mostrar la página de favoritos,
+// igual que ya se hace en todos lados (nunca se cachea un producto local).
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId Int // product.template id en Odoo
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
 }
 
 // "Avisarme cuando haya stock": se anota gente interesada en un producto

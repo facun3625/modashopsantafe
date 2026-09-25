@@ -5,8 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { UserIcon, CartIcon, SearchIcon, StoreIcon, DashboardIcon, StarIcon, LogoutIcon, PackageIcon } from "@/components/icons";
+import { UserIcon, CartIcon, SearchIcon, StoreIcon, DashboardIcon, StarIcon, LogoutIcon, PackageIcon, HeartIcon } from "@/components/icons";
 import { useCart } from "@/lib/cart";
+import { useFavorites } from "@/lib/favorites";
 import { useAuthModal } from "@/lib/authModal";
 import { useProductSuggestions } from "@/lib/useProductSuggestions";
 import { SearchSuggestions } from "@/components/SearchSuggestions";
@@ -66,6 +67,7 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { count, openCart } = useCart();
+  const { ids: favoriteIds } = useFavorites();
   const { openLogin } = useAuthModal();
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -220,6 +222,14 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
                       <StarIcon className="h-4 w-4 shrink-0" />
                       Mis puntos
                     </Link>
+                    <Link
+                      href="/mi-cuenta/favoritos"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-brand-ink transition-colors hover:bg-brand-soft"
+                    >
+                      <HeartIcon className="h-4 w-4 shrink-0" />
+                      Mis favoritos
+                    </Link>
                     <button
                       onClick={() => {
                         setProfileOpen(false);
@@ -240,6 +250,29 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
                 className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
               >
                 <UserIcon className="h-4.5 w-4.5" />
+              </button>
+            )}
+
+            {session ? (
+              <Link
+                href="/mi-cuenta/favoritos"
+                title="Mis favoritos"
+                className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
+              >
+                <HeartIcon className="h-4.5 w-4.5" />
+                {favoriteIds.size > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-brand-pink-dark text-[10px] font-semibold text-white">
+                    {favoriteIds.size}
+                  </span>
+                )}
+              </Link>
+            ) : (
+              <button
+                onClick={openLogin}
+                title="Mis favoritos"
+                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
+              >
+                <HeartIcon className="h-4.5 w-4.5" />
               </button>
             )}
 
