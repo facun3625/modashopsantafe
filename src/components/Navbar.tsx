@@ -88,9 +88,12 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
       const donde = document.getElementById("donde-estamos");
       const contacto = document.getElementById("contacto");
       const scrollPos = window.scrollY + 150;
+      // getBoundingClientRect() + scrollY, no offsetTop: offsetTop es
+      // relativo al ancestro posicionado más cercano (puede no ser el body
+      // si hay algún `relative` en el medio), y daba resultados incorrectos.
       let next: "inicio" | "donde-estamos" | "contacto" = "inicio";
-      if (donde && scrollPos >= donde.offsetTop) next = "donde-estamos";
-      if (contacto && scrollPos >= contacto.offsetTop) next = "contacto";
+      if (donde && scrollPos >= donde.getBoundingClientRect().top + window.scrollY) next = "donde-estamos";
+      if (contacto && scrollPos >= contacto.getBoundingClientRect().top + window.scrollY) next = "contacto";
       setActiveSection(next);
     }
 
