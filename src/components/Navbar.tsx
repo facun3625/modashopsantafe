@@ -155,13 +155,13 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
                   key={link.href}
                   href={link.href}
                   onClick={(e) => handleNavClick(e, link.href)}
-                  className={`relative flex cursor-pointer items-center gap-1.5 py-2 text-xs font-medium uppercase tracking-widest transition-colors ${
+                  className={
                     isTienda
-                      ? "text-brand-pink-dark hover:text-brand-pink"
-                      : active
-                        ? "text-brand-pink-dark"
-                        : "text-brand-ink/70 hover:text-brand-pink-dark"
-                  }`}
+                      ? "flex cursor-pointer items-center gap-1.5 rounded-full bg-brand-pink px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition-colors hover:bg-brand-pink-dark"
+                      : `relative flex cursor-pointer items-center gap-1.5 py-2 text-xs font-medium uppercase tracking-widest transition-colors ${
+                          active ? "text-brand-pink-dark" : "text-brand-ink/70 hover:text-brand-pink-dark"
+                        }`
+                  }
                 >
                   {isTienda && <StoreIcon className="h-3.5 w-3.5 shrink-0" />}
                   {link.label}
