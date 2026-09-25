@@ -54,7 +54,7 @@ export function CategoryCarousel({
 
                 <div className="absolute inset-x-2.5 bottom-2.5 flex items-center justify-between gap-2 rounded-full bg-white py-2 pl-4 pr-2 shadow-md">
                   <p className="truncate text-xs font-bold uppercase tracking-wide text-brand-ink">{cat.name}</p>
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-pink/10 text-brand-pink-dark transition-colors group-hover:bg-brand-pink group-hover:text-white">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-brand-pink-dark shadow-sm transition-colors group-hover:bg-brand-pink group-hover:text-white">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-3.5 w-3.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
                     </svg>
