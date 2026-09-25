@@ -25,7 +25,7 @@ export function NewsletterBanner() {
   }
 
   return (
-    <section className="px-3 py-10 sm:px-6 sm:py-16">
+    <section className="px-3 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-6xl rounded-3xl bg-brand-pink/10 p-6 sm:p-8">
         <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
           <div className="flex flex-col items-center gap-4 sm:flex-row">
