@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { getAllCategories } from "@/lib/categories";
 import { ToggleSwitch } from "@/components/admin/ToggleSwitch";
-import { ChipCheckbox } from "@/components/admin/ChipCheckbox";
 import { SaveButton } from "@/components/admin/SaveButton";
 import { CardAccordion } from "@/components/admin/CardAccordion";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
@@ -12,6 +11,7 @@ import { TelegramTestButton } from "./TelegramTestButton";
 import { MailProviderFields } from "./MailProviderFields";
 import { MailTestButton } from "./MailTestButton";
 import { SettingsTabs } from "./SettingsTabs";
+import { CategoryChipSelector } from "./CategoryChipSelector";
 import { WrenchIcon, PackageIcon } from "@/components/icons";
 import { DEFAULT_INTRO, DEFAULT_NOTES, DEFAULT_CLOSING } from "@/lib/orderEmails";
 import {
@@ -37,7 +37,6 @@ export default async function AdminConfiguracionPage() {
     prisma.heroSlide.findMany({ orderBy: { position: "asc" } }),
     getAllCategories(),
   ]);
-  const featuredCategoryIds = new Set(settings.featuredCategoryIds);
 
   const canAddSlide = slides.length < MAX_HERO_SLIDES;
 
@@ -161,17 +160,7 @@ export default async function AdminConfiguracionPage() {
               Las que se muestran en &ldquo;Explorá por categoría&rdquo; y &ldquo;Productos destacados&rdquo;. Si no
               marcás ninguna, se usa una selección por defecto.
             </p>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((c) => (
-                <ChipCheckbox
-                  key={c.id}
-                  name="featuredCategoryIds"
-                  value={String(c.id)}
-                  label={c.name}
-                  defaultChecked={featuredCategoryIds.has(c.id)}
-                />
-              ))}
-            </div>
+            <CategoryChipSelector categories={categories} selectedIds={settings.featuredCategoryIds} />
           </div>
 
           <div className="mt-5 border-t border-black/5 pt-4">
