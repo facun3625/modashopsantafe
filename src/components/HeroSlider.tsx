@@ -40,7 +40,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
         : { circle: "h-16 w-16 sm:h-20 sm:w-20", text: "text-[10px] sm:text-xs" };
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-white px-6 py-8 sm:px-10 sm:py-10">
+    <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-gradient-to-br from-brand-pink/10 via-white to-white px-6 py-8 sm:px-10 sm:py-8">
       <AnimatePresence mode="wait">
         <motion.div
           key={index}
@@ -48,14 +48,14 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -14 }}
           transition={{ duration: 0.45, ease: "easeOut" }}
-          className="grid grid-cols-1 items-stretch gap-8 sm:min-h-[380px] sm:grid-cols-2 sm:gap-10"
+          className="grid grid-cols-1 items-stretch gap-8 sm:min-h-[300px] sm:grid-cols-2 sm:gap-10"
         >
           {/* Texto */}
           <div className="order-2 flex flex-col justify-center text-center sm:order-1 sm:text-left">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-muted sm:text-sm">
               {slide.eyebrow}
             </p>
-            <h1 className="mt-3 text-4xl font-extrabold uppercase leading-[0.95] sm:text-6xl">
+            <h1 className="mt-3 text-4xl font-extrabold leading-[1.05] sm:text-6xl">
               {titleLines.map((line, i) => (
                 <span key={i} className={`block ${i % 2 === 1 ? "text-brand-pink-dark" : "text-brand-ink"}`}>
                   {line}
