@@ -120,8 +120,10 @@ export default async function Home() {
 
           <HeroSlider slides={heroSlides} />
 
-          {/* Marquee de promociones */}
-          <div className="mt-3 overflow-hidden rounded-3xl bg-brand-ink py-3">
+          {/* Marquee de promociones + franja de beneficios, fusionados en un
+              solo módulo (oscuro arriba, blanco abajo) en vez de dos
+              rectángulos flotando por separado. */}
+          <div className="mt-3 overflow-hidden rounded-t-3xl bg-brand-ink py-3">
             <div className="flex w-max animate-marquee gap-10 whitespace-nowrap">
               {Array(12)
                 .fill(MARQUEE_ITEMS)

@@ -24,7 +24,7 @@ export function BenefitsStrip({
   ];
 
   return (
-    <div className="mt-3 grid grid-cols-1 gap-3 rounded-3xl border border-black/5 bg-white px-4 py-5 shadow-sm sm:grid-cols-3 sm:px-6">
+    <div className="grid grid-cols-1 gap-3 rounded-b-3xl border-x border-b border-black/5 bg-white px-4 py-5 shadow-sm sm:grid-cols-3 sm:px-6">
       {benefits.map((b, i) => (
         <div key={i} className="flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-brand-pink-dark shadow-sm">
