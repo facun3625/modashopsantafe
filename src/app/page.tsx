@@ -11,10 +11,9 @@ import { HeroSlider, type HeroSlide } from "@/components/HeroSlider";
 import { BenefitsStrip } from "@/components/BenefitsStrip";
 import type { OdooProductListItem } from "@/types/odoo";
 
-// Elegidas a mano por ahora. Cuando exista el panel de administración,
-// esta selección (y el orden) debería salir de ahí en vez de estar hardcodeada.
+// Elegidas a mano por ahora — es el fallback del slide de ejemplo cuando
+// todavía no se cargó ningún HeroSlide real desde /admin/configuracion.
 const HERO_CATEGORY_IDS = [43, 40, 44, 45];
-const FEATURED_CATEGORY_IDS = [43, 40, 44, 45, 238, 62];
 
 export default async function Home() {
   let hero: { id: number; name: string; image: string | false }[] = [];
@@ -42,7 +41,7 @@ export default async function Home() {
         })
       ),
       Promise.all(
-        FEATURED_CATEGORY_IDS.map(async (id) => {
+        settings.featuredCategoryIds.map(async (id) => {
           const category = byId.get(id);
           if (!category) return null;
           const image = await getCategoryShowcaseImage(id, "image_128");
@@ -50,7 +49,7 @@ export default async function Home() {
         })
       ),
       Promise.all(
-        FEATURED_CATEGORY_IDS.map((id) => getProductsPage({ categoryId: id, limit: 4, offset: 0 }))
+        settings.featuredCategoryIds.map((id) => getProductsPage({ categoryId: id, limit: 4, offset: 0 }))
       ),
     ]);
 

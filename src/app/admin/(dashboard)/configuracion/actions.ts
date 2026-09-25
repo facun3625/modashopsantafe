@@ -75,6 +75,7 @@ export async function updateSiteSettings(formData: FormData) {
     address: (formData.get("address") as string) || null,
     contactEmail: (formData.get("contactEmail") as string) || null,
     marqueeText: (formData.get("marqueeText") as string) || null,
+    featuredCategoryIds: formData.getAll("featuredCategoryIds").map(Number),
   };
 
   await prisma.storeSettings.upsert({

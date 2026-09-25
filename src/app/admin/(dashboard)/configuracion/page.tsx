@@ -1,7 +1,9 @@
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { getStoreSettingsRow } from "@/lib/settings";
+import { getAllCategories } from "@/lib/categories";
 import { ToggleSwitch } from "@/components/admin/ToggleSwitch";
+import { ChipCheckbox } from "@/components/admin/ChipCheckbox";
 import { SaveButton } from "@/components/admin/SaveButton";
 import { CardAccordion } from "@/components/admin/CardAccordion";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
@@ -30,10 +32,12 @@ const labelClasses = "mb-1 block text-xs font-semibold text-brand-muted";
 const MAX_HERO_SLIDES = 3;
 
 export default async function AdminConfiguracionPage() {
-  const [settings, slides] = await Promise.all([
+  const [settings, slides, categories] = await Promise.all([
     getStoreSettingsRow(),
     prisma.heroSlide.findMany({ orderBy: { position: "asc" } }),
+    getAllCategories(),
   ]);
+  const featuredCategoryIds = new Set(settings.featuredCategoryIds);
 
   const canAddSlide = slides.length < MAX_HERO_SLIDES;
 
@@ -149,6 +153,25 @@ export default async function AdminConfiguracionPage() {
               className={fieldClasses}
             />
             <p className="mt-1 text-xs text-brand-muted">Es la franja que se desplaza debajo del slider del home.</p>
+          </div>
+
+          <div className="mt-5 border-t border-black/5 pt-4">
+            <label className={labelClasses}>Categorías destacadas del home</label>
+            <p className="mb-2.5 text-xs text-brand-muted">
+              Las que se muestran en &ldquo;Explorá por categoría&rdquo; y &ldquo;Productos destacados&rdquo;. Si no
+              marcás ninguna, se usa una selección por defecto.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((c) => (
+                <ChipCheckbox
+                  key={c.id}
+                  name="featuredCategoryIds"
+                  value={String(c.id)}
+                  label={c.name}
+                  defaultChecked={featuredCategoryIds.has(c.id)}
+                />
+              ))}
+            </div>
           </div>
 
           <div className="mt-5 border-t border-black/5 pt-4">

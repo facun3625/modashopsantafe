@@ -11,6 +11,10 @@ export async function getStoreSettingsRow() {
 
 const DEFAULT_MARQUEE = ["Nueva colección", "Promociones", "ModaShop"];
 
+// Selección original hardcodeada en page.tsx — se usa mientras el admin no
+// eligió categorías propias en /admin/configuracion.
+const DEFAULT_FEATURED_CATEGORY_IDS = [43, 40, 44, 45, 238, 62];
+
 // Datos de contacto + marquee del sitio público, con los valores por
 // defecto de lib/contact.ts como fallback mientras el admin no cargó nada.
 export async function getSiteSettings() {
@@ -25,6 +29,7 @@ export async function getSiteSettings() {
     marqueeItems: row.marqueeText
       ? row.marqueeText.split("\n").map((s) => s.trim()).filter(Boolean)
       : DEFAULT_MARQUEE,
+    featuredCategoryIds: row.featuredCategoryIds.length > 0 ? row.featuredCategoryIds : DEFAULT_FEATURED_CATEGORY_IDS,
   };
 }
 

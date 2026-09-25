@@ -112,6 +112,12 @@ model StoreSettings {
   // por línea, se guardan como un único string separado por saltos de línea.
   marqueeText String?
 
+  // Categorías (ids de Odoo) elegidas para "Explorá por categoría" y
+  // "Productos destacados" del home — antes vivía hardcodeado en page.tsx.
+  // Vacío = todavía no se cargó ninguna, se usa un default razonable (ver
+  // lib/settings.ts).
+  featuredCategoryIds Int[] @default([])
+
   // Nombre y sucursal de la franquicia — para el encabezado del mailing
   // (ej. "ModaShop" / "Santa Fe"). Pensado para cuando haya más de una
   // franquicia, cada una con su propia identidad en los mails que manda.
