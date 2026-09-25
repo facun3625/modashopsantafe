@@ -157,8 +157,8 @@ export default async function AdminConfiguracionPage() {
           <div className="mt-5 border-t border-black/5 pt-4">
             <label className={labelClasses}>Categorías destacadas del home</label>
             <p className="mb-2.5 text-xs text-brand-muted">
-              Las que se muestran en &ldquo;Explorá por categoría&rdquo; y &ldquo;Productos destacados&rdquo;. Si no
-              marcás ninguna, se usa una selección por defecto.
+              Las que se muestran en &ldquo;Explorá por categoría&rdquo; y &ldquo;Productos destacados&rdquo;, en este
+              orden (reordenalas con las flechas). Si no elegís ninguna, se usa una selección por defecto.
             </p>
             <CategoryChipSelector categories={categories} selectedIds={settings.featuredCategoryIds} />
           </div>
