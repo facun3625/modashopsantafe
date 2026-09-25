@@ -207,7 +207,7 @@ export default async function Home() {
       <section id="donde-estamos" className="scroll-mt-24 px-6 py-10">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-start">
-            <div className="w-full lg:w-2/5">
+            <div className="w-full lg:w-[30%]">
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-brand-pink-dark">
                 <span className="h-px w-4 bg-brand-pink" />
                 Nuestra tienda
@@ -238,7 +238,7 @@ export default async function Home() {
               </a>
             </div>
 
-            <div className="w-full overflow-hidden rounded-3xl border border-black/10 shadow-sm lg:w-3/5">
+            <div className="w-full overflow-hidden rounded-3xl border border-black/10 shadow-sm lg:w-[70%]">
               <iframe
                 src={`https://www.google.com/maps?q=${encodeURIComponent(settings.address)}&output=embed`}
                 className="h-72 w-full grayscale-[15%] sm:h-96"
