@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MailIcon } from "@/components/icons";
 
 export function NewsletterBanner() {
   const [email, setEmail] = useState("");
@@ -25,49 +26,47 @@ export function NewsletterBanner() {
 
   return (
     <section className="px-3 py-10 sm:px-6 sm:py-16">
-      <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-brand-pink">
-        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute -left-10 -top-10 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
-          <div className="absolute -bottom-16 -right-10 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
-          <span className="absolute left-[8%] top-[20%] text-2xl text-white/25">✦</span>
-          <span className="absolute right-[12%] top-[15%] text-lg text-white/20">✦</span>
-          <span className="absolute bottom-[18%] left-[15%] text-lg text-white/20">✦</span>
-          <span className="absolute bottom-[22%] right-[9%] text-3xl text-white/25">✦</span>
-        </div>
-
-        <div className="relative flex flex-col items-center gap-4 px-6 py-14 text-center sm:py-20">
-          <h2 className="text-2xl font-bold text-white sm:text-3xl">Sumate a nuestro newsletter</h2>
-          <p className="max-w-xl text-sm text-white/85 sm:whitespace-nowrap sm:text-base">
-            Enterate primero de los nuevos ingresos y novedades de ModaShop.
-          </p>
+      <div className="mx-auto max-w-6xl rounded-3xl bg-brand-pink/10 p-6 sm:p-8">
+        <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+          <div className="flex flex-col items-center gap-4 sm:flex-row">
+            <span className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-brand-pink-dark shadow-sm sm:flex">
+              <MailIcon className="h-6 w-6" />
+            </span>
+            <div>
+              <h2 className="text-xl font-bold text-brand-pink-dark">Sumate a nuestro newsletter</h2>
+              <p className="mt-1 text-sm text-brand-muted">
+                Enterate primero de los nuevos ingresos y novedades de ModaShop.
+              </p>
+            </div>
+          </div>
 
           {status === "ok" ? (
-            <p className="mt-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-brand-pink-dark">
+            <p className="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-brand-pink-dark shadow-sm">
               ¡Listo! Ya estás suscripto.
             </p>
           ) : (
-            <form onSubmit={handleSubmit} className="mx-auto mt-2 flex w-full max-w-sm flex-col gap-2 sm:flex-row">
+            <form onSubmit={handleSubmit} className="flex w-full max-w-sm shrink-0 gap-2">
               <input
                 type="email"
                 required
                 placeholder="tu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full flex-1 rounded-full border-0 bg-white px-5 py-2.5 text-sm text-brand-ink outline-none placeholder:text-brand-muted"
+                className="w-full flex-1 rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm text-brand-ink outline-none placeholder:text-brand-muted focus:border-brand-pink"
               />
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="shrink-0 cursor-pointer rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-brand-pink-dark shadow-sm transition-colors hover:bg-brand-soft disabled:cursor-not-allowed disabled:opacity-50"
+                className="shrink-0 cursor-pointer rounded-full bg-brand-pink px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {status === "loading" ? "Enviando..." : "Suscribirme"}
               </button>
             </form>
           )}
-          {status === "error" && (
-            <p className="text-xs text-white/85">No se pudo suscribir. Probá de nuevo.</p>
-          )}
         </div>
+        {status === "error" && (
+          <p className="mt-2 text-center text-xs text-red-600 sm:text-left">No se pudo suscribir. Probá de nuevo.</p>
+        )}
       </div>
     </section>
   );

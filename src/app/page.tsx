@@ -63,6 +63,14 @@ export default async function Home() {
 
   const MARQUEE_ITEMS = settings.marqueeItems;
 
+  // La dirección se guarda como un solo string ("San Martín 2191 — Santa
+  // Fe, Argentina") — la separamos en dos líneas para la tarjeta de "Dónde
+  // estamos". Si no tiene el separador (dirección cargada distinto), la
+  // segunda línea cae en la franquicia como fallback razonable.
+  const [addressStreet, addressCity] = settings.address.includes(" — ")
+    ? settings.address.split(" — ")
+    : [settings.address, settings.franchiseLocation];
+
   // Si todavía no se cargó ningún slide desde /admin/configuracion, se
   // muestra un slide de ejemplo con las categorías destacadas como botones
   // (mismo comportamiento que había antes de que el slider fuera editable).
@@ -196,32 +204,49 @@ export default async function Home() {
       )}
 
       {/* Dónde estamos */}
-      <section id="donde-estamos" className="scroll-mt-24 bg-brand-soft px-6 py-16">
+      <section id="donde-estamos" className="scroll-mt-24 px-6 py-16">
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-center text-2xl font-bold text-brand-ink">Dónde estamos</h2>
-
-          <div className="mt-8 overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm">
-            <iframe
-              src={`https://www.google.com/maps?q=${encodeURIComponent(settings.address)}&output=embed`}
-              className="h-72 w-full grayscale-[15%] sm:h-96"
-              style={{ border: 0 }}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              title="Ubicación de ModaShop en el mapa"
-            />
-            <div className="flex flex-col items-center gap-4 px-6 py-6 text-center sm:flex-row sm:justify-between sm:text-left">
-              <p className="flex items-center gap-2 text-brand-ink">
-                <MapPinIcon className="h-5 w-5 shrink-0 text-brand-pink" />
-                {settings.address}
+          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-brand-pink-dark">
+                <span className="h-px w-4 bg-brand-pink" />
+                Nuestra tienda
               </p>
+              <h2 className="mt-1 text-2xl font-bold text-brand-ink">Dónde estamos</h2>
+              <p className="mt-2 text-brand-muted">
+                Te esperamos en nuestro local en el centro de {settings.franchiseLocation}. Vení a conocer todos
+                nuestros productos.
+              </p>
+
+              <div className="mt-6 flex items-center gap-3 rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-pink/10 text-brand-pink-dark">
+                  <MapPinIcon className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-brand-ink">{addressStreet}</p>
+                  <p className="text-xs text-brand-muted">{addressCity}</p>
+                </div>
+              </div>
+
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 rounded-full bg-brand-pink px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-pink-dark"
+                className="mt-4 inline-flex items-center gap-2 rounded-full bg-brand-pink px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-pink-dark"
               >
-                Abrir en Google Maps
+                Abrir en Google Maps →
               </a>
+            </div>
+
+            <div className="overflow-hidden rounded-3xl border border-black/10 shadow-sm">
+              <iframe
+                src={`https://www.google.com/maps?q=${encodeURIComponent(settings.address)}&output=embed`}
+                className="h-72 w-full grayscale-[15%] sm:h-96"
+                style={{ border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Ubicación de ModaShop en el mapa"
+              />
             </div>
           </div>
         </div>
