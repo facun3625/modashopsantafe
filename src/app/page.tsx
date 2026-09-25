@@ -177,8 +177,8 @@ export default async function Home() {
 
       {/* Productos destacados */}
       {carouselProducts.length > 0 && (
-        <section className="bg-brand-soft px-6 pb-5 pt-0">
-          <div className="mx-auto max-w-6xl">
+        <section className="px-6 pb-6 pt-0 sm:pb-10">
+          <div className="mx-auto max-w-6xl rounded-3xl bg-brand-soft p-6 sm:p-10">
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-brand-pink-dark">
