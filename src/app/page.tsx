@@ -101,7 +101,7 @@ export default async function Home() {
   return (
     <div>
       {/* Hero */}
-      <section className="px-3 pt-6 sm:px-6 sm:pt-10">
+      <section className="px-3 pb-8 pt-6 sm:px-6 sm:pb-12 sm:pt-10">
         <div className="mx-auto max-w-6xl">
           <Link
             href="/tienda"
