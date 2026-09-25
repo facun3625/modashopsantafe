@@ -139,10 +139,20 @@ export default async function Home() {
       </section>
 
       {/* Categorías destacadas */}
-      <section className="bg-brand-soft px-6 py-16">
+      <section className="px-6 pb-16 pt-6">
         <div className="mx-auto max-w-6xl">
-        <h2 className="text-2xl font-bold text-brand-ink">Explorá por categoría</h2>
-        <p className="mt-1 text-brand-muted">Los rubros más elegidos de la tienda.</p>
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-brand-ink">Explorá por categoría</h2>
+            <p className="mt-1 text-brand-muted">Los rubros más elegidos de la tienda.</p>
+          </div>
+          <Link
+            href="/tienda"
+            className="shrink-0 text-sm font-medium text-brand-pink-dark hover:underline"
+          >
+            Ver todas las categorías →
+          </Link>
+        </div>
 
         {error && (
           <div className="mt-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800">
@@ -153,12 +163,6 @@ export default async function Home() {
 
         <div className="mt-8">
           <CategoryCarousel categories={featured} />
-        </div>
-
-        <div className="mt-8 text-center">
-          <Link href="/tienda" className="text-sm font-medium text-brand-pink-dark hover:underline">
-            Ver todas las categorías →
-          </Link>
         </div>
         </div>
       </section>
