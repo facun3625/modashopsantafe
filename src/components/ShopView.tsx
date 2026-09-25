@@ -47,7 +47,7 @@ export async function ShopView({
     .reduce((sum, c) => sum + (counts.get(c.id) ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-white px-6 py-12">
+    <div className="min-h-screen bg-white px-3 py-8 sm:px-6 sm:py-12">
       <ScrollToTop watch={`${categoryId ?? "all"}-${query}-${page}`} />
       <main className="mx-auto max-w-6xl">
         <h1 className="mb-1 text-3xl font-bold text-brand-ink">{category ? category.name : "Tienda"}</h1>
@@ -75,7 +75,7 @@ export async function ShopView({
               <p className="text-brand-muted">No encontramos productos.</p>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-5 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
                   {products.map((p) => (
                     <ProductCard key={p.id} product={p} />
                   ))}

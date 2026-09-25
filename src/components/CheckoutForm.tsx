@@ -398,7 +398,7 @@ export function CheckoutForm() {
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="mt-6 lg:grid lg:grid-cols-[1fr_320px] lg:items-start lg:gap-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-black/10 bg-white p-5">
+      <div className="flex min-w-0 flex-col gap-4 rounded-2xl border border-black/10 bg-white p-3 sm:p-5">
       <h2 className="font-semibold text-brand-ink">Finalizar compra</h2>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -475,9 +475,9 @@ export function CheckoutForm() {
                         <p className="mb-2 text-xs font-semibold text-brand-muted">Datos para transferir</p>
                         <dl className="flex flex-col gap-1.5">
                           {bankDetails.map((d) => (
-                            <div key={d.label} className="flex items-baseline justify-between gap-3">
+                            <div key={d.label} className="flex flex-col gap-0.5 min-[380px]:flex-row min-[380px]:items-baseline min-[380px]:justify-between min-[380px]:gap-3">
                               <dt className="text-xs text-brand-muted">{d.label}</dt>
-                              <dd className="font-mono text-sm font-medium text-brand-ink">{d.value}</dd>
+                              <dd className="break-all font-mono text-sm font-medium text-brand-ink">{d.value}</dd>
                             </div>
                           ))}
                         </dl>
@@ -542,8 +542,8 @@ export function CheckoutForm() {
                         className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
                       />
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <div className="col-span-2 sm:col-span-1">
                         <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Mes venc.</label>
                         <input
                           required
@@ -588,8 +588,8 @@ export function CheckoutForm() {
                         className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
                       />
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <div className="col-span-2 sm:col-span-1">
                         <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Ciudad</label>
                         <input
                           required

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import { headers } from "next/headers";
 import { Providers } from "@/components/Providers";
@@ -16,10 +16,19 @@ export const metadata: Metadata = {
   title: "ModaShop | Accesorios de moda",
   description:
     "ModaShop — accesorios de moda, bijouterie, cosmética y más. Descubrí el catálogo completo online.",
+  manifest: "/manifest.json",
+  // capable: true es lo que hace que, instalada, abra sin la barra de
+  // Safari. Sin icons.apple, Safari muestra una captura de pantalla en vez
+  // del logo como ícono — los tres campos van juntos, no alcanza con el
+  // manifest solo (Safari no lo lee para esto).
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent" },
   icons: {
-    icon: "/favicon.png",
+    icon: "/icons/icon-512.png",
+    apple: "/icons/icon-192.png",
   },
 };
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default async function RootLayout({
   children,

@@ -10,12 +10,21 @@ export function CategoryCarousel({
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
 
+  // Apunta directo al offsetLeft real de la tarjeta siguiente/anterior en
+  // vez de moverse un paso fijo en px (calculado a partir de la primera
+  // tarjeta) — con scroll-snap, un paso que no calza exacto con el punto de
+  // snap hace que la animación arranque y el navegador la reviente de
+  // vuelta al toque, y el click se siente como que "no hace nada".
   function scroll(dir: 1 | -1) {
     const el = scrollerRef.current;
     if (!el) return;
-    const card = el.firstElementChild as HTMLElement | null;
-    const step = card ? card.offsetWidth + 16 : el.clientWidth;
-    el.scrollBy({ left: dir * step, behavior: "smooth" });
+    const cards = Array.from(el.children) as HTMLElement[];
+    if (cards.length === 0) return;
+    const current = el.scrollLeft;
+    let index = cards.findIndex((c) => c.offsetLeft >= current - 4);
+    if (index === -1) index = cards.length - 1;
+    const target = Math.min(cards.length - 1, Math.max(0, index + dir));
+    el.scrollTo({ left: cards[target].offsetLeft, behavior: "smooth" });
   }
 
   const arrowClasses =

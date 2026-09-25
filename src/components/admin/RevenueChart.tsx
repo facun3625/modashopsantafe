@@ -15,7 +15,12 @@ export function RevenueChart({ data }: { data: { date: string; total: number }[]
           Todavía no hay ventas confirmadas en este período.
         </p>
       )}
-      <svg viewBox={`0 0 ${width} ${height + 22}`} className="w-full" style={{ minWidth: 520 }}>
+      <svg
+        viewBox={`0 0 ${width} ${height + 22}`}
+        preserveAspectRatio="none"
+        className="h-40 w-full"
+        style={{ minWidth: 520 }}
+      >
         {data.map((d, i) => {
           const barHeight = d.total > 0 ? Math.max(3, (d.total / max) * height) : 1.5;
           const x = i * (barWidth + gap);

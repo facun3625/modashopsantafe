@@ -46,7 +46,7 @@ export default auth(async (req) => {
   // venta (ver src/app/manual/route.ts) — tiene que verse aunque el sitio
   // esté en mantenimiento, si no el link queda inservible justo cuando más
   // se necesita mandarlo.
-  if (pathname === "/manual") {
+  if (pathname === "/manual" || pathname === "/presentacion") {
     return NextResponse.next();
   }
 

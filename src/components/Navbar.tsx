@@ -127,10 +127,10 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
       <TopContactBar settings={settings} />
 
       {/* Barra principal */}
-      <div className="border-b border-black/5 bg-white px-3 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-6xl items-center gap-4">
+      <div className="border-b border-black/5 bg-white px-3 py-3 sm:px-6 sm:py-4">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 sm:gap-4">
           <button
-            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center text-brand-ink lg:hidden"
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-brand-ink lg:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-label="Abrir menú"
           >
@@ -145,8 +145,8 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
             )}
           </button>
 
-          <Link href="/" className="shrink-0">
-            <Image src="/logo2.png" alt="ModaShop" width={300} height={120} priority className="h-14 w-auto sm:h-16" />
+          <Link href="/" className="min-w-0 shrink">
+            <Image src="/logo2.png" alt="ModaShop" width={300} height={120} priority className="h-10 w-auto max-w-[100px] object-contain sm:h-16 sm:max-w-none" />
           </Link>
 
           <nav className="hidden flex-1 items-center justify-center gap-8 lg:flex">
@@ -176,14 +176,16 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
             })}
           </nav>
 
-          <div className="ml-auto flex flex-1 items-center justify-end gap-3 lg:flex-none">
-            <NavbarSearch className="hidden max-w-[220px] flex-1 sm:block" />
+          <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1 sm:gap-3 lg:flex-none">
+            {/* En /tienda ya está el buscador de ShopControls, sincronizado
+                con el filtro actual — repetirlo acá era espacio duplicado. */}
+            {pathname !== "/tienda" && <NavbarSearch className="hidden max-w-[220px] flex-1 sm:block" />}
 
             {session?.user?.role === "admin" && (
               <Link
                 href="/admin/inicio"
                 title="Panel de administración"
-                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
+                className="hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark min-[400px]:flex sm:h-9 sm:w-9"
               >
                 <DashboardIcon className="h-4.5 w-4.5" />
               </Link>
@@ -195,7 +197,7 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
                   onClick={() => setProfileOpen((v) => !v)}
                   title="Mi cuenta"
                   aria-expanded={profileOpen}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark sm:h-9 sm:w-9"
                 >
                   <UserIcon className="h-4.5 w-4.5" />
                 </button>
@@ -250,7 +252,7 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
               <button
                 onClick={openLogin}
                 title="Iniciar sesión"
-                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
+                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark sm:h-9 sm:w-9"
               >
                 <UserIcon className="h-4.5 w-4.5" />
               </button>
@@ -260,7 +262,7 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
               <Link
                 href="/mi-cuenta/favoritos"
                 title="Mis favoritos"
-                className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
+                className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark sm:h-9 sm:w-9"
               >
                 <HeartIcon className="h-4.5 w-4.5" />
                 {favoriteIds.size > 0 && (
@@ -273,7 +275,7 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
               <button
                 onClick={openLogin}
                 title="Mis favoritos"
-                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
+                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark sm:h-9 sm:w-9"
               >
                 <HeartIcon className="h-4.5 w-4.5" />
               </button>
@@ -282,7 +284,7 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
             <button
               onClick={openCart}
               title="Carrito"
-              className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
+              className="relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark sm:h-9 sm:w-9"
             >
               <CartIcon className="h-4.5 w-4.5" />
               {count > 0 && (
@@ -294,11 +296,21 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
           </div>
         </div>
 
-        <NavbarSearch className="mx-auto mt-3 max-w-6xl sm:hidden" />
+        {pathname !== "/tienda" && <NavbarSearch className="mx-auto mt-3 max-w-6xl sm:hidden" />}
       </div>
 
       {open && (
         <nav className="flex flex-col gap-1 border-b border-black/5 bg-white px-6 py-3 lg:hidden">
+          {session?.user?.role === "admin" && (
+            <Link
+              href="/admin/inicio"
+              onClick={() => setOpen(false)}
+              className="flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium uppercase tracking-wide text-brand-ink hover:text-brand-pink-dark min-[400px]:hidden"
+            >
+              <DashboardIcon className="h-4 w-4 shrink-0" />
+              Panel de administración
+            </Link>
+          )}
           {LINKS.map((link) => {
             const isTienda = link.href === "/tienda";
             return (

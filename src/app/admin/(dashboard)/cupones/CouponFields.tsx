@@ -9,7 +9,7 @@ import { deleteCoupon } from "./actions";
 
 const fieldClasses =
   "w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none";
-const labelClasses = "mb-1 block text-xs font-semibold text-brand-muted";
+const labelClasses = "mb-1 block text-xs font-medium text-brand-muted";
 const sectionLabelClasses = "mb-2.5 text-xs font-semibold uppercase tracking-wide text-brand-muted/80";
 
 // Copia local (no lib/sales, que importa Prisma — no se puede usar desde un
@@ -235,7 +235,7 @@ export function CouponFields({
               <button
                 type="submit"
                 formAction={deleteCoupon.bind(null, couponId)}
-                className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-semibold text-brand-muted transition-colors hover:border-red-300 hover:text-red-700"
+                className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-medium text-brand-muted transition-colors hover:border-red-300 hover:text-red-700"
               >
                 Eliminar
               </button>

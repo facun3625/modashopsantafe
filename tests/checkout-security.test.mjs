@@ -43,7 +43,13 @@ function fixture(provider, options = {}) {
   const config = { id: 'config', enabled: true, discountPct: 10, categoryDiscounts: [], mpAccessToken: 'test', paywayPrivateKey: 'test', paywaySandbox: true };
   const db = {
     paymentMethodConfig: { findUnique: async () => config },
-    user: { findUnique: async () => ({ role: options.role ?? 'admin' }) },
+    user: {
+      findUnique: async () => ({ role: options.role ?? 'admin' }),
+      update: async ({ data }) => {
+        events.push(['user-phone', data]);
+        return data;
+      },
+    },
     order: {
       findUnique: async () => saved,
       create: async ({ data }) => {

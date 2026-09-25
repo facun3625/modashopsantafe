@@ -7,7 +7,7 @@ import path from "node:path";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { checkStock } from "@/lib/products";
-import { createOrderWithStockGuard, InsufficientStockError } from "@/lib/reservations";
+import { createOrderWithStockGuard, InsufficientStockError, saveUserPhone } from "@/lib/reservations";
 import { getShippingMethodsForPayment } from "@/lib/shipping";
 import { validateCoupon, registerCouponUse } from "@/lib/coupons";
 import { calculatePaymentMethodDiscount } from "@/lib/paymentMethodDiscount";
@@ -174,8 +174,9 @@ export async function POST(req: Request) {
     try {
       order = await createOrderWithStockGuard(
         items.map((i) => ({ productId: i.productId, quantity: i.quantity, name: i.name })),
-        (tx) =>
-          tx.order.create({
+        async (tx) => {
+          await saveUserPhone(tx, session?.user?.id, customer.phone);
+          return tx.order.create({
             data: {
               id: orderId,
               userId: session?.user?.id,
@@ -201,7 +202,8 @@ export async function POST(req: Request) {
                 })),
               },
             },
-          })
+          });
+        }
       );
     } catch (err) {
       if (err instanceof InsufficientStockError) {
@@ -246,6 +248,7 @@ export async function POST(req: Request) {
       total,
       paymentMethod,
       shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
+      userId: session?.user?.id,
     }).catch((err) => console.error("Order notification failed", order.id, err));
 
     // No se crea el picking en Odoo acá: el pedido queda "pending" y el stock

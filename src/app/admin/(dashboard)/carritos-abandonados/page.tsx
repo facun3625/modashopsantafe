@@ -38,7 +38,7 @@ export default async function AdminCarritosAbandonadosPage({
       ...(userType === "anonymous" && { userId: null, email: null }),
     },
     orderBy: { lastActive: "desc" },
-    include: { user: { select: { name: true, email: true } } },
+    include: { user: { select: { name: true, email: true, phone: true } } },
   });
 
   const emails = carts.map((c) => c.user?.email ?? c.email).filter((e): e is string => Boolean(e));
@@ -61,7 +61,7 @@ export default async function AdminCarritosAbandonadosPage({
             <button
               type="submit"
               title="Borra los que no tienen actividad hace más de 30 días"
-              className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-semibold text-brand-muted transition-colors hover:border-red-300 hover:text-red-700"
+              className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-medium text-brand-muted transition-colors hover:border-red-300 hover:text-red-700"
             >
               Limpiar viejos (+30 días)
             </button>
@@ -87,13 +87,25 @@ export default async function AdminCarritosAbandonadosPage({
               const email = cart.user?.email ?? cart.email;
               const label = cart.user?.name ?? cart.name ?? email ?? cart.phone ?? "Anónimo";
               const type = cart.userId ? "registered" : email || cart.phone ? "guest" : "anonymous";
+              // El teléfono del carrito en sí solo se carga si llegaron a
+              // escribirlo en el formulario de checkout (la mayoría de los
+              // abandonos pasan antes de eso) — para un usuario registrado
+              // caemos al que quedó guardado en su cuenta (ver
+              // saveUserPhone), cargado la última vez que compró.
+              const phoneFromAccount = !cart.phone ? cart.user?.phone ?? undefined : undefined;
+              const phone = cart.phone ?? phoneFromAccount;
 
               return (
                 <tr key={cart.id} className="border-b border-black/5 last:border-0 hover:bg-brand-soft/50">
                   <td className="px-4 py-3">
                     <p className="font-medium text-brand-ink">{label}</p>
                     {email && <p className="text-xs text-brand-muted">{email}</p>}
-                    {cart.phone && <p className="text-xs text-brand-muted">{cart.phone}</p>}
+                    {phone && (
+                      <p className="text-xs text-brand-muted">
+                        {phone}
+                        {phoneFromAccount && " (de la cuenta)"}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <Badge tone={type === "registered" ? "pink" : type === "guest" ? "neutral" : "amber"}>
@@ -107,10 +119,10 @@ export default async function AdminCarritosAbandonadosPage({
                   <td className="px-4 py-3 text-brand-muted">{timeAgo(cart.lastActive)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-3">
-                      {cart.phone && isLikelyPhone(cart.phone) && (
+                      {phone && isLikelyPhone(phone) && (
                         <a
                           href={buildWhatsAppLink(
-                            cart.phone,
+                            phone,
                             `Hola ${cart.user?.name ?? cart.name ?? ""}! Vimos que dejaste ${items.length === 1 ? items[0]?.name ?? "un producto" : `${items.length} productos`} en tu carrito de ModaShop. ¿Te ayudamos a completar la compra?`
                           )}
                           target="_blank"
@@ -125,7 +137,7 @@ export default async function AdminCarritosAbandonadosPage({
                       <form action={deleteAbandonedCart.bind(null, cart.id)}>
                         <button
                           type="submit"
-                          className="cursor-pointer text-xs font-semibold text-brand-muted hover:text-red-700"
+                          className="cursor-pointer text-xs font-medium text-brand-muted hover:text-red-700"
                         >
                           Eliminar
                         </button>

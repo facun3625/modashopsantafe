@@ -22,9 +22,15 @@ export function CardAccordion({
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4">
+      <div
+        className="flex cursor-pointer items-start justify-between gap-4"
+        onClick={() => setOpen((v) => !v)}
+      >
         {titleArea}
-        <div className="flex items-center gap-2">
+        {/* stopPropagation: el toggle, el check de guardar y la flechita
+            tienen su propia acción — sin esto, tocarlos también
+            abría/cerraba el acordeón por el bubbling del click de la fila. */}
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           {headerRight}
           {justSaved && <span className="text-xs font-semibold text-green-700">Guardado ✓</span>}
           <button
@@ -62,7 +68,15 @@ export function CardAccordion({
           </button>
         </div>
       </div>
-      {open && <div className="mt-5">{children}</div>}
+      {/* hidden, no desmontado condicional: si el contenido entra y sale del
+          árbol, el botón de abajo (useFormDirty) recién monta la primera vez
+          que se abre y toma como "base" lo que YA esté tipeado ahí — un
+          cambio hecho, cerrar y reabrir sin guardar podía quedar marcado como
+          "sin cambios". Además, con el acordeón cerrado, el form se podía
+          mandar sin estos campos en el DOM, rompiendo los `required`. */}
+      <div className="mt-5" hidden={!open}>
+        {children}
+      </div>
     </>
   );
 }

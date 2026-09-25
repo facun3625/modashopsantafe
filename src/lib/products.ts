@@ -136,7 +136,14 @@ async function applyReservations(products: OdooProductListItem[]): Promise<OdooP
 
 // Para el panel de administración: sin filtrar por imagen ni por sale_ok,
 // el admin necesita ver todo el catálogo tal cual está en Odoo.
-const ADMIN_SORT_FIELDS = { name: "name", price: "list_price", stock: "qty_available" } as const;
+// Solo name/list_price son campos "store" en Odoo — se pueden ordenar con
+// el `order` de search_read. stock y category se resuelven en memoria (ver
+// más abajo): qty_available es computado (Odoo lo ignora en el order), y
+// categ_id es un many2one — ordenarlo por SQL ordenaría por el id interno,
+// no alfabéticamente por el nombre de la categoría.
+const ADMIN_SORT_FIELDS = { name: "name", price: "list_price" } as const;
+
+export type AdminProductSort = "name" | "price" | "stock" | "category";
 
 export type AdminProductListItem = OdooProductListItem & { reserved: number };
 
@@ -147,7 +154,7 @@ export async function getAdminProductsPage(opts: {
   maxPrice?: number;
   minStock?: number;
   maxStock?: number;
-  sort?: keyof typeof ADMIN_SORT_FIELDS;
+  sort?: AdminProductSort;
   dir?: "asc" | "desc";
   limit: number;
   offset: number;
@@ -174,21 +181,28 @@ export async function getAdminProductsPage(opts: {
 
   const dir = opts.dir === "desc" ? "desc" : "asc";
 
-  // qty_available es un campo computado (no "store") en Odoo, así que no se
-  // puede ordenar a nivel SQL — Odoo lo ignora en silencio. Para ese caso
-  // traemos todo el conjunto ya filtrado y ordenamos en memoria antes de
-  // paginar; para name/list_price (campos "store") se ordena en el server.
-  if (opts.sort === "stock") {
+  // qty_available/categ_id no se pueden ordenar bien a nivel SQL (ver
+  // comentario de ADMIN_SORT_FIELDS) — para esos dos traemos todo el
+  // conjunto ya filtrado y ordenamos en memoria antes de paginar.
+  if (opts.sort === "stock" || opts.sort === "category") {
     const all = await executeKw<OdooProductListItem[]>("product.template", "search_read", [domain], {
       fields: PRODUCT_LIST_FIELDS,
       order: "name asc",
     });
-    all.sort((a, b) => (dir === "asc" ? a.qty_available - b.qty_available : b.qty_available - a.qty_available));
+    if (opts.sort === "stock") {
+      all.sort((a, b) => (dir === "asc" ? a.qty_available - b.qty_available : b.qty_available - a.qty_available));
+    } else {
+      all.sort((a, b) => {
+        const an = a.categ_id ? a.categ_id[1] : "";
+        const bn = b.categ_id ? b.categ_id[1] : "";
+        return dir === "asc" ? an.localeCompare(bn) : bn.localeCompare(an);
+      });
+    }
     const page = all.slice(opts.offset, opts.offset + opts.limit);
     return { products: await withReserved(page), total: all.length };
   }
 
-  const sortField = ADMIN_SORT_FIELDS[opts.sort ?? "name"];
+  const sortField = ADMIN_SORT_FIELDS[opts.sort === "price" ? "price" : "name"];
   const order = `${sortField} ${dir}`;
 
   const [products, total] = await Promise.all([

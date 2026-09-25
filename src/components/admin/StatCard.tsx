@@ -25,25 +25,22 @@ export function StatCard({
 }) {
   const content = (
     <>
-      <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${TONES[tone]}`}>
-        <Icon className="h-4.5 w-4.5" />
+      <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${TONES[tone]}`}>
+        <Icon className="h-3.5 w-3.5" />
       </div>
-      <p className="mt-3 text-2xl font-bold text-brand-ink">{value}</p>
+      <p className="mt-2 text-lg font-bold text-brand-ink">{value}</p>
       <p className="text-xs font-medium text-brand-muted">{label}</p>
-      {hint && <p className="mt-1 text-xs text-brand-muted">{hint}</p>}
+      {hint && <p className="mt-0.5 text-xs text-brand-muted">{hint}</p>}
     </>
   );
 
   if (href) {
     return (
-      <Link
-        href={href}
-        className="block rounded-xl border border-black/10 bg-white p-5 transition-colors hover:border-brand-pink/40 hover:shadow-sm"
-      >
+      <Link href={href} className="block rounded-xl border border-black/10 bg-white p-3.5 transition-shadow hover:shadow-sm">
         {content}
       </Link>
     );
   }
 
-  return <div className="rounded-xl border border-black/10 bg-white p-5">{content}</div>;
+  return <div className="rounded-xl border border-black/10 bg-white p-3.5">{content}</div>;
 }

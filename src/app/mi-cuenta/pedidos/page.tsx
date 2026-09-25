@@ -28,7 +28,7 @@ export default async function MisPedidosPage() {
   });
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12">
+    <div className="mx-auto max-w-3xl px-3 py-8 sm:px-6 sm:py-12">
       <h1 className="text-2xl font-bold text-brand-ink">Mis pedidos</h1>
       <p className="mt-1 text-brand-muted">Historial de compras hechas con esta cuenta.</p>
 
@@ -45,7 +45,7 @@ export default async function MisPedidosPage() {
       ) : (
         <div className="mt-8 flex flex-col gap-4">
           {orders.map((order) => (
-            <div key={order.id} className="rounded-2xl border border-black/10 bg-white p-5">
+            <div key={order.id} className="rounded-2xl border border-black/10 bg-white p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-brand-ink">
@@ -65,11 +65,11 @@ export default async function MisPedidosPage() {
 
               <div className="mt-4 flex flex-col gap-1.5 border-t border-black/5 pt-4">
                 {order.items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between text-sm">
-                    <p className="text-brand-ink">
+                  <div key={item.id} className="flex items-start justify-between gap-3 text-sm">
+                    <p className="min-w-0 break-words text-brand-ink">
                       {item.name} <span className="text-brand-muted">x{item.quantity}</span>
                     </p>
-                    <p className="text-brand-muted">${(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="shrink-0 text-brand-muted">${(item.price * item.quantity).toFixed(2)}</p>
                   </div>
                 ))}
               </div>

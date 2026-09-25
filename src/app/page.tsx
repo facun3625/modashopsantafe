@@ -148,9 +148,9 @@ export default async function Home() {
       </section>
 
       {/* Categorías destacadas */}
-      <section className="px-6 pb-10 pt-0">
+      <section className="px-3 pb-10 pt-0 sm:px-6">
         <div className="mx-auto max-w-6xl">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-col items-start gap-2 min-[420px]:flex-row min-[420px]:items-end min-[420px]:justify-between min-[420px]:gap-4">
           <div>
             <h2 className="text-2xl font-bold text-brand-ink">Explorá por categoría</h2>
             <p className="mt-1 text-brand-muted">Los rubros más elegidos de la tienda.</p>
@@ -178,9 +178,9 @@ export default async function Home() {
 
       {/* Productos destacados */}
       {carouselProducts.length > 0 && (
-        <section className="px-6 pb-6 pt-0 sm:pb-10">
-          <div className="mx-auto max-w-6xl rounded-3xl bg-brand-soft p-6 sm:p-10">
-            <div className="flex items-end justify-between gap-4">
+        <section className="px-3 pb-6 pt-0 sm:px-6 sm:pb-10">
+          <div className="mx-auto max-w-6xl rounded-3xl bg-brand-soft p-4 sm:p-10">
+            <div className="flex flex-col items-start gap-2 min-[420px]:flex-row min-[420px]:items-end min-[420px]:justify-between min-[420px]:gap-4">
               <div>
                 <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-brand-pink-dark">
                   <span className="h-px w-4 bg-brand-pink" />
@@ -205,7 +205,7 @@ export default async function Home() {
       )}
 
       {/* Dónde estamos */}
-      <section id="donde-estamos" className="scroll-mt-36 px-6 py-5">
+      <section id="donde-estamos" className="scroll-mt-36 px-3 py-5 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-start">
             <div className="w-full lg:w-[30%]">

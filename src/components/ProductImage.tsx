@@ -72,12 +72,12 @@ export function ProductImage({
               onClick={() => setOpen(false)}
             />
             <div
-              className="fixed inset-0 z-[70] flex items-center justify-center p-6"
+              className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-6"
               onClick={() => setOpen(false)}
             >
               <motion.div
                 key="panel"
-                className="relative max-h-[85vh] max-w-[85vw] overflow-hidden rounded-2xl bg-white shadow-xl"
+                className="relative max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl bg-white shadow-xl sm:max-h-[85vh] sm:max-w-[85vw]"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
@@ -94,7 +94,7 @@ export function ProductImage({
                   </svg>
                 </button>
 
-                <div className="flex h-[min(85vh,500px)] w-[min(85vw,500px)] items-center justify-center">
+                <div className="flex h-[min(calc(100dvh-1.5rem),500px)] w-[min(calc(100vw-1.5rem),500px)] items-center justify-center sm:h-[min(85vh,500px)] sm:w-[min(85vw,500px)]">
                   {loading ? (
                     <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-pink border-t-transparent" />
                   ) : (

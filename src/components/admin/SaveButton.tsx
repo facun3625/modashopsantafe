@@ -17,13 +17,13 @@ export function SaveButton({ label = "Guardar", trackDirty = false }: { label?: 
         ref={ref}
         type="submit"
         disabled={pending}
-        className={`flex cursor-pointer items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold uppercase tracking-wide shadow-sm transition-colors disabled:cursor-wait disabled:opacity-70 ${
+        className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-wait disabled:opacity-70 ${
           highlight
-            ? "bg-brand-pink text-white hover:bg-brand-pink-dark"
-            : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+            ? "bg-brand-pink text-white shadow-sm hover:bg-brand-pink-dark"
+            : "bg-black/5 text-brand-muted hover:bg-black/10"
         }`}
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-4 w-4">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-3.5 w-3.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
         </svg>
         {pending ? "Guardando..." : label}

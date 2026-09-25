@@ -25,24 +25,24 @@ export default function CarritoPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12 lg:max-w-5xl">
+    <div className="mx-auto max-w-3xl px-3 py-8 sm:px-6 sm:py-12 lg:max-w-5xl">
       <h1 className="text-2xl font-bold text-brand-ink">Tu carrito</h1>
 
       <div className="mt-8 flex flex-col gap-4">
         {items.map((item) => (
           <div
             key={item.productId}
-            className="flex items-center gap-4 rounded-2xl border border-black/10 bg-white p-4"
+            className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border border-black/10 bg-white p-3 sm:flex sm:gap-4 sm:p-4"
           >
             {item.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`data:image/png;base64,${item.image}`}
                 alt={item.name}
-                className="h-20 w-20 shrink-0 rounded-xl object-cover"
+                className="h-16 w-16 shrink-0 rounded-xl object-cover sm:h-20 sm:w-20"
               />
             ) : (
-              <div className="h-20 w-20 shrink-0 rounded-xl bg-brand-soft" />
+              <div className="h-16 w-16 shrink-0 rounded-xl bg-brand-soft sm:h-20 sm:w-20" />
             )}
 
             <div className="flex-1">
@@ -50,11 +50,11 @@ export default function CarritoPage() {
               <p className="text-sm font-semibold text-brand-pink-dark">${item.price.toFixed(2)}</p>
             </div>
 
-            <div className="flex flex-col items-center gap-1">
+            <div className="col-span-2 col-start-2 flex flex-col items-start gap-1 sm:col-auto sm:items-center">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setQuantity(item.productId, item.quantity - 1)}
-                  className="h-8 w-8 cursor-pointer rounded-full border border-black/15 text-brand-ink hover:bg-brand-soft"
+                  className="h-10 w-10 cursor-pointer rounded-full border border-black/15 text-brand-ink hover:bg-brand-soft sm:h-8 sm:w-8"
                   aria-label="Restar"
                 >
                   −
@@ -64,7 +64,7 @@ export default function CarritoPage() {
                   onClick={() => setQuantity(item.productId, item.quantity + 1)}
                   disabled={item.quantity >= item.maxStock}
                   title={item.quantity >= item.maxStock ? "No hay más stock disponible" : undefined}
-                  className="h-8 w-8 cursor-pointer rounded-full border border-black/15 text-brand-ink hover:bg-brand-soft disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="h-10 w-10 cursor-pointer rounded-full border border-black/15 text-brand-ink hover:bg-brand-soft disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent sm:h-8 sm:w-8"
                   aria-label="Sumar"
                 >
                   +
@@ -78,7 +78,7 @@ export default function CarritoPage() {
             <button
               onClick={() => removeItem(item.productId)}
               aria-label="Quitar"
-              className="ml-2 cursor-pointer text-brand-muted hover:text-red-600"
+              className="row-start-1 flex h-10 w-10 items-center justify-center justify-self-end cursor-pointer text-brand-muted hover:text-red-600 sm:ml-2 sm:h-auto sm:w-auto"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />

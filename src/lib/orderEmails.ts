@@ -1,6 +1,7 @@
 import { getStoreSettingsRow } from "@/lib/settings";
 import { getMailSender } from "@/lib/mailer";
 import { buildMailHtml } from "@/lib/mailTemplate";
+import { sendPushToUser } from "@/lib/webPush";
 
 // Mail "Recibimos tu pedido" que se le manda al cliente al confirmar la compra.
 // Fire and forget desde la ruta de pedidos: nunca tira ni frena la venta.
@@ -55,13 +56,26 @@ export type OrderConfirmationEmail = {
   total: number;
   paymentMethod: string;
   shippingAddress?: string | null;
+  // Si compró logueado, además del mail se le manda un push (a todos sus
+  // dispositivos suscriptos) — si no tiene ninguno, o compró como
+  // invitado, sendPushToUser no hace nada.
+  userId?: string | null;
 };
 
 export async function sendOrderConfirmation(order: OrderConfirmationEmail): Promise<void> {
-  const sender = await getMailSender();
-  if (!sender) return; // sin proveedor de mail configurado → no se manda
-
   const settings = await getStoreSettingsRow();
+  const shortIdForPush = order.orderId.slice(0, 8);
+  if (order.userId) {
+    sendPushToUser(order.userId, {
+      title: "¡Recibimos tu pedido! 🎉",
+      body: `Pedido #${shortIdForPush} confirmado — ya lo estamos preparando.`,
+      url: "/mi-cuenta/pedidos",
+    }).catch((err) => console.error("sendOrderConfirmation: push falló —", err));
+  }
+
+  const sender = await getMailSender();
+  if (!sender) return; // sin proveedor de mail configurado → no se manda el mail (el push ya salió)
+
   const shortId = order.orderId.slice(0, 8);
   const firstName = order.customerName.split(" ")[0] || order.customerName;
   const vars = { nombre: firstName, pedido: shortId };
@@ -98,6 +112,7 @@ export async function sendOrderConfirmation(order: OrderConfirmationEmail): Prom
       whatsappNumber: settings.whatsappPhone,
       instagramHandle: settings.instagramHandle,
       contactEmail: settings.mailFromEmail,
+      siteUrl: process.env.NEXTAUTH_URL,
     },
   });
 

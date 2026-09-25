@@ -28,7 +28,7 @@ export default async function MisFavoritosPage() {
   products.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-12">
+    <div className="mx-auto max-w-6xl px-3 py-8 sm:px-6 sm:py-12">
       <h1 className="text-2xl font-bold text-brand-ink">Mis favoritos</h1>
       <p className="mt-1 text-brand-muted">Productos que guardaste para más adelante.</p>
 
@@ -43,7 +43,7 @@ export default async function MisFavoritosPage() {
           </Link>
         </div>
       ) : (
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
           {products.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}

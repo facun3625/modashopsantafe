@@ -23,13 +23,13 @@ export function CartDrawer() {
 
           <motion.div
             key="panel"
-            className="fixed right-0 top-0 z-[70] flex h-full w-full max-w-[450px] flex-col bg-white shadow-xl"
+            className="fixed right-0 top-0 z-[70] flex h-[100dvh] w-full max-w-[450px] flex-col bg-white shadow-xl"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
           >
-            <div className="flex items-center justify-between border-b border-black/10 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-black/10 px-4 py-4 sm:px-6 sm:py-5">
               <h2 className="text-lg font-bold text-brand-ink">Tu carrito</h2>
               <button
                 onClick={closeCart}
@@ -55,7 +55,7 @@ export function CartDrawer() {
               </div>
             ) : (
               <>
-                <div className="flex-1 overflow-y-auto px-6 py-4">
+                <div className="flex-1 overscroll-contain overflow-y-auto px-4 py-4 sm:px-6">
                   <div className="flex flex-col gap-4">
                     {items.map((item) => (
                       <div key={item.productId} className="flex items-center gap-3">
@@ -117,7 +117,7 @@ export function CartDrawer() {
                   <CartRecommendations />
                 </div>
 
-                <div className="border-t border-black/10 px-6 py-5">
+                <div className="border-t border-black/10 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-6">
                   <div className="mb-4 flex items-center justify-between">
                     <p className="text-base font-semibold text-brand-ink">Total</p>
                     <p className="text-base font-bold text-brand-pink-dark">${total.toFixed(2)}</p>

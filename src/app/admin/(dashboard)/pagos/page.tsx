@@ -23,7 +23,7 @@ const METHOD_DESCRIPTIONS: Record<string, string> = {
 
 const fieldClasses =
   "w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none";
-const labelClasses = "mb-1 block text-xs font-semibold text-brand-muted";
+const labelClasses = "mb-1 block text-xs font-medium text-brand-muted";
 
 export default async function AdminPagosPage() {
   const [configs, shippingMethods, categories] = await Promise.all([
@@ -162,7 +162,7 @@ export default async function AdminPagosPage() {
 
               {categories.length > 0 && (
                 <div className="mt-5 border-t border-black/5 pt-4">
-                  <p className="mb-2.5 text-xs font-semibold text-brand-muted">
+                  <p className="mb-2.5 text-xs font-medium text-brand-muted">
                     Excepciones por categoría{" "}
                     <span className="font-normal normal-case text-brand-muted/70">
                       (reemplazan el descuento por defecto para esa categoría y sus subcategorías)
@@ -184,7 +184,7 @@ export default async function AdminPagosPage() {
                             <button
                               type="submit"
                               formAction={deletePaymentMethodCategoryDiscount.bind(null, cd.id)}
-                              className="cursor-pointer text-xs font-semibold text-brand-muted transition-colors hover:text-red-700"
+                              className="cursor-pointer text-xs font-medium text-brand-muted transition-colors hover:text-red-700"
                             >
                               Eliminar
                             </button>
@@ -222,7 +222,7 @@ export default async function AdminPagosPage() {
                     <button
                       type="submit"
                       formAction={upsertPaymentMethodCategoryDiscount.bind(null, config.id)}
-                      className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-semibold text-brand-ink transition-colors hover:border-brand-pink/40 hover:text-brand-pink-dark"
+                      className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-medium text-brand-ink transition-colors hover:border-brand-pink/40 hover:text-brand-pink-dark"
                     >
                       Agregar
                     </button>
@@ -232,7 +232,7 @@ export default async function AdminPagosPage() {
 
               {shippingMethods.length > 0 && (
                 <div className="mt-5 border-t border-black/5 pt-4">
-                  <p className="mb-2.5 text-xs font-semibold text-brand-muted">
+                  <p className="mb-2.5 text-xs font-medium text-brand-muted">
                     Envíos permitidos con este medio de pago{" "}
                     <span className="font-normal normal-case text-brand-muted/70">
                       (ninguno marcado = acepta cualquier envío habilitado)

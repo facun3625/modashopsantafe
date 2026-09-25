@@ -7,10 +7,10 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   const userLabel = session?.user?.name ?? session?.user?.email ?? "Admin";
 
   return (
-    <div className="flex h-screen overflow-hidden bg-brand-soft">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-white md:flex-row">
       <AdminSidebar userLabel={userLabel} />
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-auto px-6 py-8">{children}</main>
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-4 py-5 sm:px-6 sm:py-8">{children}</main>
     </div>
   );
 }

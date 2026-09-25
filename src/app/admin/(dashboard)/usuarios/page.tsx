@@ -69,7 +69,7 @@ export default async function AdminUsuariosPage({
                         <button
                           type="submit"
                           disabled={isSelf}
-                          className="cursor-pointer text-xs font-semibold text-brand-muted hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-brand-muted"
+                          className="cursor-pointer text-xs font-medium text-brand-muted hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-brand-muted"
                           title={isSelf ? "No podés quitarte el rol a vos mismo" : undefined}
                         >
                           Quitar admin
@@ -91,7 +91,7 @@ export default async function AdminUsuariosPage({
                       <button
                         type="submit"
                         disabled={isSelf}
-                        className="cursor-pointer text-xs font-semibold text-brand-muted hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-brand-muted"
+                        className="cursor-pointer text-xs font-medium text-brand-muted hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-brand-muted"
                         title={isSelf ? "No podés eliminar tu propia cuenta" : undefined}
                       >
                         Eliminar

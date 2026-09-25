@@ -10,19 +10,16 @@ import type { DiscountType } from "@/generated/prisma/enums";
 export async function updatePointsSettings(formData: FormData) {
   await requireAdmin();
 
-  const ratio = Number(formData.get("pointsRatio"));
+  // El campo del panel pide "puntos cada $1.000 gastados" (más intuitivo que
+  // el ratio con el que se guarda y se calcula puntos por pedido) — se
+  // convierte acá, dividiendo por 1000.
+  const perThousand = Number(formData.get("pointsPerThousand"));
+  const ratio = perThousand > 0 ? perThousand / 1000 : 0.01;
 
   await prisma.storeSettings.upsert({
     where: { id: "global" },
-    create: {
-      id: "global",
-      pointsEnabled: formData.get("pointsEnabled") === "on",
-      pointsRatio: ratio > 0 ? ratio : 0.01,
-    },
-    update: {
-      pointsEnabled: formData.get("pointsEnabled") === "on",
-      pointsRatio: ratio > 0 ? ratio : 0.01,
-    },
+    create: { id: "global", pointsEnabled: formData.get("pointsEnabled") === "on", pointsRatio: ratio },
+    update: { pointsEnabled: formData.get("pointsEnabled") === "on", pointsRatio: ratio },
   });
 
   revalidatePath("/admin/puntos");
@@ -63,11 +60,15 @@ export async function deleteReward(id: string) {
   revalidatePath("/admin/puntos");
 }
 
+// El botón vive en /admin/configuracion (junto al resto de las cosas
+// operativas del día a día) aunque la acción en sí siga acá, junto con el
+// resto de la lógica de puntos.
 export async function syncNow() {
   await requireAdmin();
   const result = await syncDeliveredOrders();
   revalidatePath("/admin/puntos");
+  revalidatePath("/admin/configuracion");
   redirect(
-    `/admin/puntos?synced=1&checked=${result.checked}&awarded=${result.awarded}${result.skipped ? "&skipped=1" : ""}`
+    `/admin/configuracion?synced=1&checked=${result.checked}&awarded=${result.awarded}${result.skipped ? "&skipped=1" : ""}`
   );
 }

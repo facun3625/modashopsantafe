@@ -67,7 +67,7 @@ export default function MisPuntosPage() {
   }
 
   if (status === "loading" || loading) {
-    return <div className="mx-auto max-w-3xl px-6 py-16 text-center text-brand-muted">Cargando...</div>;
+    return <div className="mx-auto max-w-3xl px-3 py-16 text-center text-brand-muted sm:px-6">Cargando...</div>;
   }
 
   if (status !== "authenticated") {
@@ -89,7 +89,7 @@ export default function MisPuntosPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12">
+    <div className="mx-auto max-w-3xl px-3 py-8 sm:px-6 sm:py-12">
       <h1 className="text-2xl font-bold text-brand-ink">Mis puntos</h1>
       <p className="mt-1 text-brand-muted">
         Ganás puntos con cada compra una vez que se entrega, y los canjeás por cupones de descuento.
@@ -115,7 +115,7 @@ export default function MisPuntosPage() {
           return (
             <div
               key={r.id}
-              className="flex items-center justify-between gap-4 rounded-2xl border border-black/10 bg-white p-4"
+              className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-black/10 bg-white p-4 min-[380px]:flex-row min-[380px]:items-center min-[380px]:gap-4"
             >
               <div>
                 <p className="font-medium text-brand-ink">{r.title}</p>
@@ -127,7 +127,7 @@ export default function MisPuntosPage() {
               <button
                 onClick={() => handleRedeem(r)}
                 disabled={!canRedeem || redeemingId === r.id}
-                className="shrink-0 cursor-pointer rounded-full bg-brand-pink px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-pink-dark disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+                className="min-h-11 w-full shrink-0 cursor-pointer rounded-full bg-brand-pink px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-pink-dark disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 min-[380px]:w-auto"
               >
                 {redeemingId === r.id ? "..." : "Canjear"}
               </button>
@@ -146,10 +146,10 @@ export default function MisPuntosPage() {
         {transactions.map((tx) => (
           <div
             key={tx.id}
-            className="flex items-center justify-between rounded-xl border border-black/5 bg-white px-4 py-3 text-sm"
+            className="flex items-start justify-between gap-3 rounded-xl border border-black/5 bg-white px-4 py-3 text-sm"
           >
-            <span className="text-brand-ink">{tx.description}</span>
-            <span className={tx.amount > 0 ? "font-semibold text-green-700" : "font-semibold text-red-700"}>
+            <span className="min-w-0 break-words text-brand-ink">{tx.description}</span>
+            <span className={`shrink-0 ${tx.amount > 0 ? "font-semibold text-green-700" : "font-semibold text-red-700"}`}>
               {tx.amount > 0 ? "+" : ""}
               {tx.amount}
             </span>

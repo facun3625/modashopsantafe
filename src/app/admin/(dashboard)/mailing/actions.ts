@@ -81,6 +81,7 @@ export async function createCampaign(formData: FormData) {
         whatsappNumber: settings?.whatsappPhone,
         instagramHandle: settings?.instagramHandle,
         contactEmail: settings?.mailFromEmail,
+        siteUrl: process.env.NEXTAUTH_URL,
       },
     });
 
@@ -95,5 +96,22 @@ export async function createCampaign(formData: FormData) {
 export async function deleteCampaign(id: string) {
   await requireAdmin();
   await prisma.mailCampaign.delete({ where: { id } });
+  revalidatePath("/admin/mailing");
+}
+
+// Cupo mensual informativo (ver lib/mailQuota.ts) — no bloquea el envío,
+// solo avisa. Vaciar el campo vuelve a "sin límite cargado".
+export async function updateMailQuota(formData: FormData) {
+  await requireAdmin();
+
+  const raw = formData.get("mailMonthlyQuota");
+  const quota = typeof raw === "string" && raw.trim() ? Math.max(0, Math.floor(Number(raw))) : null;
+
+  await prisma.storeSettings.upsert({
+    where: { id: "global" },
+    create: { id: "global", mailMonthlyQuota: quota },
+    update: { mailMonthlyQuota: quota },
+  });
+
   revalidatePath("/admin/mailing");
 }

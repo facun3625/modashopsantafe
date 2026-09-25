@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { getAllCategories } from "@/lib/categories";
@@ -11,8 +10,9 @@ import { ImagePreviewInput } from "@/components/admin/ImagePreviewInput";
 import { TelegramTestButton } from "./TelegramTestButton";
 import { SettingsTabs } from "./SettingsTabs";
 import { CategoryChipSelector } from "./CategoryChipSelector";
-import { WrenchIcon, PackageIcon } from "@/components/icons";
+import { WrenchIcon, PackageIcon, StarIcon } from "@/components/icons";
 import { DEFAULT_INTRO, DEFAULT_NOTES, DEFAULT_CLOSING } from "@/lib/orderEmails";
+import { syncNow } from "../puntos/actions";
 import {
   updateSiteSettings,
   updateMailSettings,
@@ -28,14 +28,32 @@ import {
 
 const fieldClasses =
   "w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none";
-const labelClasses = "mb-1 block text-xs font-semibold text-brand-muted";
+const labelClasses = "mb-1 block text-xs font-medium text-brand-muted";
 const MAX_HERO_SLIDES = 3;
 
-export default async function AdminConfiguracionPage() {
-  const [settings, slides, categories] = await Promise.all([
+function timeAgo(date: Date): string {
+  const minutes = Math.round((Date.now() - date.getTime()) / 60000);
+  if (minutes < 1) return "recién";
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.round(hours / 24);
+  return `hace ${days} d`;
+}
+
+export default async function AdminConfiguracionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ synced?: string; checked?: string; awarded?: string; skipped?: string }>;
+}) {
+  const params = await searchParams;
+  const [settings, slides, categories, pendingPointsCount] = await Promise.all([
     getStoreSettingsRow(),
     prisma.heroSlide.findMany({ orderBy: { position: "asc" } }),
     getAllCategories(),
+    prisma.order.count({
+      where: { pointsAwardedAt: null, odooPickingId: { not: null }, userId: { not: null }, status: { not: "cancelled" } },
+    }),
   ]);
 
   const canAddSlide = slides.length < MAX_HERO_SLIDES;
@@ -95,6 +113,39 @@ export default async function AdminConfiguracionPage() {
           </div>
         </div>
       </form>
+
+      <div className="rounded-xl border border-black/10 bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-muted">
+              <StarIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-semibold text-brand-ink">Sincronización de puntos con Odoo</p>
+              <p className="text-xs text-brand-muted">
+                {pendingPointsCount} pedido{pendingPointsCount === 1 ? "" : "s"} esperando confirmación de entrega
+                {settings.pointsLastSync ? ` · última revisión ${timeAgo(settings.pointsLastSync)}` : ""}. Se revisa
+                solo cada 15 minutos, o al toque acá.
+              </p>
+            </div>
+          </div>
+          <form action={syncNow}>
+            <button
+              type="submit"
+              className="cursor-pointer rounded-lg bg-brand-pink px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-pink-dark"
+            >
+              Sincronizar ahora
+            </button>
+          </form>
+        </div>
+        {params.synced && (
+          <p className="mt-3 rounded-lg border border-brand-pink/20 bg-brand-soft px-3 py-2 text-xs text-brand-ink">
+            {params.skipped
+              ? "El sistema de puntos está desactivado — no se revisó nada."
+              : `Sincronización manual: se revisaron ${params.checked} pedidos pendientes, se acreditaron puntos a ${params.awarded}.`}
+          </p>
+        )}
+      </div>
 
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-muted">Datos de contacto</h2>
@@ -360,11 +411,8 @@ export default async function AdminConfiguracionPage() {
 
       {(!settings.aiProvider || !settings.aiApiKey) && (
         <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Todavía falta cargar el proveedor y la API key en{" "}
-          <Link href="/odoo_api" className="font-semibold underline">
-            Conexión con Odoo
-          </Link>
-          . Hasta entonces, la vendedora permanece oculta y la tienda muestra el botón de WhatsApp.
+          La vendedora todavía requiere configuración técnica. Hasta que el responsable de la instalación la complete,
+          la tienda mostrará el botón de WhatsApp.
         </p>
       )}
 
@@ -563,7 +611,7 @@ export default async function AdminConfiguracionPage() {
               <button
                 type="submit"
                 formAction={deleteHeroSlide.bind(null, slide.id)}
-                className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-semibold text-brand-muted transition-colors hover:border-red-300 hover:text-red-700"
+                className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-medium text-brand-muted transition-colors hover:border-red-300 hover:text-red-700"
               >
                 Eliminar
               </button>

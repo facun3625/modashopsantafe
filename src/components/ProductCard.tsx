@@ -30,7 +30,7 @@ export function ProductCard({ product }: { product: OdooProductListItem }) {
   }
 
   return (
-    <div className="rounded-xl border border-brand-pink/15 bg-white p-4 transition-all hover:border-brand-pink/50 hover:shadow-md">
+    <div className="min-w-0 rounded-xl border border-brand-pink/15 bg-white p-3 transition-all hover:border-brand-pink/50 hover:shadow-md sm:p-4">
       <div className="relative">
         <ProductImage productId={product.id} thumbnail={image} alt={product.name} />
         <button
@@ -52,7 +52,7 @@ export function ProductCard({ product }: { product: OdooProductListItem }) {
           {product.categ_id[1].split(" / ").pop()}
         </p>
       )}
-      <p className="text-sm font-medium text-brand-ink">{product.name}</p>
+      <p className="break-words text-sm font-medium text-brand-ink">{product.name}</p>
       <div className="mt-1 flex items-center gap-2">
         <p className={`text-sm font-bold ${outOfStock ? "text-brand-ink" : "text-brand-pink-dark"}`}>
           ${product.list_price.toFixed(2)}

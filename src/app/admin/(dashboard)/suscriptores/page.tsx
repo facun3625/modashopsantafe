@@ -31,7 +31,7 @@ export default async function AdminSuscriptoresPage() {
                   <form action={deleteSubscriber.bind(null, s.id)}>
                     <button
                       type="submit"
-                      className="cursor-pointer text-xs font-semibold text-brand-muted hover:text-red-700"
+                      className="cursor-pointer text-xs font-medium text-brand-muted hover:text-red-700"
                     >
                       Eliminar
                     </button>

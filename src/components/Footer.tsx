@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { WhatsAppIcon, InstagramIcon, MailIcon } from "@/components/icons";
+import { InstallPwaButton } from "@/components/InstallPwaButton";
 import type { SiteSettings } from "@/lib/settings";
 
 export function Footer({ settings }: { settings: SiteSettings }) {
@@ -14,6 +15,9 @@ export function Footer({ settings }: { settings: SiteSettings }) {
           <p className="mt-4 max-w-xs text-sm text-brand-muted">
             Accesorios de moda, bijouterie y mucho más. Todo lo que buscás, en un solo lugar.
           </p>
+          <div className="mt-4">
+            <InstallPwaButton />
+          </div>
         </div>
 
         <div>

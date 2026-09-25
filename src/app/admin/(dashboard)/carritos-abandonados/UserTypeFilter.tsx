@@ -4,7 +4,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 const fieldClasses =
   "w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none";
-const labelClasses = "mb-1 block text-xs font-semibold text-brand-muted";
+const labelClasses = "mb-1 block text-xs font-medium text-brand-muted";
 
 export function UserTypeFilter({ defaultValue }: { defaultValue: string }) {
   const router = useRouter();

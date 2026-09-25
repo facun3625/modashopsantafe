@@ -22,10 +22,10 @@ export function AuthModal() {
             onClick={close}
           />
 
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4">
             <motion.div
               key="panel"
-              className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-xl"
+              className="max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-3xl bg-white p-5 shadow-xl sm:p-8"
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}

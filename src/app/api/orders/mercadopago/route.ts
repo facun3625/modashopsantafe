@@ -4,7 +4,7 @@ import { InvalidCheckoutError } from "@/lib/checkoutItems";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkStock } from "@/lib/products";
-import { createOrderWithStockGuard, InsufficientStockError } from "@/lib/reservations";
+import { createOrderWithStockGuard, InsufficientStockError, saveUserPhone } from "@/lib/reservations";
 import { getShippingMethodsForPayment } from "@/lib/shipping";
 import { validateCoupon, registerCouponUse } from "@/lib/coupons";
 import { calculatePaymentMethodDiscount } from "@/lib/paymentMethodDiscount";
@@ -151,8 +151,9 @@ export async function POST(req: Request) {
     try {
       order = await createOrderWithStockGuard(
         items.map((i) => ({ productId: i.productId, quantity: i.quantity, name: i.name })),
-        (tx) =>
-          tx.order.create({
+        async (tx) => {
+          await saveUserPhone(tx, session?.user?.id, customer.phone);
+          return tx.order.create({
             data: {
               id: orderId,
               userId: session?.user?.id,
@@ -178,7 +179,8 @@ export async function POST(req: Request) {
                 })),
               },
             },
-          })
+          });
+        }
       );
     } catch (err) {
       if (err instanceof InsufficientStockError) {
@@ -257,6 +259,7 @@ export async function POST(req: Request) {
       total,
       paymentMethod: "mercadopago",
       shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
+      userId: session?.user?.id,
     }).catch((err) => console.error("Order notification failed", order.id, err));
 
     // El pago ya está confirmado → genera la orden en Odoo al toque (no hace

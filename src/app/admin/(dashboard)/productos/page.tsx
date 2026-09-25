@@ -3,8 +3,26 @@ import { getAdminProductsPage, getProductCountsByCategory } from "@/lib/products
 import { getAllCategories } from "@/lib/categories";
 import { Pagination } from "@/components/Pagination";
 import { LiveSearchInput } from "./LiveSearchInput";
+import { CategoryFilterSelect } from "./CategoryFilterSelect";
 
 const PAGE_SIZE = 25;
+
+type SortField = "name" | "category" | "price" | "stock";
+
+function SortArrow({ field, sort, dir }: { field: SortField; sort: SortField; dir: "asc" | "desc" }) {
+  if (sort !== field) return null;
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      className={`h-3 w-3 shrink-0 transition-transform ${dir === "desc" ? "rotate-180" : ""}`}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M6 11l6-6 6 6" />
+    </svg>
+  );
+}
 
 export default async function AdminProductosPage({
   searchParams,
@@ -29,7 +47,8 @@ export default async function AdminProductosPage({
   const maxPrice = params.maxPrice ? Number(params.maxPrice) : undefined;
   const minStock = params.minStock ? Number(params.minStock) : undefined;
   const maxStock = params.maxStock ? Number(params.maxStock) : undefined;
-  const sort = params.sort === "price" || params.sort === "stock" ? params.sort : "name";
+  const sort =
+    params.sort === "price" || params.sort === "stock" || params.sort === "category" ? params.sort : "name";
   const dir = params.dir === "desc" ? "desc" : "asc";
 
   const categories = await getAllCategories();
@@ -68,7 +87,7 @@ export default async function AdminProductosPage({
     dir: params.dir,
   };
 
-  function sortHref(field: "price" | "stock") {
+  function sortHref(field: SortField) {
     const nextDir = sort === field && dir === "asc" ? "desc" : "asc";
     const p = new URLSearchParams();
     if (query) p.set("q", query);
@@ -82,24 +101,9 @@ export default async function AdminProductosPage({
     return `/admin/productos?${p.toString()}`;
   }
 
-  function SortArrow({ field }: { field: "price" | "stock" }) {
-    if (sort !== field) return null;
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.5}
-        className={`h-3 w-3 shrink-0 transition-transform ${dir === "desc" ? "rotate-180" : ""}`}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M6 11l6-6 6 6" />
-      </svg>
-    );
-  }
-
   const fieldClasses =
     "w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none";
-  const labelClasses = "mb-1 block text-xs font-semibold text-brand-muted";
+  const labelClasses = "mb-1 block text-xs font-medium text-brand-muted";
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -115,61 +119,47 @@ export default async function AdminProductosPage({
 
           <div className="w-48">
             <label className={labelClasses}>Categoría</label>
-            <div className="relative">
-              <select
-                name="categoryId"
-                defaultValue={params.categoryId ?? ""}
-                className={`${fieldClasses} appearance-none bg-white pr-8`}
-              >
-                <option value="">Todas</option>
-                {sortedCategories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-brand-muted"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
-              </svg>
+            <CategoryFilterSelect defaultValue={params.categoryId ?? ""} categories={sortedCategories} />
+          </div>
+
+          {/* Precio/stock necesitan "Filtrar" (son rangos, no tiene sentido
+              buscar en cada tecla) — se agrupan aparte para que se note que
+              no son instantáneos como Nombre/Categoría. */}
+          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-black/10 bg-brand-soft/30 p-3">
+            <div className="w-24">
+              <label className={labelClasses}>Precio min</label>
+              <input type="number" name="minPrice" defaultValue={params.minPrice ?? ""} min={0} className={fieldClasses} />
             </div>
-          </div>
+            <div className="w-24">
+              <label className={labelClasses}>Precio max</label>
+              <input type="number" name="maxPrice" defaultValue={params.maxPrice ?? ""} min={0} className={fieldClasses} />
+            </div>
 
-          <div className="w-24">
-            <label className={labelClasses}>Precio min</label>
-            <input type="number" name="minPrice" defaultValue={params.minPrice ?? ""} min={0} className={fieldClasses} />
-          </div>
-          <div className="w-24">
-            <label className={labelClasses}>Precio max</label>
-            <input type="number" name="maxPrice" defaultValue={params.maxPrice ?? ""} min={0} className={fieldClasses} />
-          </div>
+            <div className="w-24">
+              <label className={labelClasses}>Stock min</label>
+              <input type="number" name="minStock" defaultValue={params.minStock ?? ""} min={0} className={fieldClasses} />
+            </div>
+            <div className="w-24">
+              <label className={labelClasses}>Stock max</label>
+              <input type="number" name="maxStock" defaultValue={params.maxStock ?? ""} min={0} className={fieldClasses} />
+            </div>
 
-          <div className="w-24">
-            <label className={labelClasses}>Stock min</label>
-            <input type="number" name="minStock" defaultValue={params.minStock ?? ""} min={0} className={fieldClasses} />
-          </div>
-          <div className="w-24">
-            <label className={labelClasses}>Stock max</label>
-            <input type="number" name="maxStock" defaultValue={params.maxStock ?? ""} min={0} className={fieldClasses} />
-          </div>
+            <button
+              type="submit"
+              className="cursor-pointer rounded-lg bg-brand-pink px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-pink-dark"
+            >
+              Filtrar
+            </button>
 
-          <button
-            type="submit"
-            className="cursor-pointer rounded-lg bg-brand-pink px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-pink-dark"
-          >
-            Filtrar
-          </button>
-
-          {hasFilters && (
-            <a href="/admin/productos" className="cursor-pointer text-sm font-medium text-brand-muted hover:text-brand-pink-dark">
-              Limpiar
-            </a>
-          )}
+            {hasFilters && (
+              <a
+                href="/admin/productos"
+                className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-brand-muted transition-colors hover:bg-black/5 hover:text-brand-ink"
+              >
+                Limpiar
+              </a>
+            )}
+          </div>
         </form>
       </div>
 
@@ -177,18 +167,28 @@ export default async function AdminProductosPage({
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="sticky top-0 bg-white">
             <tr className="border-b border-black/10 text-xs uppercase tracking-wide text-brand-muted">
-              <th className="px-4 py-3 font-semibold">Producto</th>
-              <th className="px-4 py-3 font-semibold">Categoría</th>
+              <th className="px-4 py-3 font-semibold">
+                <Link href={sortHref("name")} className="flex cursor-pointer items-center gap-1 hover:text-brand-pink-dark">
+                  Producto
+                  <SortArrow field="name" sort={sort} dir={dir} />
+                </Link>
+              </th>
+              <th className="px-4 py-3 font-semibold">
+                <Link href={sortHref("category")} className="flex cursor-pointer items-center gap-1 hover:text-brand-pink-dark">
+                  Categoría
+                  <SortArrow field="category" sort={sort} dir={dir} />
+                </Link>
+              </th>
               <th className="px-4 py-3 font-semibold">
                 <Link href={sortHref("price")} className="flex cursor-pointer items-center gap-1 hover:text-brand-pink-dark">
                   Precio
-                  <SortArrow field="price" />
+                  <SortArrow field="price" sort={sort} dir={dir} />
                 </Link>
               </th>
               <th className="px-4 py-3 font-semibold">
                 <Link href={sortHref("stock")} className="flex cursor-pointer items-center gap-1 hover:text-brand-pink-dark">
                   Stock
-                  <SortArrow field="stock" />
+                  <SortArrow field="stock" sort={sort} dir={dir} />
                 </Link>
               </th>
             </tr>

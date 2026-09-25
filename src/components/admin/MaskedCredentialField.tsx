@@ -21,7 +21,7 @@ export function MaskedCredentialField({
 
   return (
     <div className="min-w-[220px] flex-1">
-      <label className="mb-1 block text-xs font-semibold text-brand-muted">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-brand-muted">{label}</label>
       {editing ? (
         <input
           type={type}

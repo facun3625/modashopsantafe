@@ -24,7 +24,7 @@ export async function getSiteSettings() {
   // Ya no hay un toggle separado de "ofrecer atención humana": el horario
   // solo define CUÁNDO está disponible el WhatsApp (ya sea el botón dentro
   // del chat de la IA, o el botón flotante que lo reemplaza cuando la IA
-  // está apagada) — ver WhatsAppFloatingButton y SiteChrome.
+  // está apagada) — ver SalesAssistant y SiteChrome.
   const humanSeller = getHumanSellerAvailability({
     aiHumanHandoffEnabled: true,
     aiHumanDays: row.aiHumanDays,

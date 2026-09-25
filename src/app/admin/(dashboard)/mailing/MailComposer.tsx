@@ -15,17 +15,19 @@ const AUDIENCE_OPTIONS: { value: MailAudience; label: string }[] = [
 
 const fieldClasses =
   "w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none";
-const labelClasses = "mb-1 block text-xs font-semibold text-brand-muted";
+const labelClasses = "mb-1 block text-xs font-medium text-brand-muted";
 
 export function MailComposer({
   audienceCounts,
   franchiseName,
   franchiseLocation,
+  quotaRemaining,
   footer,
 }: {
   audienceCounts: Record<MailAudience, number>;
   franchiseName: string;
   franchiseLocation: string | null;
+  quotaRemaining: number | null;
   footer: {
     address: string | null;
     whatsappNumber: string | null;
@@ -54,7 +56,7 @@ export function MailComposer({
       subject: subject || "Asunto del mail",
       title: title || "Título del mail",
       body: body || "Acá vas a ver el texto del mail a medida que lo escribís...",
-      footer,
+      footer: { ...footer, siteUrl: origin },
     });
   }, [subject, title, body, franchiseName, franchiseLocation, footer, origin]);
 
@@ -106,6 +108,12 @@ export function MailComposer({
               ? "Elegí al menos una lista."
               : `Hasta ${recipientEstimate} destinatarios (se sacan los emails duplicados al enviar).`}
           </p>
+          {quotaRemaining !== null && recipientEstimate > quotaRemaining && (
+            <p className="mt-1.5 text-xs font-medium text-amber-700">
+              Esto puede superar tu cupo mensual — quedan {quotaRemaining} (ver pestaña Disponibilidad). Igual se
+              puede mandar, es solo un aviso.
+            </p>
+          )}
         </div>
 
         <div>

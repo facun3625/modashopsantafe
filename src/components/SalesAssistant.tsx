@@ -85,15 +85,21 @@ export function SalesAssistant({ settings }: { settings: AssistantSettings }) {
   }, [historyLoaded, messages, sending]);
 
   useEffect(() => {
-    if (!open) return;
-    fetch("/api/assistant/status", { cache: "no-store" })
-      .then(async (response) => {
-        if (response.ok) setLiveSettings(await response.json() as AssistantSettings);
-      })
-      .catch(() => {});
-  }, [open]);
-
-  if (!settings.enabled) return null;
+    let active = true;
+    const refreshStatus = () => {
+      fetch("/api/assistant/status", { cache: "no-store" })
+        .then(async (response) => {
+          if (active && response.ok) setLiveSettings(await response.json() as AssistantSettings);
+        })
+        .catch(() => {});
+    };
+    refreshStatus();
+    const interval = window.setInterval(refreshStatus, 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   async function sendMessage(event: FormEvent) {
     event.preventDefault();
@@ -147,26 +153,58 @@ export function SalesAssistant({ settings }: { settings: AssistantSettings }) {
     }).catch(() => {});
   }
 
+  if (!liveSettings.enabled) {
+    if (!liveSettings.humanSeller.enabled) return null;
+    const commonClasses =
+      "fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-3 z-50 flex h-12 items-center gap-1.5 rounded-full px-3.5 text-white shadow-lg sm:right-5";
+
+    if (liveSettings.humanSeller.available && liveSettings.humanSeller.whatsappUrl) {
+      return (
+        <a
+          href={liveSettings.humanSeller.whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Escribinos por WhatsApp"
+          className={`${commonClasses} bg-[#25D366] transition-transform hover:scale-105`}
+        >
+          <WhatsAppIcon className="h-5 w-5 shrink-0" />
+          <span className="text-xs font-semibold">Escribinos</span>
+        </a>
+      );
+    }
+
+    return (
+      <div
+        title={`Atención por WhatsApp: ${liveSettings.humanSeller.scheduleText}`}
+        className={`${commonClasses} cursor-default bg-[#25D366]/55`}
+      >
+        <WhatsAppIcon className="h-5 w-5 shrink-0" />
+        <span className="text-xs font-semibold">Fuera de horario</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed bottom-5 right-4 z-50 sm:right-5">
+    <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-3 z-50 sm:right-5">
       {open && (
         <section
           role="dialog"
           aria-label={liveSettings.name}
-          className="absolute bottom-14 right-0 flex h-[min(560px,calc(100vh-6.5rem))] w-[min(360px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-2xl"
+          className="absolute bottom-14 right-0 flex h-[min(560px,calc(100dvh-6.5rem))] w-[min(360px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-2xl"
         >
-          <header className="flex items-center justify-between bg-brand-pink px-4 py-3 text-white">
-            <div>
-              <p className="font-semibold">{liveSettings.name}</p>
-              <p className="text-xs text-white/85">Te ayudo a encontrar lo que buscás</p>
+          <header className="flex min-h-14 items-center justify-between gap-1.5 bg-brand-pink px-3 py-2.5 text-white sm:px-4 sm:py-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold sm:text-base">{liveSettings.name}</p>
+              <p className="hidden truncate text-xs text-white/85 min-[350px]:block">Te ayudo a encontrar lo que buscás</p>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
                 onClick={clearChat}
                 disabled={sending}
                 title="Borrar la conversación y empezar de nuevo"
-                className="flex cursor-pointer items-center gap-1.5 rounded-full border border-white/35 bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:border-white/60 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Limpiar chat"
+                className="flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-white/35 bg-white/10 px-2.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:border-white/60 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -178,22 +216,22 @@ export function SalesAssistant({ settings }: { settings: AssistantSettings }) {
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" />
                 </svg>
-                Limpiar
+                <span className="hidden min-[350px]:inline">Limpiar</span>
               </button>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Cerrar asistente"
-                className="cursor-pointer rounded-full p-1.5 text-xl leading-none hover:bg-white/15"
+                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-2xl leading-none hover:bg-white/15"
               >
                 ×
               </button>
             </div>
           </header>
 
-          <div className="flex-1 space-y-3 overflow-y-auto bg-brand-soft/35 p-3" aria-live="polite">
+          <div className="flex-1 touch-pan-y space-y-3 overflow-y-auto overscroll-contain bg-brand-soft/35 p-2.5 sm:p-3" aria-live="polite">
             {messages.map((message) => (
-              <div key={message.id} className={message.role === "user" ? "ml-9" : "mr-5"}>
+              <div key={message.id} className={message.role === "user" ? "ml-6 sm:ml-9" : "mr-3 sm:mr-5"}>
                 <div
                   className={`whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                     message.role === "user"
@@ -273,7 +311,7 @@ export function SalesAssistant({ settings }: { settings: AssistantSettings }) {
             </div>
           )}
 
-          <form onSubmit={sendMessage} className="flex gap-2 border-t border-black/10 bg-white p-3">
+          <form onSubmit={sendMessage} className="flex items-end gap-2 border-t border-black/10 bg-white p-2.5 sm:p-3">
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value.slice(0, 600))}
@@ -287,12 +325,12 @@ export function SalesAssistant({ settings }: { settings: AssistantSettings }) {
               maxLength={600}
               placeholder="¿Qué estás buscando?"
               aria-label="Mensaje"
-              className="min-h-10 max-h-24 flex-1 resize-none rounded-xl border border-black/10 px-3 py-2 text-sm text-brand-ink outline-none focus:border-brand-pink"
+              className="min-h-11 max-h-24 min-w-0 flex-1 resize-none rounded-xl border border-black/10 px-3 py-2.5 text-base text-brand-ink outline-none focus:border-brand-pink sm:text-sm"
             />
             <button
               type="submit"
               disabled={!input.trim() || sending}
-              className="h-10 cursor-pointer rounded-xl bg-brand-pink px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-11 shrink-0 cursor-pointer rounded-xl bg-brand-pink px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               Enviar
             </button>
@@ -303,7 +341,7 @@ export function SalesAssistant({ settings }: { settings: AssistantSettings }) {
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        aria-label={open ? "Cerrar asistente" : `Abrir ${settings.name}`}
+        aria-label={open ? "Cerrar asistente" : `Abrir ${liveSettings.name}`}
         aria-expanded={open}
         className="flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-brand-pink px-3.5 text-white shadow-lg transition-transform hover:scale-105"
       >

@@ -6,7 +6,7 @@ import type { OrderStatus } from "@/generated/prisma/enums";
 // Cliente de Prisma o de una transacción interactiva — así el cálculo de
 // reservado se puede correr adentro del candado (ver createOrderWithStockGuard).
 type ReservationDb = Pick<typeof prisma, "orderItem">;
-type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 // Estados de pedido que "retienen" stock: el pedido está vivo pero todavía no
 // se despachó (no salió del stock físico de Odoo). Al pasar a `delivered` o
@@ -127,4 +127,14 @@ export async function createOrderWithStockGuard<T>(
 
     return build(tx);
   });
+}
+
+// Guarda el teléfono en el usuario logueado la primera vez que lo tipea en
+// un checkout (nadie lo pide en el registro) — así queda disponible para
+// contactarlo por WhatsApp desde carritos abandonados aunque ESE carrito
+// puntual no haya llegado a cargar teléfono. Se llama dentro de la misma
+// transacción que crea el pedido, en las 3 rutas de checkout.
+export async function saveUserPhone(tx: Tx, userId: string | undefined, phone: string | undefined): Promise<void> {
+  if (!userId || !phone) return;
+  await tx.user.update({ where: { id: userId }, data: { phone } });
 }

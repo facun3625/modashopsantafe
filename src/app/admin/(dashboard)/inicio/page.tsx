@@ -44,9 +44,9 @@ export default async function AdminInicioPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto">
-      <div className="shrink-0">
-        <h1 className="text-2xl font-bold text-brand-ink">Hola, {stats.userLabel} 👋</h1>
-        <p className="mt-1 text-sm text-brand-muted">
+      <div className="flex shrink-0 items-baseline justify-between gap-4">
+        <h1 className="text-2xl font-bold text-brand-ink">Hola, {stats.userLabel}</h1>
+        <p className="shrink-0 text-sm text-brand-muted">
           {new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })} — así viene la
           tienda.
         </p>
@@ -66,7 +66,7 @@ export default async function AdminInicioPage() {
       )}
 
       {/* KPIs */}
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard
           icon={SalesIcon}
           tone="pink"

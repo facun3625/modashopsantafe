@@ -45,7 +45,7 @@ export function NewsletterBanner() {
               ¡Listo! Ya estás suscripto.
             </p>
           ) : (
-            <form onSubmit={handleSubmit} className="flex w-full max-w-sm shrink-0 gap-2">
+            <form onSubmit={handleSubmit} className="flex w-full max-w-sm shrink-0 flex-col gap-2 min-[400px]:flex-row">
               <input
                 type="email"
                 required
@@ -57,7 +57,7 @@ export function NewsletterBanner() {
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="shrink-0 cursor-pointer rounded-full bg-brand-pink px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 shrink-0 cursor-pointer rounded-full bg-brand-pink px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {status === "loading" ? "Enviando..." : "Suscribirme"}
               </button>

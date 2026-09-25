@@ -25,7 +25,15 @@ export function useFormDirty<T extends HTMLElement>() {
 
   useEffect(() => {
     const form = ref.current?.closest("form");
-    if (!form || baseline.current !== null) return;
+    if (!form) return;
+    // Ojo: nada de "if baseline ya está seteado, salir" acá. En desarrollo,
+    // Strict Mode corre este efecto dos veces (monta → limpia → vuelve a
+    // montar) — la limpieza SACA los listeners, y si este segundo montaje
+    // se saltea por un guard de "ya tengo baseline", el form se queda sin
+    // listeners para siempre y el botón de Guardar nunca se entera de nada.
+    // Recalcular baseline en cada (re)montaje es seguro: entre limpiar y
+    // volver a montar no pasó ninguna interacción real, así que da el mismo
+    // valor de antes.
     baseline.current = snapshot(form);
 
     const handler = () => setDirty(snapshot(form) !== baseline.current);
