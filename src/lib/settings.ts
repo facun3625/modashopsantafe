@@ -50,6 +50,17 @@ export async function getSiteSettings() {
       { icon: row.benefit2Icon, title: row.benefit2Title, subtitle: row.benefit2Subtitle },
       { icon: row.benefit3Icon, title: row.benefit3Title, subtitle: row.benefit3Subtitle },
     ],
+    // Pop-up promocional del sitio público — null si está apagado o si no
+    // tiene ni título ni texto cargado (ver SitePopupModal).
+    popup:
+      row.popupEnabled && (row.popupTitle || row.popupBodyHtml)
+        ? {
+            title: row.popupTitle,
+            bodyHtml: row.popupBodyHtml,
+            scope: row.popupScope,
+            frequency: row.popupFrequency,
+          }
+        : null,
     assistant: {
       enabled: row.aiAssistantEnabled && assistantConfigured,
       name: row.aiAssistantName?.trim() || "Vendedora virtual",

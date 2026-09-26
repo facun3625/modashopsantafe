@@ -2,18 +2,21 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { BoldIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, LinkIcon, ImageIcon } from "@/components/icons";
-import { uploadMailImage } from "./actions";
 
 // Editor mínimo con document.execCommand — no es lo más moderno (está
 // "deprecado" hace años sin que el browser haya sacado nada que lo
 // reemplace del todo para un caso simple como este), pero para negrita,
 // alineación, tamaño, link e imagen alcanza de sobra sin sumar una
-// librería de edición completa solo para el cuerpo del mailing.
+// librería de edición completa. Compartido entre Mailing y el pop-up del
+// sitio — cada caller pasa su propia `uploadImage` (guardan en carpetas
+// distintas) en vez de que este componente sepa a qué feature pertenece.
 const SIZES: Record<string, string> = {
   normal: "3",
   grande: "5",
   titulo: "6",
 };
+
+export type RichTextUploadResult = { ok: true; url: string } | { ok: false; error: string };
 
 function ToolbarButton({
   onClick,
@@ -48,11 +51,18 @@ export function RichTextEditor({
   initialValue,
   onChange,
   placeholder,
+  uploadImage,
 }: {
   name: string;
   initialValue?: string;
-  onChange: (html: string) => void;
+  // Opcional: cuando este editor se usa desde un Server Component (como el
+  // panel del pop-up), no hay forma de pasarle una función — no se puede
+  // serializar a través del límite server/client. Ahí simplemente no se
+  // pasa, y el editor sigue funcionando igual (el <input hidden> es lo que
+  // en verdad importa para el submit del form).
+  onChange?: (html: string) => void;
   placeholder?: string;
+  uploadImage: (formData: FormData) => Promise<RichTextUploadResult>;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +97,7 @@ export function RichTextEditor({
       const next = el!.innerHTML;
       hidden!.value = next;
       setEmpty(el!.textContent?.trim() === "" && !el!.querySelector("img"));
-      onChangeRef.current(next);
+      onChangeRef.current?.(next);
     }
 
     el.addEventListener("input", sync);
@@ -126,7 +136,7 @@ export function RichTextEditor({
     try {
       const formData = new FormData();
       formData.set("image", file);
-      const result = await uploadMailImage(formData);
+      const result = await uploadImage(formData);
       if (result.ok) {
         exec("insertImage", result.url);
       } else {

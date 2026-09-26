@@ -90,6 +90,60 @@ async function saveHeroImage(file: File): Promise<string> {
   return `/api/uploads/hero/${filename}`;
 }
 
+const POPUP_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "popup");
+const POPUP_ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
+const MAX_POPUP_IMAGE_BYTES = 4 * 1024 * 1024;
+
+// Insertada desde el botón de imagen del RichTextEditor del pop-up — mismo
+// patrón que uploadMailImage, carpeta/ruta propia (public/uploads/popup +
+// /api/uploads/popup/[filename]) para no mezclarla con las del mailing.
+export async function uploadPopupImage(formData: FormData): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  await requireAdmin();
+
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Elegí una imagen." };
+  if (!POPUP_ALLOWED_TYPES.has(file.type)) return { ok: false, error: "Formato no soportado (usá PNG, JPG, WEBP, GIF o AVIF)." };
+  if (file.size > MAX_POPUP_IMAGE_BYTES) return { ok: false, error: "La imagen pesa más de 4 MB." };
+
+  const ext = path.extname(file.name) || "";
+  const filename = `${randomUUID()}${ext}`;
+  await mkdir(POPUP_UPLOAD_DIR, { recursive: true });
+  const bytes = Buffer.from(await file.arrayBuffer());
+  await writeFile(path.join(POPUP_UPLOAD_DIR, filename), bytes);
+
+  return { ok: true, url: `/api/uploads/popup/${filename}` };
+}
+
+const POPUP_SCOPES = new Set(["home", "tienda", "all"]);
+const POPUP_FREQUENCIES = new Set(["once", "always"]);
+
+// Pop-up promocional del sitio público — ver components/SitePopupModal.tsx.
+export async function updatePopupSettings(formData: FormData) {
+  await requireAdmin();
+
+  const scope = formData.get("popupScope");
+  const frequency = formData.get("popupFrequency");
+
+  const data = {
+    popupEnabled: formData.get("popupEnabled") === "on",
+    popupTitle: optionalText(formData, "popupTitle", 100),
+    popupBodyHtml: (formData.get("popupBodyHtml") as string)?.trim() || null,
+    popupScope: (typeof scope === "string" && POPUP_SCOPES.has(scope) ? scope : "all") as "home" | "tienda" | "all",
+    popupFrequency: (typeof frequency === "string" && POPUP_FREQUENCIES.has(frequency) ? frequency : "once") as
+      | "once"
+      | "always",
+  };
+
+  await prisma.storeSettings.upsert({
+    where: { id: "global" },
+    create: { id: "global", ...data },
+    update: data,
+  });
+
+  revalidatePath("/admin/configuracion");
+  revalidatePath("/", "layout");
+}
+
 // Acepta "modashopsantafe", "@modashopsantafe" o el link completo
 // (instagram.com/modashopsantafe/) y siempre guarda solo el usuario — así
 // no importa qué formato pegue el admin, el link del sitio nunca se rompe.

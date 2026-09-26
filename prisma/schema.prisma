@@ -155,6 +155,18 @@ model StoreSettings {
   benefit3Title    String?
   benefit3Subtitle String?
 
+  // Pop-up promocional del sitio público (título + texto enriquecido, mismo
+  // editor que usa Mailing) — ver components/SitePopupModal.tsx. "once" se
+  // controla en el navegador del visitante (localStorage), no por IP: una
+  // IP real se comparte entre varios celulares de un mismo operador y
+  // cambia si el visitante pasa de wifi a datos, así que no sirve para
+  // identificar "ya lo vio".
+  popupEnabled   Boolean        @default(false)
+  popupTitle     String?
+  popupBodyHtml  String?
+  popupScope     PopupScope     @default(all)
+  popupFrequency PopupFrequency @default(once)
+
   // Nombre y sucursal de la franquicia — para el encabezado del mailing
   // (ej. "ModaShop" / "Santa Fe"). Pensado para cuando haya más de una
   // franquicia, cada una con su propia identidad en los mails que manda.
@@ -233,6 +245,17 @@ enum MailCampaignStatus {
 enum MailProvider {
   smtp
   resend
+}
+
+enum PopupScope {
+  home
+  tienda
+  all
+}
+
+enum PopupFrequency {
+  once
+  always
 }
 
 enum AiProvider {

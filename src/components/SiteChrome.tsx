@@ -7,6 +7,7 @@ import { Footer } from "@/components/Footer";
 import { SalesAssistant } from "@/components/SalesAssistant";
 import { WhatsAppFloatingButton } from "@/components/WhatsAppFloatingButton";
 import { VisitTracker } from "@/components/VisitTracker";
+import { SitePopupModal } from "@/components/SitePopupModal";
 import type { SiteSettings } from "@/lib/settings";
 
 // El panel de administración tiene su propio layout (sidebar, header) y no
@@ -59,6 +60,7 @@ export function SiteChrome({
       ) : (
         <WhatsAppFloatingButton humanSeller={settings.assistant.humanSeller} />
       )}
+      <SitePopupModal popup={settings.popup} />
     </>
   );
 }

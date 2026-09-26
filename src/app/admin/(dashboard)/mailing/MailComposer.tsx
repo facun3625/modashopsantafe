@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { buildMailHtml } from "@/lib/mailTemplate";
-import { createCampaign } from "./actions";
-import { RichTextEditor } from "./RichTextEditor";
+import { createCampaign, uploadMailImage } from "./actions";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 
 type MailAudience = "abandoned_carts" | "waitlist" | "users" | "subscribers";
 
@@ -158,6 +158,7 @@ export function MailComposer({
             name="body"
             onChange={setBody}
             placeholder="Escribí el mensaje — seleccioná texto para darle formato."
+            uploadImage={uploadMailImage}
           />
         </div>
 

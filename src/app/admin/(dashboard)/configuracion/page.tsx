@@ -7,6 +7,7 @@ import { SaveButton } from "@/components/admin/SaveButton";
 import { CardAccordion } from "@/components/admin/CardAccordion";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
 import { ImagePreviewInput } from "@/components/admin/ImagePreviewInput";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { TelegramTestButton } from "./TelegramTestButton";
 import { SettingsTabs } from "./SettingsTabs";
 import { CategoryChipSelector } from "./CategoryChipSelector";
@@ -27,6 +28,8 @@ import {
   deleteHeroSlide,
   updateAiAssistantSettings,
   updateBenefitsSettings,
+  updatePopupSettings,
+  uploadPopupImage,
 } from "./actions";
 
 const fieldClasses =
@@ -762,6 +765,72 @@ export default async function AdminConfiguracionPage({
     </div>
   );
 
+  // --- Panel: Pop-up del sitio ---
+  const popupPanel = (
+    <form action={updatePopupSettings} className="rounded-xl border border-black/10 bg-white p-5">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 pb-5">
+        <div>
+          <p className="font-semibold text-brand-ink">Pop-up promocional</p>
+          <p className="mt-1 max-w-2xl text-xs text-brand-muted">
+            Aparece unos segundos después de entrar al sitio, con el título y el texto que cargues acá abajo.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <ToggleSwitch name="popupEnabled" defaultChecked={settings.popupEnabled} />
+          <span className="text-sm text-brand-ink">Habilitado</span>
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label className={labelClasses}>Dónde se muestra</label>
+          <select name="popupScope" defaultValue={settings.popupScope} className={fieldClasses}>
+            <option value="all">Todo el sitio</option>
+            <option value="home">Solo home</option>
+            <option value="tienda">Solo tienda</option>
+          </select>
+        </div>
+        <div>
+          <label className={labelClasses}>Frecuencia</label>
+          <select name="popupFrequency" defaultValue={settings.popupFrequency} className={fieldClasses}>
+            <option value="once">Una vez por visitante</option>
+            <option value="always">Cada vez que entra al sitio</option>
+          </select>
+          <p className="mt-1 text-xs text-brand-muted">
+            &ldquo;Una vez&rdquo; lo recuerda el navegador del visitante — si después editás el texto, vuelve a
+            aparecer aunque ya lo hayan visto.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <label className={labelClasses}>Título</label>
+        <input
+          type="text"
+          name="popupTitle"
+          maxLength={100}
+          defaultValue={settings.popupTitle ?? ""}
+          placeholder="¡Nueva colección ya disponible!"
+          className={fieldClasses}
+        />
+      </div>
+
+      <div className="mt-4">
+        <label className={labelClasses}>Texto</label>
+        <RichTextEditor
+          name="popupBodyHtml"
+          initialValue={settings.popupBodyHtml ?? ""}
+          placeholder="Escribí el mensaje del pop-up — seleccioná texto para darle formato, o insertá una imagen."
+          uploadImage={uploadPopupImage}
+        />
+      </div>
+
+      <div className="mt-5 border-t border-black/5 pt-4">
+        <SaveButton trackDirty />
+      </div>
+    </form>
+  );
+
   return (
     <div className="flex flex-col">
       <div>
@@ -777,6 +846,7 @@ export default async function AdminConfiguracionPage({
           { id: "telegram", label: "Telegram", content: telegramPanel },
           { id: "vendedora", label: "Vendedora IA", content: aiPanel },
           { id: "slider", label: "Slider", content: sliderPanel },
+          { id: "popup", label: "Pop-up", content: popupPanel },
         ]}
       />
     </div>

@@ -3,6 +3,8 @@
 // vivo del admin (un client component), para que lo que se ve en pantalla
 // sea exactamente lo que se manda.
 
+import { sanitizeRichHtml } from "@/lib/sanitizeHtml";
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
@@ -21,30 +23,6 @@ function paragraphs(text: string): string {
         `<p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#383e45;">${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`
     )
     .join("");
-}
-
-// El cuerpo enriquecido viene del RichTextEditor del admin de Mailing — es
-// contenido de un admin logueado, no de un visitante, pero igual se limpia:
-// sacar <script>/<style>/<iframe>/etc. y atributos on* evita que un pegado
-// de contenido de otra página (o un editor con bugs) arrastre algo raro al
-// mail. No es un sanitizador HTML completo — para eso haría falta parsear
-// el DOM de verdad, que no está disponible del lado del server sin sumar
-// una dependencia — pero cubre lo que puede pasar en la práctica acá.
-function sanitizeRichHtml(html: string): string {
-  return html
-    .replace(/<(script|style|iframe|object|embed|form)\b[^>]*>[\s\S]*?<\/\1>/gi, "")
-    .replace(/<(script|style|iframe|object|embed|form)\b[^>]*\/?>/gi, "")
-    .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
-    .replace(/\shref\s*=\s*(["'])\s*javascript:[^"']*\1/gi, "")
-    // Las imágenes que inserta el editor no traen estilo — se les agrega acá
-    // para que no se salgan del ancho del mail en el cliente de correo.
-    .replace(/<img(?![^>]*\bstyle=)([^>]*)>/gi, '<img$1 style="max-width:100%;height:auto;border-radius:8px;" />')
-    // Los links del editor tampoco traen color — se les da el color de marca.
-    .replace(
-      /<a(?![^>]*\bstyle=)([^>]*)>/gi,
-      '<a$1 style="color:#c2185b;text-decoration:underline;">'
-    );
 }
 
 // Envoltorio con la tipografía/color base del mail — igual que paragraphs(),
