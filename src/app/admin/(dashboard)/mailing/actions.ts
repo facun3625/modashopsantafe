@@ -1,5 +1,8 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
@@ -7,6 +10,34 @@ import { getMailSender } from "@/lib/mailer";
 import { buildMailHtml } from "@/lib/mailTemplate";
 import { getAudienceEmails } from "@/lib/audiences";
 import type { MailAudience } from "@/generated/prisma/enums";
+
+const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "mail");
+const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+// Insertada desde el botón de imagen del editor del cuerpo del mail (ver
+// RichTextEditor.tsx). Devuelve la URL ABSOLUTA (no relativa) porque el
+// <img> queda guardado tal cual dentro del HTML del cuerpo, y ese HTML
+// después se manda por mail — un cliente de correo no tiene forma de
+// resolver una URL relativa a "este sitio".
+export type UploadMailImageResult = { ok: true; url: string } | { ok: false; error: string };
+
+export async function uploadMailImage(formData: FormData): Promise<UploadMailImageResult> {
+  await requireAdmin();
+
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Elegí una imagen." };
+  if (!ALLOWED_TYPES.has(file.type)) return { ok: false, error: "Formato no soportado (usá PNG, JPG, WEBP, GIF o AVIF)." };
+  if (file.size > MAX_IMAGE_BYTES) return { ok: false, error: "La imagen pesa más de 4 MB." };
+
+  const ext = path.extname(file.name) || "";
+  const filename = `${randomUUID()}${ext}`;
+  await mkdir(UPLOAD_DIR, { recursive: true });
+  const bytes = Buffer.from(await file.arrayBuffer());
+  await writeFile(path.join(UPLOAD_DIR, filename), bytes);
+
+  return { ok: true, url: `${process.env.NEXTAUTH_URL ?? ""}/api/uploads/mail/${filename}` };
+}
 
 // Corre después de que createCampaign ya respondió — no se espera (no
 // `await` en el caller). Como el server corre como proceso persistente
@@ -75,7 +106,11 @@ export async function createCampaign(formData: FormData) {
       franchiseLocation: settings?.franchiseLocation,
       subject,
       title,
-      body,
+      // HTML enriquecido (negrita, alineación, tamaño, links, imágenes) que
+      // arma el RichTextEditor — buildMailHtml lo sanitiza, no lo trata
+      // como texto plano a partir en párrafos (eso es solo para el mail de
+      // pedido, que sigue siendo texto armado por el server).
+      bodyHtml: body,
       footer: {
         address: settings?.address,
         whatsappNumber: settings?.whatsappPhone,

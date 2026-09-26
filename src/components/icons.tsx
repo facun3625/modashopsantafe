@@ -358,3 +358,54 @@ export function PlusIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function BoldIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7 4h6a3.5 3.5 0 0 1 0 7H7V4Zm0 7h7a3.5 3.5 0 0 1 0 7H7v-7Z" />
+    </svg>
+  );
+}
+
+export function AlignLeftIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path strokeLinecap="round" d="M4 6h16M4 12h10M4 18h13" />
+    </svg>
+  );
+}
+
+export function AlignCenterIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path strokeLinecap="round" d="M4 6h16M7 12h10M5.5 18h13" />
+    </svg>
+  );
+}
+
+export function AlignRightIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path strokeLinecap="round" d="M4 6h16M10 12h10M7 18h13" />
+    </svg>
+  );
+}
+
+export function LinkIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 14.5 14.5 9.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 7.5 12.5 6a3.5 3.5 0 0 1 5 5L16 12.5M13 16.5 11.5 18a3.5 3.5 0 0 1-5-5L8 11.5" />
+    </svg>
+  );
+}
+
+export function ImageIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <circle cx="8.5" cy="9.5" r="1.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m5 17 4.5-4.5a2 2 0 0 1 2.8 0L15 15.2M14 14l1.2-1.2a2 2 0 0 1 2.8 0L20 14.6" />
+    </svg>
+  );
+}

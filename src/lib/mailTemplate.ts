@@ -23,6 +23,39 @@ function paragraphs(text: string): string {
     .join("");
 }
 
+// El cuerpo enriquecido viene del RichTextEditor del admin de Mailing — es
+// contenido de un admin logueado, no de un visitante, pero igual se limpia:
+// sacar <script>/<style>/<iframe>/etc. y atributos on* evita que un pegado
+// de contenido de otra página (o un editor con bugs) arrastre algo raro al
+// mail. No es un sanitizador HTML completo — para eso haría falta parsear
+// el DOM de verdad, que no está disponible del lado del server sin sumar
+// una dependencia — pero cubre lo que puede pasar en la práctica acá.
+function sanitizeRichHtml(html: string): string {
+  return html
+    .replace(/<(script|style|iframe|object|embed|form)\b[^>]*>[\s\S]*?<\/\1>/gi, "")
+    .replace(/<(script|style|iframe|object|embed|form)\b[^>]*\/?>/gi, "")
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
+    .replace(/\shref\s*=\s*(["'])\s*javascript:[^"']*\1/gi, "")
+    // Las imágenes que inserta el editor no traen estilo — se les agrega acá
+    // para que no se salgan del ancho del mail en el cliente de correo.
+    .replace(/<img(?![^>]*\bstyle=)([^>]*)>/gi, '<img$1 style="max-width:100%;height:auto;border-radius:8px;" />')
+    // Los links del editor tampoco traen color — se les da el color de marca.
+    .replace(
+      /<a(?![^>]*\bstyle=)([^>]*)>/gi,
+      '<a$1 style="color:#c2185b;text-decoration:underline;">'
+    );
+}
+
+// Envoltorio con la tipografía/color base del mail — igual que paragraphs(),
+// pero para HTML ya armado (negrita, alineación, links, imágenes) en vez de
+// texto plano a partir en párrafos.
+function richBody(html: string): string {
+  const clean = sanitizeRichHtml(html).trim();
+  if (!clean) return "";
+  return `<div style="font-size:15px;line-height:1.65;color:#383e45;">${clean}</div>`;
+}
+
 // Solo linkea si hay algo que armar — nunca inventa un handle/URL que no
 // esté cargado en Configuración.
 function siteLink(url: string | null | undefined): string | null {
@@ -43,7 +76,12 @@ export type MailTemplateData = {
   franchiseLocation?: string | null;
   subject: string;
   title: string;
-  body: string;
+  // Exactamente uno de los dos: `body` es texto plano (se parte en párrafos
+  // por línea en blanco — lo usa el mail de pedido, armado por el server).
+  // `bodyHtml` es HTML enriquecido (negrita, alineación, links, imágenes) —
+  // lo usa Mailing, armado por el RichTextEditor del admin.
+  body?: string;
+  bodyHtml?: string;
   footer: {
     address?: string | null;
     whatsappNumber?: string | null;
@@ -54,7 +92,8 @@ export type MailTemplateData = {
 };
 
 export function buildMailHtml(data: MailTemplateData): string {
-  const { logoUrl, franchiseName, franchiseLocation, title, body, footer } = data;
+  const { logoUrl, franchiseName, franchiseLocation, title, footer } = data;
+  const bodyContent = data.bodyHtml ? richBody(data.bodyHtml) : paragraphs(data.body ?? "");
 
   const footerLinks = [siteLink(footer.siteUrl), instagramLink(footer.instagramHandle), footer.contactEmail ? escapeHtml(footer.contactEmail) : null]
     .filter(Boolean)
@@ -80,7 +119,7 @@ export function buildMailHtml(data: MailTemplateData): string {
 
       <div style="padding:32px 4px;">
         <h1 style="margin:0 0 18px;font-size:23px;line-height:1.3;color:#2a1f24;">${escapeHtml(title)}</h1>
-        ${paragraphs(body)}
+        ${bodyContent}
       </div>
 
       <div style="height:1px;background:#e8e5e6;"></div>
