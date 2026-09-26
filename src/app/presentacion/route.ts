@@ -1,7 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-const DOCUMENT_PATH = path.join(process.cwd(), "PRESENTACION_FUNCIONAL_Y_TECNICA.md");
+const PRESENTATION_PATH = path.join(process.cwd(), "PRESENTACION_FUNCIONAL_Y_TECNICA.md");
+const STORE_MANUAL_PATH = path.join(process.cwd(), "MANUAL_MODA_TIENDA.md");
+
+type DocumentOptions = {
+  browserTitle: string;
+  headerLabel: string;
+  firstHeadingId: string;
+};
 
 function escapeHtml(value: string): string {
   return value
@@ -150,14 +157,14 @@ function renderMarkdown(markdown: string): { content: string; toc: string } {
   return { content: html.join("\n"), toc };
 }
 
-function documentHtml(content: string, toc: string): string {
+function documentHtml(content: string, toc: string, options: DocumentOptions): string {
   return `<!doctype html>
 <html lang="es">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>Presentación funcional y técnica | ModaShop</title>
+    <title>${escapeHtml(options.browserTitle)}</title>
     <style>
       :root { --pink:#ef4f91; --pink-dark:#ca2d70; --ink:#26242a; --muted:#706874; --soft:#fff4f8; --line:#eadfe5; }
       * { box-sizing:border-box; }
@@ -218,7 +225,7 @@ function documentHtml(content: string, toc: string): string {
   </head>
   <body>
     <header class="top">
-      <a class="brand" href="#modashop-santa-fe">Moda<span>Shop</span> · Presentación</a>
+      <a class="brand" href="#${escapeHtml(options.firstHeadingId)}">Moda<span>Shop</span> · ${escapeHtml(options.headerLabel)}</a>
       <div class="actions"><button type="button" onclick="window.print()">Imprimir / Guardar PDF</button></div>
     </header>
     <div class="layout">
@@ -229,11 +236,26 @@ function documentHtml(content: string, toc: string): string {
 </html>`;
 }
 
-export async function GET() {
-  const markdown = await readFile(DOCUMENT_PATH, "utf-8");
+export async function GET(request: Request) {
+  const storeManual =
+    request.headers.get("x-document-name") === "moda-tienda" ||
+    new URL(request.url).searchParams.get("documento") === "moda-tienda";
+  const documentPath = storeManual ? STORE_MANUAL_PATH : PRESENTATION_PATH;
+  const options: DocumentOptions = storeManual
+    ? {
+        browserTitle: "Manual Moda Tienda | ModaShop",
+        headerLabel: "Manual Moda Tienda",
+        firstHeadingId: "manual-moda-tienda",
+      }
+    : {
+        browserTitle: "Presentación funcional y técnica | ModaShop",
+        headerLabel: "Presentación",
+        firstHeadingId: "modashop-santa-fe",
+      };
+  const markdown = await readFile(documentPath, "utf-8");
   const { content, toc } = renderMarkdown(markdown);
 
-  return new Response(documentHtml(content, toc), {
+  return new Response(documentHtml(content, toc, options), {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "X-Robots-Tag": "noindex, nofollow",
