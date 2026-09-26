@@ -34,7 +34,7 @@ export function ProductCarousel({ products }: { products: OdooProductListItem[] 
           {products.map((p) => (
             <div
               key={p.id}
-              className="w-full shrink-0 snap-start sm:w-[calc((100%-2rem)/3)] xl:w-[calc((100%-3rem)/4)]"
+              className="w-[calc((100%-1rem)/2)] shrink-0 snap-start sm:w-[calc((100%-2rem)/3)] xl:w-[calc((100%-3rem)/4)]"
             >
               <ProductCard product={p} />
             </div>

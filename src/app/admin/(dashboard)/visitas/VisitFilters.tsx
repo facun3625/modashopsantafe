@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export const PERIODS = {
   today: "Hoy",
@@ -30,14 +29,17 @@ export function VisitFilters({
   to: string;
   isCustom: boolean;
 }) {
-  const router = useRouter();
   const [fromInput, setFromInput] = useState(from);
   const [toInput, setToInput] = useState(to);
 
+  // Navegación DURA (window.location, no router.push de Next) a propósito:
+  // con router.push, volver a una combinación de filtros ya visitada en la
+  // sesión podía quedarse con la página vieja (el caso reportado: la URL
+  // cambiaba a ?period=7d pero el select seguía mostrando 30 días) — ni
+  // agregar router.refresh() lo garantizaba. Una recarga de página entera
+  // no tiene ese problema: siempre trae la respuesta del server posta.
   function applyPreset(next: string) {
-    setFromInput("");
-    setToInput("");
-    router.push(`/admin/visitas?period=${next}`);
+    window.location.href = `/admin/visitas?period=${next}`;
   }
 
   function applyRange(nextFrom: string, nextTo: string) {
@@ -45,7 +47,7 @@ export function VisitFilters({
     const sp = new URLSearchParams();
     sp.set("from", nextFrom);
     sp.set("to", nextTo);
-    router.push(`/admin/visitas?${sp.toString()}`);
+    window.location.href = `/admin/visitas?${sp.toString()}`;
   }
 
   return (

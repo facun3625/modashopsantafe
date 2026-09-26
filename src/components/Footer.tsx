@@ -40,14 +40,23 @@ export function Footer({ settings }: { settings: SiteSettings }) {
           <ul className="mt-4 space-y-3 text-sm text-brand-muted">
             <li className="flex items-center gap-2">
               <WhatsAppIcon className="h-4 w-4 shrink-0" />
-              <a
-                href={`https://wa.me/${settings.whatsappNumber}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-brand-pink-dark"
-              >
-                WhatsApp
-              </a>
+              {/* Mismo horario que configura el admin para la vendedora IA
+                  (ver /admin/configuracion → horario de WhatsApp) — fuera de
+                  esas horas no tiene sentido invitar a escribir. */}
+              {settings.assistant.humanSeller.available && settings.assistant.humanSeller.whatsappUrl ? (
+                <a
+                  href={settings.assistant.humanSeller.whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-brand-pink-dark"
+                >
+                  WhatsApp
+                </a>
+              ) : (
+                <span title={`Fuera de horario — ${settings.assistant.humanSeller.scheduleText}`} className="text-brand-muted/50">
+                  WhatsApp (fuera de horario)
+                </span>
+              )}
             </li>
             <li className="flex items-center gap-2">
               <MailIcon className="h-4 w-4 shrink-0" />

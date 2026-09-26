@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import type { PaymentMethod } from "@/generated/prisma/enums";
 import { paymentMethodLabel } from "@/lib/orderLabels";
 
@@ -16,16 +16,20 @@ export type PeriodKey = keyof typeof PERIODS;
 const PAYMENTS: PaymentMethod[] = ["mercadopago", "transferencia", "contra_entrega", "payway"];
 
 export function StatsFilters({ period, payment }: { period: PeriodKey; payment?: PaymentMethod }) {
-  const router = useRouter();
   const params = useSearchParams();
 
+  // Navegación DURA (window.location, no router.push de Next) a propósito:
+  // con router.push (incluso agregando router.refresh() atrás), volver a
+  // una combinación de filtros ya visitada en la sesión podía quedarse con
+  // la página vieja — la URL cambiaba pero el select y los números no. Una
+  // recarga de página entera no tiene ese problema.
   function apply(next: { period?: string; payment?: string }) {
     const sp = new URLSearchParams(params.toString());
     for (const [key, value] of Object.entries(next)) {
       if (value) sp.set(key, value);
       else sp.delete(key);
     }
-    router.push(`/admin/estadisticas?${sp.toString()}`);
+    window.location.href = `/admin/estadisticas?${sp.toString()}`;
   }
 
   const selectClass =

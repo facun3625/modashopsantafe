@@ -3,15 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { UserIcon, CartIcon, SearchIcon, StoreIcon, DashboardIcon, StarIcon, LogoutIcon, PackageIcon, HeartIcon } from "@/components/icons";
+import { UserIcon, CartIcon, SearchIcon, StoreIcon, DashboardIcon, StarIcon, LogoutIcon, PackageIcon, HeartIcon, MapPinIcon, MailIcon, WhatsAppIcon, InstagramIcon } from "@/components/icons";
 import { useCart } from "@/lib/cart";
 import { useFavorites } from "@/lib/favorites";
 import { useAuthModal } from "@/lib/authModal";
 import { useProductSuggestions } from "@/lib/useProductSuggestions";
 import { SearchSuggestions } from "@/components/SearchSuggestions";
 import { TopContactBar } from "@/components/TopContactBar";
+import { InstallPwaButton } from "@/components/InstallPwaButton";
 import type { SiteSettings } from "@/lib/settings";
 
 const LINKS = [
@@ -102,6 +104,10 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, [pathname]);
 
+  // Mismo horario que la vendedora IA (ver /admin/configuracion) — el
+  // WhatsApp del menú mobile no tiene sentido ofrecerlo fuera de horario.
+  const whatsappAvailable = settings.assistant.humanSeller.available && Boolean(settings.assistant.humanSeller.whatsappUrl);
+
   function isActive(href: string) {
     if (pathname !== "/") return false;
     if (href === "/") return activeSection === "inicio";
@@ -180,6 +186,8 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
             {/* En /tienda ya está el buscador de ShopControls, sincronizado
                 con el filtro actual — repetirlo acá era espacio duplicado. */}
             {pathname !== "/tienda" && <NavbarSearch className="hidden max-w-[220px] flex-1 sm:block" />}
+
+            <InstallPwaButton variant="icon" />
 
             {session?.user?.role === "admin" && (
               <Link
@@ -299,36 +307,136 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
         {pathname !== "/tienda" && <NavbarSearch className="mx-auto mt-3 max-w-6xl sm:hidden" />}
       </div>
 
-      {open && (
-        <nav className="flex flex-col gap-1 border-b border-black/5 bg-white px-6 py-3 lg:hidden">
-          {session?.user?.role === "admin" && (
-            <Link
-              href="/admin/inicio"
+      {/* Drawer del menú mobile — mismo patrón que el carrito (overlay +
+          panel que desliza), pero desde la izquierda; antes era una lista
+          plana que empujaba el contenido de abajo, se veía muy pobre. */}
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div
+              key="menu-overlay"
+              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm lg:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setOpen(false)}
-              className="flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium uppercase tracking-wide text-brand-ink hover:text-brand-pink-dark min-[400px]:hidden"
+            />
+            <motion.nav
+              key="menu-panel"
+              className="fixed left-0 top-0 z-[70] flex h-[100dvh] w-full max-w-[320px] flex-col bg-white shadow-xl lg:hidden"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
             >
-              <DashboardIcon className="h-4 w-4 shrink-0" />
-              Panel de administración
-            </Link>
-          )}
-          {LINKS.map((link) => {
-            const isTienda = link.href === "/tienda";
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={(e) => handleNavClick(e, link.href)}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium uppercase tracking-wide ${
-                  isTienda ? "text-brand-pink-dark" : "text-brand-ink hover:text-brand-pink-dark"
-                }`}
-              >
-                {isTienda && <StoreIcon className="h-4 w-4 shrink-0" />}
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
-      )}
+              <div className="flex items-center justify-between border-b border-black/10 px-4 py-4">
+                <Image src="/logo2.png" alt="ModaShop" width={300} height={120} className="h-8 w-auto" />
+                <button
+                  onClick={() => setOpen(false)}
+                  aria-label="Cerrar menú"
+                  className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-brand-ink hover:bg-brand-soft"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                    <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+                {session?.user?.role === "admin" && (
+                  <Link
+                    href="/admin/inicio"
+                    onClick={() => setOpen(false)}
+                    className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium uppercase tracking-wide text-brand-ink hover:bg-brand-soft min-[400px]:hidden"
+                  >
+                    <DashboardIcon className="h-4 w-4 shrink-0" />
+                    Panel de administración
+                  </Link>
+                )}
+                {LINKS.map((link) => {
+                  const isTienda = link.href === "/tienda";
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={(e) => handleNavClick(e, link.href)}
+                      className={`flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium uppercase tracking-wide ${
+                        isTienda ? "text-brand-pink-dark hover:bg-brand-pink/5" : "text-brand-ink hover:bg-brand-soft"
+                      }`}
+                    >
+                      {isTienda && <StoreIcon className="h-4 w-4 shrink-0" />}
+                      {link.label}
+                    </Link>
+                  );
+                })}
+
+                <div className="mt-4 border-t border-black/10 pt-4">
+                  <p className="px-3 text-xs font-semibold uppercase tracking-widest text-brand-muted">Contacto</p>
+                  <div className="mt-3 flex flex-col gap-3 px-3 text-sm text-brand-ink">
+                    <div className="flex items-center gap-2.5">
+                      <MapPinIcon className="h-4 w-4 shrink-0 text-brand-muted" />
+                      <span>{settings.address}</span>
+                    </div>
+                    {/* Mismo horario configurado para la vendedora IA (ver
+                        /admin/configuracion → horario de WhatsApp) — fuera de
+                        esas horas no tiene sentido invitar a escribir. */}
+                    {whatsappAvailable ? (
+                      <a
+                        href={settings.assistant.humanSeller.whatsappUrl!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 hover:text-brand-pink-dark"
+                      >
+                        <WhatsAppIcon className="h-4 w-4 shrink-0 text-brand-muted" />
+                        {settings.whatsappNumber}
+                      </a>
+                    ) : (
+                      <div title={`Fuera de horario — ${settings.assistant.humanSeller.scheduleText}`} className="flex items-center gap-2.5 text-brand-ink/40">
+                        <WhatsAppIcon className="h-4 w-4 shrink-0" />
+                        {settings.whatsappNumber} (fuera de horario)
+                      </div>
+                    )}
+                    <a href={`mailto:${settings.contactEmail}`} className="flex items-center gap-2.5 hover:text-brand-pink-dark">
+                      <MailIcon className="h-4 w-4 shrink-0 text-brand-muted" />
+                      {settings.contactEmail}
+                    </a>
+                  </div>
+
+                  <div className="mt-4 flex gap-2 px-3">
+                    {whatsappAvailable ? (
+                      <a
+                        href={settings.assistant.humanSeller.whatsappUrl!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="WhatsApp"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 text-brand-ink hover:border-brand-pink hover:text-brand-pink-dark"
+                      >
+                        <WhatsAppIcon className="h-4.5 w-4.5" />
+                      </a>
+                    ) : (
+                      <div
+                        title={`Fuera de horario — ${settings.assistant.humanSeller.scheduleText}`}
+                        className="flex h-10 w-10 shrink-0 cursor-default items-center justify-center rounded-full border border-black/10 text-brand-ink/30"
+                      >
+                        <WhatsAppIcon className="h-4.5 w-4.5" />
+                      </div>
+                    )}
+                    <a
+                      href={`https://instagram.com/${settings.instagramHandle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Instagram"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-black/10 text-brand-ink hover:border-brand-pink hover:text-brand-pink-dark"
+                    >
+                      <InstagramIcon className="h-4.5 w-4.5" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </motion.nav>
+          </>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

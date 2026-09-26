@@ -44,12 +44,13 @@ function detectIOS() {
   return { isIOS, isIOSNonSafari };
 }
 
-export function InstallPwaButton() {
+export function InstallPwaButton({ variant = "pill" }: { variant?: "pill" | "icon" }) {
   const { canInstall, promptInstall } = useInstallPrompt();
   const [isIOS, setIsIOS] = useState(false);
   const [isIOSNonSafari, setIsIOSNonSafari] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showIOSHelp, setShowIOSHelp] = useState(false);
+  const [showUnsupported, setShowUnsupported] = useState(false);
 
   useEffect(() => {
     navigator.serviceWorker?.register("/sw.js", { scope: "/" }).catch(console.error);
@@ -65,9 +66,16 @@ export function InstallPwaButton() {
   async function handleClick() {
     if (isIOS) {
       setShowIOSHelp(true);
-      return;
+    } else if (canInstall) {
+      await promptInstall();
+    } else {
+      // Safari de escritorio, Firefox de escritorio, etc.: no existe
+      // beforeinstallprompt ahí, así que "instalar" no es una opción — se
+      // avisa en vez de esconder el botón sin explicar nada. Las
+      // notificaciones sí se intentan igual (son una API aparte).
+      setShowUnsupported(true);
     }
-    await promptInstall();
+
     const response = await fetch("/api/push/public-key", { cache: "no-store" }).catch(() => null);
     if (response?.ok) {
       const result = await response.json() as { publicKey?: string };
@@ -75,22 +83,37 @@ export function InstallPwaButton() {
     }
   }
 
-  const showButton = !isStandalone && (canInstall || isIOS);
-  if (!showButton) return null;
+  // Antes esto se ocultaba del todo si el browser no soportaba
+  // beforeinstallprompt (ej. Safari/Firefox de escritorio) — quedaba
+  // invisible sin ninguna pista de por qué. Ahora se muestra siempre salvo
+  // que ya esté instalada, y el click explica qué pasa según el navegador.
+  if (isStandalone) return null;
+
+  const isIcon = variant === "icon";
 
   return (
     <div className="relative inline-block max-w-full">
       <button
         type="button"
         onClick={handleClick}
-        className="flex min-h-11 max-w-full cursor-pointer items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-medium text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
+        title={isIcon ? "Descargar Web App" : undefined}
+        aria-label={isIcon ? "Descargar Web App" : undefined}
+        className={
+          isIcon
+            ? "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-black/10 text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark sm:h-9 sm:w-9"
+            : "flex min-h-11 max-w-full cursor-pointer items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-medium text-brand-ink transition-colors hover:border-brand-pink hover:text-brand-pink-dark"
+        }
       >
-        <DownloadIcon className="h-4 w-4 shrink-0" />
-        Descargar Web App
+        <DownloadIcon className={isIcon ? "h-4.5 w-4.5" : "h-4 w-4 shrink-0"} />
+        {!isIcon && "Descargar Web App"}
       </button>
 
       {showIOSHelp && (
-        <div className="absolute bottom-full left-0 z-30 mb-2 w-[min(16rem,calc(100vw-2rem))] rounded-xl border border-black/10 bg-white p-4 text-left text-sm text-brand-ink shadow-lg sm:left-1/2 sm:-translate-x-1/2">
+        <div
+          className={`absolute z-30 w-[min(16rem,calc(100vw-2rem))] rounded-xl border border-black/10 bg-white p-4 text-left text-sm text-brand-ink shadow-lg ${
+            isIcon ? "right-0 top-full mt-2" : "bottom-full left-0 mb-2 sm:left-1/2 sm:-translate-x-1/2"
+          }`}
+        >
           {isIOSNonSafari ? (
             <p>Abrí este sitio en Safari para poder instalarlo — desde Chrome/Firefox en iOS no se puede.</p>
           ) : (
@@ -104,6 +127,26 @@ export function InstallPwaButton() {
           <button
             type="button"
             onClick={() => setShowIOSHelp(false)}
+            className="mt-3 cursor-pointer text-xs font-semibold text-brand-pink-dark hover:underline"
+          >
+            Entendido
+          </button>
+        </div>
+      )}
+
+      {showUnsupported && (
+        <div
+          className={`absolute z-30 w-[min(16rem,calc(100vw-2rem))] rounded-xl border border-black/10 bg-white p-4 text-left text-sm text-brand-ink shadow-lg ${
+            isIcon ? "right-0 top-full mt-2" : "bottom-full left-0 mb-2 sm:left-1/2 sm:-translate-x-1/2"
+          }`}
+        >
+          <p>
+            Tu navegador no permite instalar la app todavía — probá desde Chrome o Edge en Android o en la compu. Si
+            aceptaste el permiso recién, igual te van a llegar las notificaciones.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowUnsupported(false)}
             className="mt-3 cursor-pointer text-xs font-semibold text-brand-pink-dark hover:underline"
           >
             Entendido
