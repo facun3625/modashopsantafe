@@ -10,8 +10,10 @@ import { ImagePreviewInput } from "@/components/admin/ImagePreviewInput";
 import { TelegramTestButton } from "./TelegramTestButton";
 import { SettingsTabs } from "./SettingsTabs";
 import { CategoryChipSelector } from "./CategoryChipSelector";
+import { IconPicker } from "./IconPicker";
 import { WrenchIcon, PackageIcon, StarIcon } from "@/components/icons";
 import { DEFAULT_INTRO, DEFAULT_NOTES, DEFAULT_CLOSING } from "@/lib/orderEmails";
+import { getCashDiscountPct } from "@/lib/paymentSettings";
 import { syncNow } from "../puntos/actions";
 import {
   updateSiteSettings,
@@ -24,6 +26,7 @@ import {
   updateHeroSlide,
   deleteHeroSlide,
   updateAiAssistantSettings,
+  updateBenefitsSettings,
 } from "./actions";
 
 const fieldClasses =
@@ -47,14 +50,26 @@ export default async function AdminConfiguracionPage({
   searchParams: Promise<{ synced?: string; checked?: string; awarded?: string; skipped?: string }>;
 }) {
   const params = await searchParams;
-  const [settings, slides, categories, pendingPointsCount] = await Promise.all([
+  const [settings, slides, categories, pendingPointsCount, cashDiscountPct] = await Promise.all([
     getStoreSettingsRow(),
     prisma.heroSlide.findMany({ orderBy: { position: "asc" } }),
     getAllCategories(),
     prisma.order.count({
       where: { pointsAwardedAt: null, odooPickingId: { not: null }, userId: { not: null }, status: { not: "cancelled" } },
     }),
+    getCashDiscountPct(),
   ]);
+
+  // Mismos defaults que calcula BenefitsStrip cuando el admin no cargó nada
+  // — se muestran como placeholder para que quede claro qué se ve hoy.
+  const benefitDefaults = [
+    {
+      title: cashDiscountPct ? `${cashDiscountPct}% OFF pagando en efectivo` : "Múltiples medios de pago",
+      subtitle: cashDiscountPct ? "En toda la tienda" : "Efectivo, transferencia y tarjeta",
+    },
+    { title: `Envíos a ${settings.franchiseLocation || "Santa Fe"}`, subtitle: "Rápidos y seguros" },
+    { title: "Retiro en local", subtitle: settings.address || "San Martín 2191 — Santa Fe, Argentina" },
+  ];
 
   const canAddSlide = slides.length < MAX_HERO_SLIDES;
 
@@ -212,6 +227,53 @@ export default async function AdminConfiguracionPage({
               orden (reordenalas con las flechas). Si no elegís ninguna, se usa una selección por defecto.
             </p>
             <CategoryChipSelector categories={categories} selectedIds={settings.featuredCategoryIds} />
+          </div>
+
+          <div className="mt-5 border-t border-black/5 pt-4">
+            <SaveButton trackDirty />
+          </div>
+        </form>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-muted">Franja de beneficios</h2>
+        <p className="mt-1 text-xs text-brand-muted">
+          Los 3 ítems debajo del slider del home. Dejá un campo vacío para usar el valor calculado automáticamente
+          (que ves de fondo, en gris).
+        </p>
+        <form action={updateBenefitsSettings} className="mt-3 rounded-xl border border-black/10 bg-white p-5">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            {([1, 2, 3] as const).map((i) => (
+              <div key={i} className="rounded-lg border border-black/10 bg-brand-soft/40 p-3.5">
+                <p className="mb-2 text-xs font-semibold text-brand-ink">Ítem {i}</p>
+                <IconPicker
+                  name={`benefit${i}Icon`}
+                  defaultValue={settings[`benefit${i}Icon` as const] ?? null}
+                />
+                <div className="mt-3">
+                  <label className={labelClasses}>Título</label>
+                  <input
+                    type="text"
+                    name={`benefit${i}Title`}
+                    maxLength={80}
+                    defaultValue={settings[`benefit${i}Title` as const] ?? ""}
+                    placeholder={benefitDefaults[i - 1].title}
+                    className={fieldClasses}
+                  />
+                </div>
+                <div className="mt-3">
+                  <label className={labelClasses}>Subtítulo</label>
+                  <input
+                    type="text"
+                    name={`benefit${i}Subtitle`}
+                    maxLength={120}
+                    defaultValue={settings[`benefit${i}Subtitle` as const] ?? ""}
+                    placeholder={benefitDefaults[i - 1].subtitle}
+                    className={fieldClasses}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="mt-5 border-t border-black/5 pt-4">

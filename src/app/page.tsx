@@ -143,6 +143,7 @@ export default async function Home() {
             cashDiscountPct={cashDiscountPct}
             franchiseLocation={settings.franchiseLocation}
             address={settings.address}
+            overrides={settings.benefits}
           />
         </div>
       </section>

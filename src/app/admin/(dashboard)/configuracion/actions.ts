@@ -122,6 +122,34 @@ export async function updateSiteSettings(formData: FormData) {
   revalidatePath("/");
 }
 
+// Franja de 3 beneficios del home (ver BenefitsStrip) — cada campo vacío
+// vuelve a null, que en getSiteSettings() cae al valor calculado por defecto
+// en vez de mostrar un texto vacío.
+export async function updateBenefitsSettings(formData: FormData) {
+  await requireAdmin();
+
+  const data = {
+    benefit1Icon: (formData.get("benefit1Icon") as string) || null,
+    benefit1Title: optionalText(formData, "benefit1Title", 80),
+    benefit1Subtitle: optionalText(formData, "benefit1Subtitle", 120),
+    benefit2Icon: (formData.get("benefit2Icon") as string) || null,
+    benefit2Title: optionalText(formData, "benefit2Title", 80),
+    benefit2Subtitle: optionalText(formData, "benefit2Subtitle", 120),
+    benefit3Icon: (formData.get("benefit3Icon") as string) || null,
+    benefit3Title: optionalText(formData, "benefit3Title", 80),
+    benefit3Subtitle: optionalText(formData, "benefit3Subtitle", 120),
+  };
+
+  await prisma.storeSettings.upsert({
+    where: { id: "global" },
+    create: { id: "global", ...data },
+    update: data,
+  });
+
+  revalidatePath("/admin/configuracion");
+  revalidatePath("/");
+}
+
 // El proveedor de envío (SMTP/Resend), sus credenciales y el remitente son
 // configuración técnica y se cargan en /odoo_api junto con Odoo y la IA —
 // ver updateMailProviderSettings ahí. Acá solo queda la identidad de la

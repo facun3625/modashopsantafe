@@ -140,6 +140,21 @@ model StoreSettings {
   // lib/settings.ts).
   featuredCategoryIds Int[] @default([])
 
+  // Franja de 3 beneficios debajo del hero (ver BenefitsStrip) — ícono
+  // (clave de components/icons.tsx, ver BENEFIT_ICON_OPTIONS), título y
+  // subtítulo, editables desde /admin/configuracion. Null = se usa el valor
+  // calculado por defecto (descuento en efectivo real, sucursal, dirección)
+  // en vez de forzar a cargar los 9 campos en instalaciones nuevas.
+  benefit1Icon     String?
+  benefit1Title    String?
+  benefit1Subtitle String?
+  benefit2Icon     String?
+  benefit2Title    String?
+  benefit2Subtitle String?
+  benefit3Icon     String?
+  benefit3Title    String?
+  benefit3Subtitle String?
+
   // Nombre y sucursal de la franquicia — para el encabezado del mailing
   // (ej. "ModaShop" / "Santa Fe"). Pensado para cuando haya más de una
   // franquicia, cada una con su propia identidad en los mails que manda.

@@ -187,7 +187,11 @@ export function Navbar({ settings }: { settings: SiteSettings }) {
                 con el filtro actual — repetirlo acá era espacio duplicado. */}
             {pathname !== "/tienda" && <NavbarSearch className="hidden max-w-[220px] flex-1 sm:block" />}
 
-            <InstallPwaButton variant="icon" />
+            {/* Solo en mobile/tablet — en desktop ya está la versión pill en
+                el footer, no hace falta duplicarla acá al lado del buscador. */}
+            <div className="lg:hidden">
+              <InstallPwaButton variant="icon" />
+            </div>
 
             {session?.user?.role === "admin" && (
               <Link

@@ -39,25 +39,30 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
         : { circle: "h-16 w-16 sm:h-20 sm:w-20", text: "text-[10px] sm:text-xs" };
 
   return (
-    <div className="relative flex min-h-[320px] items-center overflow-hidden rounded-3xl sm:min-h-[400px]">
-      <AnimatePresence>
-        <motion.div
-          key={`bg-${index}`}
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${slide.image})` }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.6 }}
-        />
-      </AnimatePresence>
-      {/* Oscurece la izquierda (donde va el texto) y deja la foto a la
-          vista del lado derecho — la imagen cubre TODO el banner. */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" />
+    <div className="relative flex min-h-[320px] items-center rounded-3xl sm:min-h-[400px]">
+      {/* La imagen y su degradé van en un wrapper propio con overflow-hidden
+          para respetar el rounded-3xl — el círculo de promo queda AFUERA de
+          este wrapper para poder "asomarse" un poco por el borde. */}
+      <div className="absolute inset-0 overflow-hidden rounded-3xl">
+        <AnimatePresence>
+          <motion.div
+            key={`bg-${index}`}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${slide.image})` }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+          />
+        </AnimatePresence>
+        {/* Oscurece la izquierda (donde va el texto) y deja la foto a la
+            vista del lado derecho — la imagen cubre TODO el banner. */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent" />
+      </div>
 
       {promoLines.length > 0 && (
         <div
-          className={`absolute right-4 top-4 z-10 flex shrink-0 rotate-6 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-full bg-white p-2 text-center font-bold uppercase leading-tight text-wrap break-words text-brand-pink-dark shadow-lg ${promoSize.circle} ${promoSize.text}`}
+          className={`absolute -right-2 -top-2 z-20 flex shrink-0 rotate-6 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-full bg-white p-2 text-center font-bold uppercase leading-tight text-wrap break-words text-brand-pink-dark shadow-lg sm:-right-3 sm:-top-3 ${promoSize.circle} ${promoSize.text}`}
         >
           {promoLines.map((line, i) => (
             <span key={i}>{line}</span>
@@ -65,7 +70,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
         </div>
       )}
 
-      <div className="relative z-10 flex h-full w-full flex-col justify-center px-8 py-10 sm:px-16">
+      <div className="relative z-10 flex h-full w-full flex-col justify-center px-8 py-10 pr-24 sm:px-16">
         <AnimatePresence mode="wait">
           <motion.div
             key={index}

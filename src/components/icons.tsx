@@ -409,3 +409,26 @@ export function ImageIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+// Íconos elegibles para la franja de beneficios del home (BenefitsStrip) —
+// se guardan por clave (string) en StoreSettings, nunca la función en sí,
+// así que este mapa es la única fuente de verdad tanto para el selector del
+// admin como para lo que se termina renderizando en el sitio público.
+export const BENEFIT_ICON_OPTIONS = [
+  { key: "TagIcon", label: "Etiqueta", Icon: TagIcon },
+  { key: "TruckIcon", label: "Camión", Icon: TruckIcon },
+  { key: "StoreIcon", label: "Local", Icon: StoreIcon },
+  { key: "CardIcon", label: "Tarjeta", Icon: CardIcon },
+  { key: "PackageIcon", label: "Paquete", Icon: PackageIcon },
+  { key: "ClockIcon", label: "Reloj", Icon: ClockIcon },
+  { key: "CheckCircleIcon", label: "Check", Icon: CheckCircleIcon },
+  { key: "StarIcon", label: "Estrella", Icon: StarIcon },
+  { key: "HeartIcon", label: "Corazón", Icon: HeartIcon },
+  { key: "GearIcon", label: "Engranaje", Icon: GearIcon },
+  { key: "MapPinIcon", label: "Ubicación", Icon: MapPinIcon },
+  { key: "HomeIcon", label: "Casa", Icon: HomeIcon },
+] as const;
+
+export function getBenefitIcon(key: string | null | undefined) {
+  return BENEFIT_ICON_OPTIONS.find((o) => o.key === key)?.Icon ?? TagIcon;
+}

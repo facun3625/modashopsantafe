@@ -43,6 +43,13 @@ export async function getSiteSettings() {
       ? row.marqueeText.split("\n").map((s) => s.trim()).filter(Boolean)
       : DEFAULT_MARQUEE,
     featuredCategoryIds: row.featuredCategoryIds.length > 0 ? row.featuredCategoryIds : DEFAULT_FEATURED_CATEGORY_IDS,
+    // Franja de beneficios del home — null en cualquier campo significa
+    // "usar el valor calculado por defecto" (ver BenefitsStrip).
+    benefits: [
+      { icon: row.benefit1Icon, title: row.benefit1Title, subtitle: row.benefit1Subtitle },
+      { icon: row.benefit2Icon, title: row.benefit2Title, subtitle: row.benefit2Subtitle },
+      { icon: row.benefit3Icon, title: row.benefit3Title, subtitle: row.benefit3Subtitle },
+    ],
     assistant: {
       enabled: row.aiAssistantEnabled && assistantConfigured,
       name: row.aiAssistantName?.trim() || "Vendedora virtual",
