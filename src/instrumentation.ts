@@ -10,6 +10,19 @@ export async function register() {
   const { syncDeliveredOrders } = await import("@/lib/points");
   const { releaseDeliveredReservations } = await import("@/lib/reservations");
   const { expirePendingOrders } = await import("@/lib/orderExpiry");
+  // Precalienta lo que muestra la portada (categorías, productos destacados y sus fotos) para que la primera visita
+  // después de arrancar o desplegar no espere a Odoo.
+  const warmHome = async () => {
+    const { getAllCategories } = await import("@/lib/categories");
+    const { getProductsPage } = await import("@/lib/products");
+    const { getStoreSettingsRow } = await import("@/lib/settings");
+    const { HERO_CATEGORY_IDS } = await import("@/lib/homeCategories");
+    const settings = await getStoreSettingsRow();
+    await getAllCategories();
+    const ids = [...new Set([...HERO_CATEGORY_IDS, ...settings.featuredCategoryIds])];
+    await Promise.all(ids.map((id) => getProductsPage({ categoryId: id, limit: 4, offset: 0 })));
+  };
+  setTimeout(() => warmHome().catch((err) => console.error("warmHome failed", err)), 5_000);
   const INTERVAL_MS = 15 * 60 * 1000;
 
   const run = () => {

@@ -3,6 +3,7 @@ import { getAllCategories } from "@/lib/categories";
 import { getProductsPage, getCategoryShowcaseImage } from "@/lib/products";
 import { getSiteSettings } from "@/lib/settings";
 import { getThemeForRequest } from "@/lib/themeRuntime";
+import { HERO_CATEGORY_IDS } from "@/lib/homeCategories";
 import { ensureBaseTheme } from "@/lib/baseTheme";
 import { sanitizeThemeConfig, type ThemeSlide } from "@/lib/themes";
 import { getCashDiscountPct } from "@/lib/paymentSettings";
@@ -16,7 +17,6 @@ import type { OdooProductListItem } from "@/types/odoo";
 
 // Elegidas a mano por ahora — es el fallback del slide de ejemplo cuando
 // todavía no se cargó ningún HeroSlide real desde /admin/configuracion.
-const HERO_CATEGORY_IDS = [43, 40, 44, 45];
 
 const BANNER_GRID = ["", "grid-cols-1 mx-auto max-w-xs", "grid-cols-2", "grid-cols-2 sm:grid-cols-3", "grid-cols-2 sm:grid-cols-4", "grid-cols-2 sm:grid-cols-3", "grid-cols-2 sm:grid-cols-3"];
 

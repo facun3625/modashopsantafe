@@ -355,5 +355,8 @@ export async function getCategoryShowcaseImage(
     })
   );
   const p = products[0];
-  return p ? productImageUrl(p.id, field === "image_128" ? 128 : 1024, p.write_date || null) : false;
+  if (!p) return false;
+  const size = field === "image_128" ? 128 : 1024;
+  warmProductImages([{ id: p.id, version: p.write_date || null }], String(size));
+  return productImageUrl(p.id, size, p.write_date || null);
 }
