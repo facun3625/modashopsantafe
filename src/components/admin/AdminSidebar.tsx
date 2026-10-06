@@ -161,6 +161,16 @@ export function AdminSidebar({ userLabel }: { userLabel: string }) {
             <UserIcon className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{userLabel}</span>
           </p>
+          <a
+            href="/manual"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium text-brand-ink/80 transition-colors hover:bg-black/[0.04] hover:text-brand-ink"
+          >
+            <ClipboardIcon className="h-3.5 w-3.5 shrink-0" />
+            Manual de uso
+          </a>
           <Link
             href="/"
             onClick={() => setOpen(false)}

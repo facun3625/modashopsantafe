@@ -58,49 +58,38 @@ export async function getProductsPage(opts: {
   }
 
   // Filtro opcional del admin (Configuración → General): oculta del todo los
-  // productos en 0 en vez de mostrarlos con "Sin stock" + aviso de reposición.
+  // productos en 0 en vez de mostrarlos al final con "Sin stock" + aviso de reposición
+  // (ver los tramos más abajo).
   // Se filtra por el stock físico de Odoo, no por el neto post-reserva (ver
   // applyReservations) — el caso de "1 físico pero reservado por un pedido
   // web" queda igual visible con "Sin stock", cubierto aparte por el aviso
   // de reserva en /admin/productos.
   const settings = await getStoreSettingsRow();
-  if (settings.hideOutOfStock) {
-    domain.push(["qty_available", ">", 0]);
-  }
 
-  if (opts.priorityCategoryIds && opts.priorityCategoryIds.length > 0) {
-    return getPrioritizedPage(domain, opts.priorityCategoryIds, opts.limit, opts.offset);
-  }
+  // Tramos del listado, en orden: primero las categorías prioritarias (si hay) y después el resto. Cada tramo se parte
+  // en "con stock" y "sin stock", y todos los "sin stock" van al final: así un cliente siempre ve primero lo que puede
+  // comprar. Si el admin oculta lo sin stock, ese segundo grupo no existe.
+  const notIn = (ids: number[]) => ids.flatMap((id) => ["!", ["categ_id", "child_of", id]]);
+  const priority = opts.priorityCategoryIds ?? [];
+  const byCategory =
+    priority.length > 0
+      ? [...priority.map((id, i) => [...domain, ["categ_id", "child_of", id], ...notIn(priority.slice(0, i))]), [...domain, ...notIn(priority)]]
+      : [domain];
+  const segments = [
+    ...byCategory.map((d) => [...d, ["qty_available", ">", 0]]),
+    ...(settings.hideOutOfStock ? [] : byCategory.map((d) => [...d, ["qty_available", "<=", 0]])),
+  ];
 
-  const [products, total] = await Promise.all([
-    executeKw<OdooProductListItem[]>("product.template", "search_read", [domain], {
-      fields: PRODUCT_LIST_FIELDS,
-      limit: opts.limit,
-      offset: opts.offset,
-      // id desempata productos con el mismo nombre: sin eso, al paginar se repiten o se saltean entre páginas
-      order: "name asc, id asc",
-    }),
-    executeKw<number>("product.template", "search_count", [domain]),
-  ]);
-
-  return { products: await applyReservations(products), total };
+  return getSegmentedPage(segments, opts.limit, opts.offset);
 }
 
-// Arma el catálogo como una sola lista hecha de tramos: un tramo por categoría prioritaria (en orden, sin repetir lo
-// que ya entró en un tramo anterior, por si una es subcategoría de otra) y al final el resto. Cuenta cada tramo y trae
-// solo las partes que caen dentro de la página pedida, así la paginación sigue siendo continua.
-async function getPrioritizedPage(
-  base: unknown[],
-  priorityIds: number[],
+// Arma el listado como una sola lista hecha de tramos (cada uno ordenado por nombre). Cuenta cada tramo y trae solo
+// las partes que caen dentro de la página pedida, así la paginación sigue siendo continua y sin repetidos.
+async function getSegmentedPage(
+  segments: unknown[][],
   limit: number,
   offset: number
 ): Promise<{ products: OdooProductListItem[]; total: number }> {
-  const notIn = (ids: number[]) => ids.flatMap((id) => ["!", ["categ_id", "child_of", id]]);
-  const segments = [
-    ...priorityIds.map((id, i) => [...base, ["categ_id", "child_of", id], ...notIn(priorityIds.slice(0, i))]),
-    [...base, ...notIn(priorityIds)],
-  ];
-
   const counts = await Promise.all(segments.map((d) => executeKw<number>("product.template", "search_count", [d])));
   const total = counts.reduce((a, b) => a + b, 0);
 
@@ -116,6 +105,7 @@ async function getPrioritizedPage(
           fields: PRODUCT_LIST_FIELDS,
           limit: to - from,
           offset: from - start,
+          // id desempata productos con el mismo nombre: sin eso, al paginar se repiten o se saltean entre páginas
           order: "name asc, id asc",
         })
       );

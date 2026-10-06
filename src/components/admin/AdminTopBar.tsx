@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
-import { BellIcon, LogoutIcon, StoreIcon } from "@/components/icons";
+import { BellIcon, ClipboardIcon, LogoutIcon, StoreIcon } from "@/components/icons";
 import type { AdminCounts } from "@/lib/adminCounts";
 
 function useClickAway(onAway: () => void) {
@@ -89,6 +89,10 @@ export function AdminTopBar({ name, email, counts }: { name: string; email: stri
               <StoreIcon className="h-4 w-4 shrink-0" />
               Ver la tienda
             </Link>
+            <a href="/manual" target="_blank" rel="noopener noreferrer" onClick={() => setProfile(false)} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-brand-ink transition-colors hover:bg-brand-soft">
+              <ClipboardIcon className="h-4 w-4 shrink-0" />
+              Manual de uso
+            </a>
             <button type="button" onClick={() => signOut({ callbackUrl: "/" })} className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-brand-ink transition-colors hover:bg-brand-soft">
               <LogoutIcon className="h-4 w-4 shrink-0" />
               Cerrar sesión
