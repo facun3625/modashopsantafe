@@ -4,6 +4,7 @@ import { getReservedQuantities } from "@/lib/reservations";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { productImageUrl } from "@/lib/productImage";
 import { cachedCatalog } from "@/lib/catalogCache";
+import { warmProductImages } from "@/lib/productImageCache";
 import type { OdooCategory, OdooProductListItem } from "@/types/odoo";
 
 // Las fotos NO se piden acá (pesan mucho como base64): se arma su URL con productImageUrl y se piden aparte.
@@ -20,11 +21,14 @@ async function withImages(raw: RawListItem[], allHaveImage: boolean): Promise<Od
     const ids = await executeKw<number[]>("product.template", "search", [[["id", "in", raw.map((r) => r.id)], ["image_128", "!=", false]]]);
     hasImage = new Set(ids);
   }
-  return raw.map(({ write_date, ...p }) => {
+  const out: OdooProductListItem[] = raw.map(({ write_date, ...p }) => {
     const ok = hasImage ? hasImage.has(p.id) : true;
     const v = write_date || null;
     return { ...p, image_128: ok ? productImageUrl(p.id, 128, v) : false, image_512: ok ? productImageUrl(p.id, 512, v) : false };
   });
+  // Las fotos del listado se traen ya, en segundo plano, para que el navegador no espere a Odoo al pedirlas
+  warmProductImages(raw.filter((_, i) => out[i].image_512 !== false).map((r) => ({ id: r.id, version: r.write_date || null })));
+  return out;
 }
 
 // Chequeo de stock antes de crear un pedido. El disponible real de cara al

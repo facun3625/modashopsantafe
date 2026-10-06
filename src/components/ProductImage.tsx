@@ -9,10 +9,12 @@ export function ProductImage({
   productId,
   thumbnail,
   alt,
+  priority = false,
 }: {
   productId: number;
   thumbnail: string | false;
   alt: string;
+  priority?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [fullImage, setFullImage] = useState<string | null>(null);
@@ -40,7 +42,8 @@ export function ProductImage({
           <img
             src={imageSrc(thumbnail) ?? undefined}
             alt={alt}
-            loading="lazy"
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
             decoding="async"
             className="h-full w-full object-cover transition-transform group-hover/image:scale-[1.03]"
           />

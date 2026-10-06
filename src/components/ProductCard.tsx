@@ -10,7 +10,7 @@ import { CartIcon, BellIcon, HeartIcon } from "@/components/icons";
 import { ProductImage } from "@/components/ProductImage";
 import { WaitlistModal } from "@/components/WaitlistModal";
 
-export function ProductCard({ product }: { product: OdooProductListItem }) {
+export function ProductCard({ product, priority = false }: { product: OdooProductListItem; priority?: boolean }) {
   const { addItem } = useCart();
   const { status } = useSession();
   const { isFavorite, toggle } = useFavorites();
@@ -32,7 +32,7 @@ export function ProductCard({ product }: { product: OdooProductListItem }) {
   return (
     <div className="min-w-0 rounded-xl border border-brand-pink/15 bg-white p-3 transition-all hover:border-brand-pink/50 hover:shadow-md sm:p-4">
       <div className="relative">
-        <ProductImage productId={product.id} thumbnail={image} alt={product.name} />
+        <ProductImage productId={product.id} thumbnail={image} alt={product.name} priority={priority} />
         <button
           type="button"
           onClick={handleToggleFavorite}
