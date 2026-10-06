@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useCart, type CartItem } from "@/lib/cart";
 import { CheckoutForm } from "@/components/CheckoutForm";
+import { SaveCartPrompt } from "@/components/SaveCartPrompt";
 
 export default function CarritoPage() {
   const { items, removeItem, setQuantity, total, addItem } = useCart();
@@ -131,6 +132,13 @@ export default function CarritoPage() {
           </div>
         ))}
       </div>
+
+      {/* En el checkout ya se piden estos datos: el aviso va solo antes de abrirlo */}
+      {!showCheckout && (
+        <div className="mt-6">
+          <SaveCartPrompt />
+        </div>
+      )}
 
       <div className="mt-8 flex items-center justify-between border-t border-black/10 pt-6">
         <p className="text-lg font-semibold text-brand-ink">Total</p>

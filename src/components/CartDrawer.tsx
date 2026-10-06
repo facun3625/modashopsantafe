@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "@/lib/cart";
 import { CartRecommendations } from "@/components/CartRecommendations";
+import { SaveCartPrompt } from "@/components/SaveCartPrompt";
 
 export function CartDrawer() {
   const { items, removeItem, setQuantity, total, isOpen, closeCart } = useCart();
@@ -113,6 +114,9 @@ export function CartDrawer() {
                         </button>
                       </div>
                     ))}
+                  </div>
+                  <div className="mt-5">
+                    <SaveCartPrompt compact />
                   </div>
                   <CartRecommendations />
                 </div>

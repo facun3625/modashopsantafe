@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MailIcon } from "@/components/icons";
+import { saveVisitorContact } from "@/lib/visitorContact";
 
 export function NewsletterBanner() {
   const [email, setEmail] = useState("");
@@ -17,6 +18,7 @@ export function NewsletterBanner() {
         body: JSON.stringify({ email }),
       });
       if (!res.ok) throw new Error();
+      saveVisitorContact({ email });
       setStatus("ok");
       setEmail("");
     } catch {

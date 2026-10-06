@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { getCartSessionId } from "@/lib/cartSession";
+import { CONTACT_EVENT, getVisitorContact } from "@/lib/visitorContact";
 
 export type CartItem = {
   productId: number;
@@ -39,6 +40,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  // Cambia cuando el visitante deja sus datos (checkout, newsletter, "Guardá tu carrito") para volver a sincronizar
+  const [contactVersion, setContactVersion] = useState(0);
+
+  useEffect(() => {
+    const onContact = () => setContactVersion((v) => v + 1);
+    window.addEventListener(CONTACT_EVENT, onContact);
+    return () => window.removeEventListener(CONTACT_EVENT, onContact);
+  }, []);
 
   useEffect(() => {
     try {
@@ -68,14 +77,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const sessionId = getCartSessionId();
       if (!sessionId) return;
       const total = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
+      // Sin sesión, se usa el contacto que el visitante ya dejó alguna vez en este navegador
+      const contact = getVisitorContact();
       fetch("/api/cart/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
           userId: session?.user?.id,
-          email: session?.user?.email,
-          name: session?.user?.name,
+          email: session?.user?.email ?? contact.email,
+          name: session?.user?.name ?? contact.name,
+          phone: contact.phone,
           items: items.map((i) => ({ productId: i.productId, name: i.name, price: i.price, quantity: i.quantity })),
           total,
         }),
@@ -83,7 +95,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }, 800);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, hydrated, session?.user?.id, session?.user?.email, session?.user?.name]);
+  }, [items, hydrated, session?.user?.id, session?.user?.email, session?.user?.name, contactVersion]);
 
   function addItem(item: Omit<CartItem, "quantity">, quantity = 1) {
     setItems((prev) => {

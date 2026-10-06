@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/lib/cart";
 import { getCartSessionId } from "@/lib/cartSession";
+import { getVisitorContact, saveVisitorContact } from "@/lib/visitorContact";
 import { tokenizeCard } from "@/lib/decidirScript";
 import { PAYWAY_CARD_BRANDS, PROVINCIAS_AR } from "@/lib/payway";
 import { detectCardBrand, tokenizeMercadoPagoCard } from "@/lib/mercadoPagoScript";
@@ -47,9 +48,12 @@ export function CheckoutForm() {
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[] | null>(null);
   const [selectedShippingId, setSelectedShippingId] = useState<string | null>(null);
   const [shippingAddress, setShippingAddress] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  // Arranca con lo que el visitante ya dejó antes en este navegador (el form se monta recién al tocar "Finalizar
+  // compra", así que leer localStorage acá no genera diferencias con el render del server). La sesión, si hay, pisa
+  // nombre y email más abajo.
+  const [name, setName] = useState(() => getVisitorContact().name ?? "");
+  const [email, setEmail] = useState(() => getVisitorContact().email ?? "");
+  const [phone, setPhone] = useState(() => getVisitorContact().phone ?? "");
   const [comprobante, setComprobante] = useState<File | null>(null);
   const checkoutIdRef = useRef<string | null>(null);
   const [requiresReview, setRequiresReview] = useState(false);
@@ -102,6 +106,12 @@ export function CheckoutForm() {
       setEmail(session.user.email ?? "");
     }
   }, [session]);
+
+  // Lo que va escribiendo queda recordado (solo valores válidos), para sus próximos carritos
+  useEffect(() => {
+    const handle = setTimeout(() => saveVisitorContact({ name, email, phone }), 800);
+    return () => clearTimeout(handle);
+  }, [name, email, phone]);
 
   // El sync de lib/cart.tsx solo manda datos de la sesión — un visitante
   // anónimo que ya tipeó nombre/email/teléfono acá pero todavía no confirmó
