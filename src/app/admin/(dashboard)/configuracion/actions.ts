@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { sendTelegram } from "@/lib/telegram";
 import { normalizeTime } from "@/lib/ai/availability";
+import { clearCatalogCache } from "@/lib/catalogCache";
 
 export async function updateMaintenanceMode(formData: FormData) {
   await requireAdmin();
@@ -39,6 +40,24 @@ export async function updateWelcomeCouponSettings(formData: FormData) {
   };
   await prisma.storeSettings.upsert({ where: { id: "global" }, create: { id: "global", ...data }, update: data });
   revalidatePath("/admin/configuracion");
+}
+
+// Cada cuánto se vuelve a consultar el catálogo a Odoo (ver lib/catalogCache.ts). 0 = siempre en vivo.
+export async function updateCatalogCacheSettings(formData: FormData) {
+  await requireAdmin();
+  const seconds = Math.min(3600, Math.max(0, Math.floor(Number(formData.get("catalogCacheSeconds")) || 0)));
+  await prisma.storeSettings.upsert({ where: { id: "global" }, create: { id: "global", catalogCacheSeconds: seconds }, update: { catalogCacheSeconds: seconds } });
+  clearCatalogCache();
+  revalidatePath("/admin/configuracion");
+}
+
+// "Actualizar catálogo ahora": descarta lo guardado y la próxima visita consulta a Odoo en vivo (ej. después de
+// cambiar precios o cargar productos nuevos en Odoo).
+export async function refreshCatalogNow() {
+  await requireAdmin();
+  clearCatalogCache();
+  revalidatePath("/tienda");
+  revalidatePath("/");
 }
 
 export async function updateHideOutOfStock(formData: FormData) {

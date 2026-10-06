@@ -1,5 +1,6 @@
 "use client";
 
+import { imageSrc } from "@/lib/productImage";
 import { useRef } from "react";
 import Link from "next/link";
 
@@ -52,7 +53,8 @@ export function CategoryCarousel({
               {cat.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={`data:image/png;base64,${cat.image}`}
+                  src={imageSrc(cat.image) ?? undefined}
+                  loading="lazy"
                   alt={cat.name}
                   className="h-32 w-32 rounded-xl object-cover"
                 />

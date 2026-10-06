@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { resetOdooCache } from "@/lib/odoo";
+import { clearCatalogCache } from "@/lib/catalogCache";
 import { buildMailSender } from "@/lib/mailer";
 import { DEFAULT_AI_MODELS } from "@/lib/ai/types";
 import type { AiProvider } from "@/generated/prisma/enums";
@@ -30,6 +31,8 @@ export async function updateOdooSettings(formData: FormData) {
   });
 
   resetOdooCache();
+  // Otro Odoo (u otra base) = otro catálogo: no tiene sentido seguir mostrando lo guardado del anterior
+  clearCatalogCache();
   revalidatePath("/odoo_api");
 }
 

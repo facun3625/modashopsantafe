@@ -1,5 +1,6 @@
 "use client";
 
+import { imageSrc } from "@/lib/productImage";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useCart } from "@/lib/cart";
@@ -248,7 +249,7 @@ export function SalesAssistant({ settings }: { settings: AssistantSettings }) {
                         {product.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={`data:image/png;base64,${product.image}`}
+                            src={imageSrc(product.image) ?? undefined}
                             alt=""
                             className="h-14 w-14 shrink-0 rounded-lg object-cover"
                           />

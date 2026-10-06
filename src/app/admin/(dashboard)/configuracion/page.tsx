@@ -21,6 +21,8 @@ import {
   updateMaintenanceMode,
   updateHideOutOfStock,
   updateWelcomeCouponSettings,
+  updateCatalogCacheSettings,
+  refreshCatalogNow,
   updateAiAssistantSettings,
   updateBenefitsSettings,
   updatePopupSettings,
@@ -122,6 +124,49 @@ export default async function AdminConfiguracionPage({
           </div>
         </div>
       </form>
+
+      <div className="rounded-xl border border-black/10 bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-muted">
+              <PackageIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-semibold text-brand-ink">Velocidad del catálogo</p>
+              <p className="max-w-xl text-xs text-brand-muted">
+                La tienda guarda lo que trae de Odoo unos segundos para cargar rápido. Un cambio hecho en Odoo (precio,
+                producto nuevo, stock) puede tardar ese tiempo en verse en la vidriera, pero nunca se vende sin stock:
+                se verifica en Odoo al agregar al carrito y al comprar. 0 = siempre en vivo (más lento).
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <form action={updateCatalogCacheSettings} className="flex items-end gap-2">
+              <div>
+                <label className={labelClasses}>Actualizar cada (segundos)</label>
+                <input
+                  type="number"
+                  name="catalogCacheSeconds"
+                  min={0}
+                  max={3600}
+                  step={1}
+                  defaultValue={settings.catalogCacheSeconds}
+                  className="w-28 rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none"
+                />
+              </div>
+              <SaveButton trackDirty />
+            </form>
+            <form action={refreshCatalogNow}>
+              <button
+                type="submit"
+                className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-soft"
+              >
+                Actualizar catálogo ahora
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
 
       <form
         action={updateWelcomeCouponSettings}

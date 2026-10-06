@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ZoomIcon } from "@/components/icons";
+import { imageSrc, productImageUrl } from "@/lib/productImage";
 
 export function ProductImage({
   productId,
@@ -17,20 +18,13 @@ export function ProductImage({
   const [fullImage, setFullImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleOpen() {
+  // La foto grande se pide directo por URL (con caché), sin bajar el resto de los datos del producto
+  function handleOpen() {
     if (!thumbnail) return;
     setOpen(true);
     if (!fullImage) {
       setLoading(true);
-      try {
-        const res = await fetch(`/api/products/${productId}`);
-        const data = await res.json();
-        setFullImage(data.image_1920 || thumbnail);
-      } catch {
-        setFullImage(thumbnail);
-      } finally {
-        setLoading(false);
-      }
+      setFullImage(productImageUrl(productId, 1920));
     }
   }
 
@@ -44,8 +38,10 @@ export function ProductImage({
         {thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`data:image/png;base64,${thumbnail}`}
+            src={imageSrc(thumbnail) ?? undefined}
             alt={alt}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition-transform group-hover/image:scale-[1.03]"
           />
         ) : null}
@@ -94,15 +90,23 @@ export function ProductImage({
                   </svg>
                 </button>
 
-                <div className="flex h-[min(calc(100dvh-1.5rem),500px)] w-[min(calc(100vw-1.5rem),500px)] items-center justify-center sm:h-[min(85vh,500px)] sm:w-[min(85vw,500px)]">
-                  {loading ? (
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-pink border-t-transparent" />
-                  ) : (
+                <div className="relative flex h-[min(calc(100dvh-1.5rem),500px)] w-[min(calc(100vw-1.5rem),500px)] items-center justify-center sm:h-[min(85vh,500px)] sm:w-[min(85vw,500px)]">
+                  {loading && (
+                    <div className="absolute h-8 w-8 animate-spin rounded-full border-2 border-brand-pink border-t-transparent" />
+                  )}
+                  {fullImage && (
+                    // La foto se carga de fondo mientras se ve el spinner (si no se dibujara, nunca avisaría que terminó)
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={`data:image/png;base64,${fullImage}`}
+                      src={fullImage}
+                      onLoad={() => setLoading(false)}
+                      onError={() => {
+                        setLoading(false);
+                        const fallback = imageSrc(thumbnail);
+                        if (fallback && fallback !== fullImage) setFullImage(fallback);
+                      }}
                       alt={alt}
-                      className="h-full w-full object-contain"
+                      className={`h-full w-full object-contain ${loading ? "invisible" : ""}`}
                     />
                   )}
                 </div>

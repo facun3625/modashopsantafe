@@ -1,5 +1,6 @@
 "use client";
 
+import { imageSrc } from "@/lib/productImage";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useCart, type CartItem } from "@/lib/cart";
@@ -82,7 +83,7 @@ export default function CarritoPage() {
             {item.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`data:image/png;base64,${item.image}`}
+                src={imageSrc(item.image) ?? undefined}
                 alt={item.name}
                 className="h-16 w-16 shrink-0 rounded-xl object-cover sm:h-20 sm:w-20"
               />

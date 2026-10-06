@@ -99,6 +99,11 @@ model StoreSettings {
   // "limpia".
   hideOutOfStock Boolean @default(false)
 
+  // Cada cuántos segundos se vuelve a consultar el catálogo a Odoo para la vidriera (categorías, listados, conteos).
+  // En el medio se muestra lo guardado: el stock a la venta se verifica igual en Odoo al agregar al carrito y al
+  // comprar. 0 = sin caché (siempre en vivo). Ver lib/catalogCache.ts.
+  catalogCacheSeconds Int @default(120)
+
   // Vendedora virtual. El proveedor se puede cambiar sin alterar el chat ni
   // las herramientas: Odoo sigue siendo la fuente real de catálogo y stock.
   aiAssistantEnabled    Boolean     @default(false)

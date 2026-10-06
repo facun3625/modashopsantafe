@@ -1,5 +1,6 @@
 "use client";
 
+import { imageSrc } from "@/lib/productImage";
 import { useEffect, useState } from "react";
 import { useCart } from "@/lib/cart";
 import type { OdooProductListItem } from "@/types/odoo";
@@ -49,7 +50,8 @@ export function CartRecommendations() {
             {p.image_128 ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`data:image/png;base64,${p.image_128}`}
+                src={imageSrc(p.image_128) ?? undefined}
+                  loading="lazy"
                 alt={p.name}
                 className="h-10 w-10 shrink-0 rounded-md object-cover opacity-95"
               />

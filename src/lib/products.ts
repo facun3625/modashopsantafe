@@ -2,9 +2,30 @@ import { normalizeCheckoutItems } from "@/lib/checkoutItems";
 import { executeKw } from "@/lib/odoo";
 import { getReservedQuantities } from "@/lib/reservations";
 import { getStoreSettingsRow } from "@/lib/settings";
+import { productImageUrl } from "@/lib/productImage";
+import { cachedCatalog } from "@/lib/catalogCache";
 import type { OdooCategory, OdooProductListItem } from "@/types/odoo";
 
-const PRODUCT_LIST_FIELDS = ["name", "list_price", "qty_available", "image_128", "image_512", "categ_id"];
+// Las fotos NO se piden acá (pesan mucho como base64): se arma su URL con productImageUrl y se piden aparte.
+// write_date sirve de versión de la foto, para que el navegador la guarde sin mostrar una vieja.
+const PRODUCT_LIST_FIELDS = ["name", "list_price", "qty_available", "categ_id", "write_date"];
+
+type RawListItem = Omit<OdooProductListItem, "image_128" | "image_512"> & { write_date: string | false };
+
+// Completa las URLs de las fotos. Si la consulta ya filtraba por "tiene foto" no hace falta preguntar; si no, se
+// pregunta a Odoo cuáles tienen foto (una búsqueda liviana, sin bajar las imágenes).
+async function withImages(raw: RawListItem[], allHaveImage: boolean): Promise<OdooProductListItem[]> {
+  let hasImage: Set<number> | null = null;
+  if (!allHaveImage && raw.length > 0) {
+    const ids = await executeKw<number[]>("product.template", "search", [[["id", "in", raw.map((r) => r.id)], ["image_128", "!=", false]]]);
+    hasImage = new Set(ids);
+  }
+  return raw.map(({ write_date, ...p }) => {
+    const ok = hasImage ? hasImage.has(p.id) : true;
+    const v = write_date || null;
+    return { ...p, image_128: ok ? productImageUrl(p.id, 128, v) : false, image_512: ok ? productImageUrl(p.id, 512, v) : false };
+  });
+}
 
 // Chequeo de stock antes de crear un pedido. El disponible real de cara al
 // cliente es el qty_available de Odoo MENOS lo ya reservado por otros pedidos
@@ -80,7 +101,11 @@ export async function getProductsPage(opts: {
     ...(settings.hideOutOfStock ? [] : byCategory.map((d) => [...d, ["qty_available", "<=", 0]])),
   ];
 
-  return getSegmentedPage(segments, opts.limit, opts.offset);
+  // Lo que viene de Odoo se guarda unos minutos (ver lib/catalogCache.ts); las reservas web se descuentan en vivo
+  const page = await cachedCatalog(`page:${JSON.stringify([segments, opts.limit, opts.offset])}`, () =>
+    getSegmentedPage(segments, opts.limit, opts.offset)
+  );
+  return { products: await applyReservations(page.products), total: page.total };
 }
 
 // Arma el listado como una sola lista hecha de tramos (cada uno ordenado por nombre). Cuenta cada tramo y trae solo
@@ -93,7 +118,7 @@ async function getSegmentedPage(
   const counts = await Promise.all(segments.map((d) => executeKw<number>("product.template", "search_count", [d])));
   const total = counts.reduce((a, b) => a + b, 0);
 
-  const reads: Promise<OdooProductListItem[]>[] = [];
+  const reads: Promise<RawListItem[]>[] = [];
   let start = 0;
   for (let i = 0; i < segments.length; i++) {
     const end = start + counts[i];
@@ -101,7 +126,7 @@ async function getSegmentedPage(
     const to = Math.min(offset + limit, end);
     if (from < to) {
       reads.push(
-        executeKw<OdooProductListItem[]>("product.template", "search_read", [segments[i]], {
+        executeKw<RawListItem[]>("product.template", "search_read", [segments[i]], {
           fields: PRODUCT_LIST_FIELDS,
           limit: to - from,
           offset: from - start,
@@ -113,8 +138,8 @@ async function getSegmentedPage(
     start = end;
   }
 
-  const products = (await Promise.all(reads)).flat();
-  return { products: await applyReservations(products), total };
+  const products = await withImages((await Promise.all(reads)).flat(), true);
+  return { products, total };
 }
 
 // Búsqueda acotada para la vendedora virtual. Solo devuelve productos
@@ -137,12 +162,12 @@ export async function searchProductsForAssistant(opts: {
   // Pedimos algunas filas extra porque una reserva web puede llevar el stock
   // neto a cero aunque Odoo todavía informe stock físico.
   const limit = Math.min(Math.max(opts.limit ?? 6, 1), 8);
-  const products = await executeKw<OdooProductListItem[]>("product.template", "search_read", [domain], {
+  const raw = await executeKw<RawListItem[]>("product.template", "search_read", [domain], {
     fields: PRODUCT_LIST_FIELDS,
     limit: opts.inStockOnly ? limit * 3 : limit,
     order: "name asc",
   });
-  const available = await applyReservations(products);
+  const available = await applyReservations(await withImages(raw, true));
   return (opts.inStockOnly ? available.filter((product) => product.qty_available > 0) : available).slice(0, limit);
 }
 
@@ -151,13 +176,8 @@ export async function searchProductsForAssistant(opts: {
 // local, así que un favorito viejo siempre muestra datos frescos.
 export async function getProductsByIds(ids: number[]): Promise<OdooProductListItem[]> {
   if (ids.length === 0) return [];
-  const products = await executeKw<OdooProductListItem[]>(
-    "product.template",
-    "read",
-    [ids],
-    { fields: PRODUCT_LIST_FIELDS }
-  );
-  return applyReservations(products);
+  const raw = await executeKw<RawListItem[]>("product.template", "read", [ids], { fields: PRODUCT_LIST_FIELDS });
+  return applyReservations(await withImages(raw, false));
 }
 
 // Descuenta del qty_available que ve el cliente el stock ya reservado por
@@ -223,7 +243,7 @@ export async function getAdminProductsPage(opts: {
   // comentario de ADMIN_SORT_FIELDS) — para esos dos traemos todo el
   // conjunto ya filtrado y ordenamos en memoria antes de paginar.
   if (opts.sort === "stock" || opts.sort === "category") {
-    const all = await executeKw<OdooProductListItem[]>("product.template", "search_read", [domain], {
+    const all = await executeKw<RawListItem[]>("product.template", "search_read", [domain], {
       fields: PRODUCT_LIST_FIELDS,
       order: "name asc",
     });
@@ -237,14 +257,14 @@ export async function getAdminProductsPage(opts: {
       });
     }
     const page = all.slice(opts.offset, opts.offset + opts.limit);
-    return { products: await withReserved(page), total: all.length };
+    return { products: await withReserved(await withImages(page, false)), total: all.length };
   }
 
   const sortField = ADMIN_SORT_FIELDS[opts.sort === "price" ? "price" : "name"];
   const order = `${sortField} ${dir}`;
 
-  const [products, total] = await Promise.all([
-    executeKw<OdooProductListItem[]>("product.template", "search_read", [domain], {
+  const [raw, total] = await Promise.all([
+    executeKw<RawListItem[]>("product.template", "search_read", [domain], {
       fields: PRODUCT_LIST_FIELDS,
       limit: opts.limit,
       offset: opts.offset,
@@ -253,7 +273,7 @@ export async function getAdminProductsPage(opts: {
     executeKw<number>("product.template", "search_count", [domain]),
   ]);
 
-  return { products: await withReserved(products), total };
+  return { products: await withReserved(await withImages(raw, false)), total };
 }
 
 // El admin ve el stock físico real de Odoo (source of truth para reponer),
@@ -273,10 +293,12 @@ async function withReserved(products: OdooProductListItem[]): Promise<AdminProdu
 export async function getProductCountsByCategory(
   categories: OdooCategory[]
 ): Promise<Map<number, number>> {
-  const groups = await executeKw<{ categ_id: [number, string] | false; categ_id_count: number }[]>(
-    "product.template",
-    "read_group",
-    [[["sale_ok", "=", true], HAS_IMAGE_DOMAIN], ["categ_id"], ["categ_id"]]
+  const groups = await cachedCatalog("counts", () =>
+    executeKw<{ categ_id: [number, string] | false; categ_id_count: number }[]>(
+      "product.template",
+      "read_group",
+      [[["sale_ok", "=", true], HAS_IMAGE_DOMAIN], ["categ_id"], ["categ_id"]]
+    )
   );
 
   const direct = new Map<number, number>();
@@ -321,11 +343,13 @@ export async function getCategoryShowcaseImage(
     ["id", "not in", SHOWCASE_EXCLUDE_IDS],
     [field, "!=", false],
   ];
-  const products = await executeKw<Record<string, string | false>[]>(
-    "product.template",
-    "search_read",
-    [domain],
-    { fields: [field], limit: 1, order: "name asc" }
+  const products = await cachedCatalog(`showcase:${categoryId}`, () =>
+    executeKw<{ id: number; write_date: string | false }[]>("product.template", "search_read", [domain], {
+      fields: ["write_date"],
+      limit: 1,
+      order: "name asc",
+    })
   );
-  return products[0]?.[field] ?? false;
+  const p = products[0];
+  return p ? productImageUrl(p.id, field === "image_128" ? 128 : 1024, p.write_date || null) : false;
 }

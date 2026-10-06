@@ -1,3 +1,4 @@
+import { cachedCatalog } from "@/lib/catalogCache";
 import { executeKw } from "@/lib/odoo";
 import type { OdooCategory } from "@/types/odoo";
 
@@ -7,11 +8,9 @@ import type { OdooCategory } from "@/types/odoo";
 // desde que las credenciales de Odoo se leen de la base) rompe el bundle
 // del browser si se importa desde uno.
 export async function getAllCategories(): Promise<OdooCategory[]> {
-  return executeKw<OdooCategory[]>(
-    "product.category",
-    "search_read",
-    [[]],
-    { fields: ["name", "parent_id"], order: "complete_name asc" }
+  // Cambian muy poco: se guardan junto con el resto del catálogo (ver lib/catalogCache.ts)
+  return cachedCatalog("categories", () =>
+    executeKw<OdooCategory[]>("product.category", "search_read", [[]], { fields: ["name", "parent_id"], order: "complete_name asc" })
   );
 }
 

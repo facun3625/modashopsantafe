@@ -1,3 +1,4 @@
+import { imageSrc } from "@/lib/productImage";
 import type { OdooProductListItem } from "@/types/odoo";
 
 export function SearchSuggestions({
@@ -28,7 +29,7 @@ export function SearchSuggestions({
                 {p.image_128 ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={`data:image/png;base64,${p.image_128}`}
+                    src={imageSrc(p.image_128) ?? undefined}
                     alt=""
                     className="h-10 w-10 shrink-0 rounded-lg bg-brand-soft object-cover"
                   />

@@ -21,20 +21,12 @@ export async function ShopView({
   const page = Math.max(1, Number(searchParams.page) || 1);
   const basePath = categoryId ? `/categoria/${categoryId}` : "/tienda";
 
-  const [categories, settings] = await Promise.all([getAllCategories(), getStoreSettingsRow()]);
-  // Orden elegido en Configuración: solo en la vista general (sin categoría ni búsqueda), y solo con categorías que
-  // todavía existen en Odoo
-  const known = new Set(categories.map((c) => c.id));
-  const priorityCategoryIds = !categoryId && !query ? settings.shopPriorityCategoryIds.filter((id) => known.has(id)) : [];
-
-  let category = null;
-  if (categoryId) {
-    category = categories.find((c) => c.id === categoryId);
-    if (!category) notFound();
-  }
-
-  const [counts, { products, total }] = await Promise.all([
-    getProductCountsByCategory(categories),
+  // Categorías y productos se piden a Odoo a la vez (antes uno esperaba al otro). Una categoría prioritaria que ya no
+  // existe en Odoo simplemente no trae productos.
+  const settings = await getStoreSettingsRow();
+  const priorityCategoryIds = !categoryId && !query ? settings.shopPriorityCategoryIds : [];
+  const [categories, { products, total }] = await Promise.all([
+    getAllCategories(),
     getProductsPage({
       categoryId,
       query: query || undefined,
@@ -43,6 +35,14 @@ export async function ShopView({
       priorityCategoryIds,
     }),
   ]);
+
+  let category = null;
+  if (categoryId) {
+    category = categories.find((c) => c.id === categoryId);
+    if (!category) notFound();
+  }
+
+  const counts = await getProductCountsByCategory(categories);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 

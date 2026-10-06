@@ -1,5 +1,6 @@
 "use client";
 
+import { imageSrc } from "@/lib/productImage";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "@/lib/cart";
@@ -62,7 +63,7 @@ export function CartDrawer() {
                         {item.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={`data:image/png;base64,${item.image}`}
+                            src={imageSrc(item.image) ?? undefined}
                             alt={item.name}
                             className="h-16 w-16 shrink-0 rounded-lg object-cover"
                           />
