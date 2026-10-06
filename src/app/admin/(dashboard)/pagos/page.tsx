@@ -77,7 +77,7 @@ export default async function AdminPagosPage() {
                 </div>
 
                 {config.method === "contra_entrega" && (
-                  <div className="min-w-[280px] flex-1">
+                  <div>
                     <label className={`${labelClasses} whitespace-nowrap`}>Vence si no se confirma en (días)</label>
                     <div className="flex items-center gap-3">
                       <input
@@ -88,9 +88,9 @@ export default async function AdminPagosPage() {
                         max={60}
                         step={1}
                         placeholder="—"
-                        className={`${fieldClasses} w-28 shrink-0`}
+                        className="w-28 shrink-0 rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none"
                       />
-                      <p className="text-xs leading-snug text-brand-muted">
+                      <p className="max-w-xs text-xs leading-snug text-brand-muted">
                         Pasado ese plazo, el pedido pendiente se cancela solo, se libera el stock y se le avisa al cliente. Vacío o 0 = no vence.
                       </p>
                     </div>
