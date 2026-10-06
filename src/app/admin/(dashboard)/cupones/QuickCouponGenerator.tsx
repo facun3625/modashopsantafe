@@ -53,12 +53,11 @@ export function QuickCouponGenerator() {
           <label className={labelClasses}>Descuento (%)</label>
           <input type="number" name="discountValue" min={1} max={100} defaultValue={15} required className={fieldClasses} />
         </div>
-        <div className="w-36">
-          <label className={labelClasses}>Vence en (días)</label>
+        <div className="w-44">
+          <label className={labelClasses}>Vence en (días, 0 = nunca)</label>
           <input type="number" name="expiresInDays" min={0} defaultValue={30} className={fieldClasses} />
-          <p className="mt-1 text-[11px] text-brand-muted">0 = sin vencimiento</p>
         </div>
-        <div className="min-w-[180px] flex-1">
+        <div className="min-w-[220px] flex-1">
           <label className={labelClasses}>WhatsApp del cliente (opcional)</label>
           <input
             type="text"
@@ -71,7 +70,7 @@ export function QuickCouponGenerator() {
         <button
           type="submit"
           disabled={pending}
-          className="cursor-pointer rounded-full bg-brand-pink px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-[38px] cursor-pointer rounded-full bg-brand-pink px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-pink-dark disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? "Generando..." : "Generar cupón"}
         </button>

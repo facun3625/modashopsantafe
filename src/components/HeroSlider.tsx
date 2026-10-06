@@ -6,6 +6,8 @@ import { AnimatePresence, motion } from "framer-motion";
 
 export type HeroSlide = {
   image: string;
+  // Video de fondo (silencio, bucle). En el celular se muestra la imagen en su lugar, si la hay.
+  videoUrl?: string | null;
   eyebrow: string;
   title: string; // hasta 2 líneas separadas por \n
   subtitle?: string | null;
@@ -33,10 +35,10 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
   const promoTotalLength = promoLines.reduce((sum, l) => sum + l.length, 0);
   const promoSize =
     promoTotalLength > 26
-      ? { circle: "h-24 w-24 sm:h-28 sm:w-28", text: "text-[9px] sm:text-xs" }
+      ? { circle: "h-28 w-28 sm:h-36 sm:w-36", text: "text-[9px] sm:text-xs" }
       : promoTotalLength > 14
-        ? { circle: "h-20 w-20 sm:h-24 sm:w-24", text: "text-[9px] sm:text-[11px]" }
-        : { circle: "h-16 w-16 sm:h-20 sm:w-20", text: "text-[10px] sm:text-xs" };
+        ? { circle: "h-24 w-24 sm:h-32 sm:w-32", text: "text-[9px] sm:text-[11px]" }
+        : { circle: "h-20 w-20 sm:h-28 sm:w-28", text: "text-[10px] sm:text-xs" };
 
   return (
     <div className="relative flex min-h-[320px] items-center rounded-3xl sm:min-h-[400px]">
@@ -44,10 +46,22 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
           para respetar el rounded-3xl — el círculo de promo queda AFUERA de
           este wrapper para poder "asomarse" un poco por el borde. */}
       <div className="absolute inset-0 overflow-hidden rounded-3xl">
+        {slide.videoUrl && (
+          <video
+            key={`video-${index}`}
+            src={slide.videoUrl}
+            poster={slide.image || undefined}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className={`absolute inset-0 h-full w-full object-cover ${slide.image ? "hidden sm:block" : "block"}`}
+          />
+        )}
         <AnimatePresence>
           <motion.div
             key={`bg-${index}`}
-            className="absolute inset-0 bg-cover bg-center"
+            className={`absolute inset-0 bg-cover bg-center ${slide.videoUrl && !slide.image ? "hidden" : ""}`}
             style={{ backgroundImage: `url(${slide.image})` }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -62,7 +76,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
 
       {promoLines.length > 0 && (
         <div
-          className={`absolute -right-2 -top-2 z-20 flex shrink-0 rotate-6 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-full bg-white p-2 text-center font-bold uppercase leading-tight text-wrap break-words text-brand-pink-dark shadow-lg sm:-right-3 sm:-top-3 ${promoSize.circle} ${promoSize.text}`}
+          className={`absolute -right-2 -top-2 z-20 flex shrink-0 rotate-6 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-full border-[3px] border-brand-pink bg-white p-3 text-center font-bold sm:border-4 sm:p-5 uppercase leading-tight text-wrap break-words text-brand-pink-dark shadow-lg sm:right-0 sm:top-0 sm:translate-x-[30%] sm:-translate-y-[12%] ${promoSize.circle} ${promoSize.text}`}
         >
           {promoLines.map((line, i) => (
             <span key={i}>{line}</span>

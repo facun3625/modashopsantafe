@@ -23,4 +23,12 @@ export async function register() {
 
   setTimeout(run, 30_000);
   setInterval(run, INTERVAL_MS);
+
+  // Mails de recuperación de carritos cada 10 minutos (solo si el interruptor de Carritos abandonados está prendido)
+  const { runCartRecovery } = await import("@/lib/cartRecoveryMail");
+  const recover = () => {
+    runCartRecovery().catch((err: unknown) => console.error("runCartRecovery (auto) failed", err));
+  };
+  setTimeout(recover, 120_000);
+  setInterval(recover, 10 * 60 * 1000);
 }

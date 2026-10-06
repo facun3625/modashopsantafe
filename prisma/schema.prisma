@@ -161,6 +161,12 @@ model StoreSettings {
   // IP real se comparte entre varios celulares de un mismo operador y
   // cambia si el visitante pasa de wifi a datos, así que no sirve para
   // identificar "ya lo vio".
+  // Recuperación automática de carritos por mail (ver lib/cartRecoveryMail.ts)
+  cartRecoveryEnabled    Boolean @default(false)
+  cartRecoveryDelayHours Int     @default(4)
+  cartRecoverySubject    String?
+  cartRecoveryMessage    String?
+
   popupEnabled   Boolean        @default(false)
   popupTitle     String?
   popupBodyHtml  String?
@@ -255,6 +261,7 @@ enum PopupScope {
 
 enum PopupFrequency {
   once
+  daily
   always
 }
 
@@ -603,6 +610,14 @@ model AbandonedCart {
   total      Float
   lastActive DateTime @updatedAt
   createdAt  DateTime @default(now())
+  // Cuándo se le mandó el mail automático de recuperación (null = nunca)
+  recoveryEmailSentAt DateTime?
+}
+
+// Personas que pidieron no recibir más recordatorios de carrito (link de baja del mail)
+model CartRecoveryOptOut {
+  email     String   @id
+  createdAt DateTime @default(now())
 }
 
 // Registro propio de ventas online: Odoo no tiene el módulo de Ventas
@@ -672,4 +687,21 @@ model OrderItem {
   name      String
   price     Float
   quantity  Int
+}
+
+// Temas visuales: un aspecto base (isBase, siempre vigente cuando no hay campaña) y temas de campaña (Navidad, Black
+// Friday...) con ventana de fechas opcional. Si aplican varios, gana el que empezó más reciente. config: colores,
+// tipografía, botones, fondo, barra de anuncio, slider de portada y tarjetas destacadas — ver src/lib/themes.ts, que
+// valida y sanea todo antes de guardarlo y de usarlo.
+model Theme {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  enabled     Boolean   @default(false)
+  isBase      Boolean   @default(false)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  config      Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

@@ -4,6 +4,7 @@ import { orderStatusLabel, paymentMethodLabel } from "@/lib/sales";
 import { StatCard } from "@/components/admin/StatCard";
 import { RevenueChart } from "@/components/admin/RevenueChart";
 import { Badge } from "@/components/admin/Badge";
+import { QuickCouponGenerator } from "../cupones/QuickCouponGenerator";
 import {
   SalesIcon,
   ClockIcon,
@@ -66,6 +67,10 @@ export default async function AdminInicioPage() {
       )}
 
       {/* KPIs */}
+      <div className="mt-6">
+        <QuickCouponGenerator />
+      </div>
+
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard
           icon={SalesIcon}

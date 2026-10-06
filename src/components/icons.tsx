@@ -432,3 +432,14 @@ export const BENEFIT_ICON_OPTIONS = [
 export function getBenefitIcon(key: string | null | undefined) {
   return BENEFIT_ICON_OPTIONS.find((o) => o.key === key)?.Icon ?? TagIcon;
 }
+
+export function PaletteIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3.5a8.5 8.5 0 0 0 0 17h1.2a2 2 0 0 0 1.4-3.4 1.8 1.8 0 0 1 1.3-3.1H18a3.5 3.5 0 0 0 3.5-3.5C21.5 6.8 17.2 3.5 12 3.5Z" />
+      <circle cx="7.5" cy="10.5" r="1" />
+      <circle cx="10.5" cy="7" r="1" />
+      <circle cx="15" cy="7.5" r="1" />
+    </svg>
+  );
+}

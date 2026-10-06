@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { getAllCategories } from "@/lib/categories";
 import { getProductsPage, getCategoryShowcaseImage } from "@/lib/products";
-import { getHeroSlides, getSiteSettings } from "@/lib/settings";
+import { getSiteSettings } from "@/lib/settings";
+import { getThemeForRequest } from "@/lib/themeRuntime";
+import { ensureBaseTheme } from "@/lib/baseTheme";
+import { sanitizeThemeConfig, type ThemeSlide } from "@/lib/themes";
 import { getCashDiscountPct } from "@/lib/paymentSettings";
 import { MapPinIcon } from "@/components/icons";
 import { ProductCarousel } from "@/components/ProductCarousel";
@@ -15,16 +18,18 @@ import type { OdooProductListItem } from "@/types/odoo";
 // todavía no se cargó ningún HeroSlide real desde /admin/configuracion.
 const HERO_CATEGORY_IDS = [43, 40, 44, 45];
 
+const BANNER_GRID = ["", "grid-cols-1 mx-auto max-w-xs", "grid-cols-2", "grid-cols-2 sm:grid-cols-3", "grid-cols-2 sm:grid-cols-4", "grid-cols-2 sm:grid-cols-3", "grid-cols-2 sm:grid-cols-3"];
+
 export default async function Home() {
   let hero: { id: number; name: string; image: string | false }[] = [];
   let featured: { id: number; name: string; image: string | false }[] = [];
   let carouselProducts: OdooProductListItem[] = [];
   let error: string | null = null;
 
-  const [slidesFromDb, settings, cashDiscountPct] = await Promise.all([
-    getHeroSlides(),
+  const [settings, cashDiscountPct, theme] = await Promise.all([
     getSiteSettings(),
     getCashDiscountPct(),
+    getThemeForRequest(),
   ]);
 
   try {
@@ -70,27 +75,21 @@ export default async function Home() {
     ? settings.address.split(" — ")
     : [settings.address, settings.franchiseLocation];
 
-  // Si todavía no se cargó ningún slide desde /admin/configuracion, se
-  // muestra un slide de ejemplo con las categorías destacadas como botones
-  // (mismo comportamiento que había antes de que el slider fuera editable).
+  // El slider se maneja dentro de cada tema (Temas y campañas). Si el tema vigente no tiene slides propios, se usa el
+  // slider del aspecto base. Si tampoco hay, un slide de ejemplo con las categorías destacadas como botones.
+  const toSlide = (s: ThemeSlide): HeroSlide => ({
+    image: s.image,
+    videoUrl: s.videoUrl || null,
+    eyebrow: s.eyebrow,
+    title: s.title,
+    subtitle: s.subtitle || null,
+    promoText: s.promoText || null,
+    buttons: s.buttons,
+  });
+  const baseHero = theme && theme.config.hero.length > 0 ? theme.config.hero : sanitizeThemeConfig((await ensureBaseTheme())?.config).hero;
   const heroSlides: HeroSlide[] =
-    slidesFromDb.length > 0
-      ? slidesFromDb.map((s) => ({
-          image: s.imageUrl ?? "/hero-bg.jpg",
-          eyebrow: s.eyebrow,
-          title: s.title,
-          subtitle: s.subtitle,
-          promoText: s.promoText,
-          buttons: (
-            [
-              [s.button1Label, s.button1Href],
-              [s.button2Label, s.button2Href],
-              [s.button3Label, s.button3Href],
-            ] as const
-          )
-            .filter((b): b is [string, string] => Boolean(b[0] && b[1]))
-            .map(([label, href]) => ({ label, href })),
-        }))
+    baseHero.length > 0
+      ? baseHero.map(toSlide)
       : [
           {
             image: "/hero-bg.jpg",
@@ -147,6 +146,34 @@ export default async function Home() {
           />
         </div>
       </section>
+
+      {/* Tarjetas destacadas del tema (se cargan en Temas y campañas → Tarjetas destacadas) */}
+      {theme && theme.config.banners.length > 0 && (
+        <section className="px-3 pb-8 pt-0 sm:px-6 sm:pb-10">
+          <div className="mx-auto max-w-6xl">
+            {theme.config.bannersTitle && <h2 className="text-2xl font-bold text-brand-ink">{theme.config.bannersTitle}</h2>}
+            <div className={`grid gap-3 sm:gap-4 ${theme.config.bannersTitle ? "mt-5" : ""} ${BANNER_GRID[Math.min(theme.config.banners.length, 6)]}`}>
+              {theme.config.banners.map((b, i) => {
+                const card = (
+                  <>
+                    <div className="aspect-[4/3] w-full overflow-hidden bg-brand-soft">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={b.image} alt={b.alt || b.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+                    </div>
+                    {b.title && <p className="px-3 py-2.5 text-center text-sm font-semibold text-brand-ink">{b.title}</p>}
+                  </>
+                );
+                const cls = "group block overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm";
+                return b.href ? (
+                  <a key={i} href={b.href} className={`${cls} transition-shadow hover:shadow-md`}>{card}</a>
+                ) : (
+                  <div key={i} className={cls}>{card}</div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Categorías destacadas */}
       <section className="px-3 pb-10 pt-0 sm:px-6">

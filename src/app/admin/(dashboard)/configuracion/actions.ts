@@ -76,20 +76,6 @@ export async function updateAiAssistantSettings(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
-const MAX_HERO_SLIDES = 3;
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "hero");
-
-async function saveHeroImage(file: File): Promise<string> {
-  const ext = path.extname(file.name) || "";
-  const filename = `${randomUUID()}${ext}`;
-  await mkdir(UPLOAD_DIR, { recursive: true });
-  const bytes = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(UPLOAD_DIR, filename), bytes);
-  // Servido por una ruta propia, no por /public estático — ver
-  // src/app/api/uploads/hero/[filename]/route.ts para el porqué.
-  return `/api/uploads/hero/${filename}`;
-}
-
 const POPUP_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "popup");
 const POPUP_ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
 const MAX_POPUP_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -115,7 +101,7 @@ export async function uploadPopupImage(formData: FormData): Promise<{ ok: true; 
 }
 
 const POPUP_SCOPES = new Set(["home", "tienda", "all"]);
-const POPUP_FREQUENCIES = new Set(["once", "always"]);
+const POPUP_FREQUENCIES = new Set(["once", "daily", "always"]);
 
 // Pop-up promocional del sitio público — ver components/SitePopupModal.tsx.
 export async function updatePopupSettings(formData: FormData) {
@@ -131,6 +117,7 @@ export async function updatePopupSettings(formData: FormData) {
     popupScope: (typeof scope === "string" && POPUP_SCOPES.has(scope) ? scope : "all") as "home" | "tienda" | "all",
     popupFrequency: (typeof frequency === "string" && POPUP_FREQUENCIES.has(frequency) ? frequency : "once") as
       | "once"
+      | "daily"
       | "always",
   };
 
@@ -295,61 +282,3 @@ export async function testTelegram(token: string, chatId: string): Promise<Teleg
   return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 
-function readSlideFields(formData: FormData) {
-  return {
-    eyebrow: String(formData.get("eyebrow") ?? "").trim(),
-    title: String(formData.get("title") ?? "").trim(),
-    subtitle: (formData.get("subtitle") as string)?.trim() || null,
-    promoText: (formData.get("promoText") as string)?.trim() || null,
-    button1Label: (formData.get("button1Label") as string)?.trim() || null,
-    button1Href: (formData.get("button1Href") as string)?.trim() || null,
-    button2Label: (formData.get("button2Label") as string)?.trim() || null,
-    button2Href: (formData.get("button2Href") as string)?.trim() || null,
-    button3Label: (formData.get("button3Label") as string)?.trim() || null,
-    button3Href: (formData.get("button3Href") as string)?.trim() || null,
-    enabled: formData.get("enabled") === "on",
-    position: Math.max(0, Number(formData.get("position")) || 0),
-  };
-}
-
-export async function createHeroSlide(formData: FormData) {
-  await requireAdmin();
-
-  const count = await prisma.heroSlide.count();
-  if (count >= MAX_HERO_SLIDES) return;
-
-  const fields = readSlideFields(formData);
-  if (!fields.eyebrow || !fields.title) return;
-
-  const image = formData.get("image");
-  const imageUrl = image instanceof File && image.size > 0 ? await saveHeroImage(image) : null;
-
-  await prisma.heroSlide.create({ data: { ...fields, imageUrl, position: count } });
-  revalidatePath("/admin/configuracion");
-  revalidatePath("/");
-}
-
-export async function updateHeroSlide(formData: FormData) {
-  await requireAdmin();
-
-  const id = String(formData.get("id"));
-  const fields = readSlideFields(formData);
-  if (!id || !fields.eyebrow || !fields.title) return;
-
-  const image = formData.get("image");
-  const imageUrl = image instanceof File && image.size > 0 ? await saveHeroImage(image) : undefined;
-
-  await prisma.heroSlide.update({
-    where: { id },
-    data: { ...fields, ...(imageUrl ? { imageUrl } : {}) },
-  });
-  revalidatePath("/admin/configuracion");
-  revalidatePath("/");
-}
-
-export async function deleteHeroSlide(id: string) {
-  await requireAdmin();
-  await prisma.heroSlide.delete({ where: { id } });
-  revalidatePath("/admin/configuracion");
-  revalidatePath("/");
-}

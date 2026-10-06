@@ -1,12 +1,9 @@
-import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { getAllCategories } from "@/lib/categories";
 import { ToggleSwitch } from "@/components/admin/ToggleSwitch";
 import { SaveButton } from "@/components/admin/SaveButton";
-import { CardAccordion } from "@/components/admin/CardAccordion";
 import { MaskedCredentialField } from "@/components/admin/MaskedCredentialField";
-import { ImagePreviewInput } from "@/components/admin/ImagePreviewInput";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { TelegramTestButton } from "./TelegramTestButton";
 import { SettingsTabs } from "./SettingsTabs";
@@ -23,9 +20,6 @@ import {
   updateOrderEmailSettings,
   updateMaintenanceMode,
   updateHideOutOfStock,
-  createHeroSlide,
-  updateHeroSlide,
-  deleteHeroSlide,
   updateAiAssistantSettings,
   updateBenefitsSettings,
   updatePopupSettings,
@@ -35,7 +29,6 @@ import {
 const fieldClasses =
   "w-full rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none";
 const labelClasses = "mb-1 block text-xs font-medium text-brand-muted";
-const MAX_HERO_SLIDES = 3;
 
 function timeAgo(date: Date): string {
   const minutes = Math.round((Date.now() - date.getTime()) / 60000);
@@ -53,9 +46,8 @@ export default async function AdminConfiguracionPage({
   searchParams: Promise<{ synced?: string; checked?: string; awarded?: string; skipped?: string }>;
 }) {
   const params = await searchParams;
-  const [settings, slides, categories, pendingPointsCount, cashDiscountPct] = await Promise.all([
+  const [settings, categories, pendingPointsCount, cashDiscountPct] = await Promise.all([
     getStoreSettingsRow(),
-    prisma.heroSlide.findMany({ orderBy: { position: "asc" } }),
     getAllCategories(),
     prisma.order.count({
       where: { pointsAwardedAt: null, odooPickingId: { not: null }, userId: { not: null }, status: { not: "cancelled" } },
@@ -73,8 +65,6 @@ export default async function AdminConfiguracionPage({
     { title: `Envíos a ${settings.franchiseLocation || "Santa Fe"}`, subtitle: "Rápidos y seguros" },
     { title: "Retiro en local", subtitle: settings.address || "San Martín 2191 — Santa Fe, Argentina" },
   ];
-
-  const canAddSlide = slides.length < MAX_HERO_SLIDES;
 
   // --- Panel: General (mantenimiento + datos de contacto) ---
   const generalPanel = (
@@ -571,200 +561,6 @@ export default async function AdminConfiguracionPage({
     </form>
   );
 
-  // --- Panel: Slider principal ---
-  // Contenido compartido entre "editar slide" y "nuevo slide" — mismo orden
-  // visual en los dos para que no se sientan como formularios distintos:
-  // imagen (con vista previa) → textos en grilla prolija → botones como
-  // lista numerada, en vez del flex-wrap amontonado que había antes.
-  function slideFields(opts: {
-    imageExisting?: string | null;
-    imageRequired: boolean;
-    defaults?: {
-      promoText?: string | null;
-      eyebrow?: string;
-      title?: string;
-      subtitle?: string | null;
-      buttons?: readonly [string | null, string | null][];
-    };
-  }) {
-    const d = opts.defaults;
-    const buttons = d?.buttons ?? [
-      [null, null],
-      [null, null],
-      [null, null],
-    ];
-
-    return (
-      <div className="flex flex-col gap-5">
-        <ImagePreviewInput
-          name="image"
-          label="Imagen"
-          existingUrl={opts.imageExisting}
-          required={opts.imageRequired}
-          helperText={
-            opts.imageRequired
-              ? "Apaisada y de buena resolución — es el fondo del banner principal del home."
-              : "Dejá sin elegir para mantener la imagen actual."
-          }
-        />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelClasses}>Texto chico (eyebrow)</label>
-            <input type="text" name="eyebrow" required placeholder="ModaShop" defaultValue={d?.eyebrow} className={fieldClasses} />
-          </div>
-          <div>
-            <label className={labelClasses}>Subtítulo</label>
-            <input type="text" name="subtitle" defaultValue={d?.subtitle ?? ""} className={fieldClasses} />
-          </div>
-          <div>
-            <label className={labelClasses}>Título (hasta 2 líneas)</label>
-            <textarea
-              name="title"
-              rows={2}
-              required
-              placeholder={"Brillá\ncon estilo"}
-              defaultValue={d?.title}
-              className={fieldClasses}
-            />
-          </div>
-          <div>
-            <label className={labelClasses}>Texto del círculo (opcional, hasta 2 líneas)</label>
-            <textarea name="promoText" rows={2} defaultValue={d?.promoText ?? ""} className={fieldClasses} />
-          </div>
-        </div>
-
-        <div>
-          <p className={`${labelClasses} normal-case`}>Botones (opcional, hasta 3)</p>
-          <div className="flex flex-col gap-2">
-            {buttons.map(([label, href], i) => (
-              <div
-                key={i}
-                className="flex flex-wrap items-center gap-2.5 rounded-lg border border-black/10 bg-brand-soft/50 p-2.5"
-              >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-muted shadow-sm">
-                  {i + 1}
-                </span>
-                <input
-                  type="text"
-                  name={`button${i + 1}Label`}
-                  placeholder="Texto del botón"
-                  defaultValue={label ?? ""}
-                  className="w-44 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-sm text-brand-ink focus:border-brand-pink focus:outline-none"
-                />
-                <input
-                  type="text"
-                  name={`button${i + 1}Href`}
-                  placeholder="/tienda o https://..."
-                  defaultValue={href ?? ""}
-                  className="min-w-[180px] flex-1 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-sm text-brand-ink focus:border-brand-pink focus:outline-none"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const sliderPanel = (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-brand-muted">
-        Hasta {MAX_HERO_SLIDES} slides para el carrusel del home. Tenés {slides.length}.
-      </p>
-
-      {slides.map((slide) => (
-        <form
-          key={slide.id}
-          action={updateHeroSlide}
-          className={`rounded-xl border bg-white p-5 transition-colors ${
-            slide.enabled ? "border-brand-pink/30" : "border-black/10"
-          }`}
-        >
-          <input type="hidden" name="id" value={slide.id} />
-          <CardAccordion
-            titleArea={
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                {slide.imageUrl && (
-                  <Image
-                    src={slide.imageUrl}
-                    alt=""
-                    width={56}
-                    height={56}
-                    className="h-14 w-14 shrink-0 rounded-lg object-cover"
-                  />
-                )}
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-brand-ink">{slide.title.split("\n")[0]}</p>
-                  <p className="truncate text-xs text-brand-muted">{slide.eyebrow}</p>
-                </div>
-              </div>
-            }
-            headerRight={<ToggleSwitch name="enabled" defaultChecked={slide.enabled} />}
-          >
-            <div className="mb-4 w-24">
-              <label className={labelClasses}>Orden</label>
-              <input type="number" name="position" min={0} defaultValue={slide.position} className={fieldClasses} />
-            </div>
-
-            {slideFields({
-              imageExisting: slide.imageUrl,
-              imageRequired: false,
-              defaults: {
-                promoText: slide.promoText,
-                eyebrow: slide.eyebrow,
-                title: slide.title,
-                subtitle: slide.subtitle,
-                buttons: [
-                  [slide.button1Label, slide.button1Href],
-                  [slide.button2Label, slide.button2Href],
-                  [slide.button3Label, slide.button3Href],
-                ],
-              },
-            })}
-
-            <div className="mt-5 flex gap-3 border-t border-black/5 pt-4">
-              <SaveButton trackDirty />
-              <button
-                type="submit"
-                formAction={deleteHeroSlide.bind(null, slide.id)}
-                className="cursor-pointer rounded-lg border border-black/10 px-4 py-2 text-sm font-medium text-brand-muted transition-colors hover:border-red-300 hover:text-red-700"
-              >
-                Eliminar
-              </button>
-            </div>
-          </CardAccordion>
-        </form>
-      ))}
-
-      {slides.length === 0 && (
-        <p className="rounded-xl border border-dashed border-black/15 bg-white p-5 text-center text-sm text-brand-muted">
-          Todavía no creaste ningún slide — el home usa el contenido por defecto.
-        </p>
-      )}
-
-      {canAddSlide ? (
-        <form action={createHeroSlide} className="rounded-xl border border-dashed border-black/20 bg-white p-5">
-          <p className="mb-4 text-base font-semibold text-brand-ink">Nuevo slide</p>
-
-          {slideFields({ imageRequired: true })}
-
-          <div className="mt-5 flex items-center gap-4 border-t border-black/5 pt-4">
-            <div className="flex items-center gap-2">
-              <ToggleSwitch name="enabled" defaultChecked />
-              <span className="text-sm text-brand-ink">Habilitado</span>
-            </div>
-            <SaveButton label="Crear" />
-          </div>
-        </form>
-      ) : (
-        <p className="rounded-xl border border-dashed border-black/15 bg-white p-5 text-center text-sm text-brand-muted">
-          Ya tenés el máximo de {MAX_HERO_SLIDES} slides. Borrá uno para poder crear otro.
-        </p>
-      )}
-    </div>
-  );
-
   // --- Panel: Pop-up del sitio ---
   const popupPanel = (
     <form action={updatePopupSettings} className="rounded-xl border border-black/10 bg-white p-5">
@@ -794,6 +590,7 @@ export default async function AdminConfiguracionPage({
           <label className={labelClasses}>Frecuencia</label>
           <select name="popupFrequency" defaultValue={settings.popupFrequency} className={fieldClasses}>
             <option value="once">Una vez por visitante</option>
+            <option value="daily">Una vez por día (primera visita del día)</option>
             <option value="always">Cada vez que entra al sitio</option>
           </select>
           <p className="mt-1 text-xs text-brand-muted">
@@ -845,7 +642,6 @@ export default async function AdminConfiguracionPage({
           { id: "mail-compra", label: "Mail de compra", content: orderEmailPanel },
           { id: "telegram", label: "Telegram", content: telegramPanel },
           { id: "vendedora", label: "Vendedora IA", content: aiPanel },
-          { id: "slider", label: "Slider", content: sliderPanel },
           { id: "popup", label: "Pop-up", content: popupPanel },
         ]}
       />

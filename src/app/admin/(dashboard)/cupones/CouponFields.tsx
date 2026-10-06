@@ -27,7 +27,7 @@ function toDateInputValue(date: Date | null): string {
   return date.toISOString().slice(0, 10);
 }
 
-type CouponDefaults = {
+export type CouponDefaults = {
   code: string;
   enabled: boolean;
   discountType: string;

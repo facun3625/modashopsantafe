@@ -1,13 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useCart } from "@/lib/cart";
+import { useCart, type CartItem } from "@/lib/cart";
 import { CheckoutForm } from "@/components/CheckoutForm";
 
 export default function CarritoPage() {
-  const { items, removeItem, setQuantity, total } = useCart();
+  const { items, removeItem, setQuantity, total, addItem } = useCart();
   const [showCheckout, setShowCheckout] = useState(false);
+  const recoveryChecked = useRef(false);
+  const checkoutRef = useRef<HTMLDivElement>(null);
+
+  // Al abrir el checkout, bajar hasta el formulario (si no, queda el botón arriba y parece que no pasó nada)
+  // Bajar hasta el formulario con una animación propia: al scrollear se oculta la barra rosa y el header se achica, lo
+  // que corre la página y hace que el scroll suave del navegador se corte. Acá el destino se recalcula en cada cuadro.
+  useEffect(() => {
+    if (!showCheckout) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const duration = reduce ? 0 : 500;
+    const startY = window.scrollY;
+    const target = () => {
+      const el = checkoutRef.current;
+      if (!el) return startY;
+      const header = document.querySelector("header")?.getBoundingClientRect().height ?? 0;
+      return Math.max(0, el.getBoundingClientRect().top + window.scrollY - header - 16);
+    };
+    let frame = 0;
+    let begin: number | null = null;
+    const step = (now: number) => {
+      begin ??= now;
+      const t = duration === 0 ? 1 : Math.min(1, (now - begin) / duration);
+      const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      window.scrollTo({ top: startY + (target() - startY) * eased, behavior: "instant" });
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [showCheckout]);
+
+  // Link del mail de recuperación (/carrito?recuperar=<id>): vuelve a cargar el carrito con precios y stock de hoy
+  useEffect(() => {
+    if (recoveryChecked.current) return;
+    recoveryChecked.current = true;
+    const id = new URLSearchParams(window.location.search).get("recuperar");
+    if (!id) return;
+    fetch(`/api/cart/recover?id=${encodeURIComponent(id)}`, { cache: "no-store" })
+      .then((r) => r.json() as Promise<{ items: CartItem[] }>)
+      .then(({ items: recovered }) => {
+        for (const { quantity, ...item } of recovered) addItem(item, quantity);
+        window.history.replaceState(null, "", "/carrito");
+      })
+      .catch(() => {});
+  }, [addItem]);
 
   if (items.length === 0) {
     return (
@@ -94,7 +138,9 @@ export default function CarritoPage() {
       </div>
 
       {showCheckout ? (
-        <CheckoutForm />
+        <div ref={checkoutRef}>
+          <CheckoutForm />
+        </div>
       ) : (
         <button
           onClick={() => setShowCheckout(true)}

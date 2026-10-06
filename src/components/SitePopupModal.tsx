@@ -8,6 +8,15 @@ import type { SiteSettings } from "@/lib/settings";
 
 const SEEN_KEY = "modashop:popup:seen";
 
+// Valor que se guarda en el navegador para saber si ya se mostró: "una vez" lo ata al contenido (si el admin lo edita,
+// vuelve a aparecer); "una vez por día" además lo ata al día de hoy; "siempre" no se guarda nada (null).
+function seenValue(popup: NonNullable<SiteSettings["popup"]>): string | null {
+  const content = `${popup.title ?? ""}\n${popup.bodyHtml ?? ""}`;
+  if (popup.frequency === "once") return content;
+  if (popup.frequency === "daily") return `${new Date().toLocaleDateString("en-CA")}\n${content}`;
+  return null;
+}
+
 // "No repetir" se controla por navegador (localStorage), no por IP: una IP
 // real se comparte entre varios celulares de un mismo operador y cambia si
 // el visitante pasa de wifi a datos, así que no sirve para identificar "ya
@@ -27,31 +36,31 @@ export function SitePopupModal({ popup }: { popup: SiteSettings["popup"] }) {
   useEffect(() => {
     if (!popup || !matchesScope) return;
 
-    if (popup.frequency === "once") {
-      const contentKey = `${popup.title ?? ""}\n${popup.bodyHtml ?? ""}`;
+    const seen = seenValue(popup);
+    if (seen !== null) {
       try {
-        if (localStorage.getItem(SEEN_KEY) === contentKey) return;
+        if (localStorage.getItem(SEEN_KEY) === seen) return;
       } catch {
-        // Privado/bloqueado: no se puede recordar "ya lo vio" — se muestra
-        // igual en vez de romper por esto.
+        // Privado/bloqueado: no se puede recordar "ya lo vio" — se muestra igual en vez de romper por esto.
       }
     }
 
-    const timer = setTimeout(() => setOpen(true), 600);
+    const timer = setTimeout(() => {
+      setOpen(true);
+      if (seen !== null) {
+        try {
+          localStorage.setItem(SEEN_KEY, seen);
+        } catch {
+          // Sin localStorage disponible, simplemente puede volver a aparecer.
+        }
+      }
+    }, 600);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   function close() {
     setOpen(false);
-    if (popup?.frequency === "once") {
-      const contentKey = `${popup.title ?? ""}\n${popup.bodyHtml ?? ""}`;
-      try {
-        localStorage.setItem(SEEN_KEY, contentKey);
-      } catch {
-        // Sin localStorage disponible, simplemente puede volver a aparecer.
-      }
-    }
   }
 
   if (!popup) return null;

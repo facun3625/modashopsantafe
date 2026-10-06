@@ -16,10 +16,14 @@ export function SiteChrome({
   children,
   settings,
   isMaintenancePage,
+  announcement,
+  previewThemeName,
 }: {
   children: ReactNode;
   settings: SiteSettings;
   isMaintenancePage: boolean;
+  announcement: { text: string; href: string; bg: string; color: string } | null;
+  previewThemeName: string | null;
 }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin");
@@ -52,6 +56,21 @@ export function SiteChrome({
   return (
     <>
       <VisitTracker />
+      {announcement && announcement.text && (
+        <div className="px-4 py-2 text-center text-xs font-semibold sm:text-sm" style={{ backgroundColor: announcement.bg, color: announcement.color }}>
+          {announcement.href ? (
+            <a href={announcement.href} className="hover:underline">{announcement.text}</a>
+          ) : (
+            announcement.text
+          )}
+        </div>
+      )}
+      {previewThemeName && (
+        <div className="flex flex-wrap items-center justify-center gap-3 bg-amber-100 px-4 py-2 text-center text-xs text-amber-900">
+          <span>Vista previa del tema <b>{previewThemeName}</b>: solo la ves vos.</span>
+          <a href="/api/admin/themes/preview?exit=1" className="font-semibold underline">Salir de la vista previa</a>
+        </div>
+      )}
       <Navbar settings={settings} />
       <div className="flex-1">{children}</div>
       <Footer settings={settings} />

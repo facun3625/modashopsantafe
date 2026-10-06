@@ -5,10 +5,19 @@ import { buildWhatsAppLink, isLikelyPhone } from "@/lib/whatsapp";
 import { CopyEmailsButton } from "./CopyEmailsButton";
 import { UserTypeFilter } from "./UserTypeFilter";
 import { deleteAbandonedCart, cleanupOldAbandonedCarts } from "./actions";
+import { CartRecoveryPanel } from "./CartRecoveryPanel";
+import { getStoreSettingsRow } from "@/lib/settings";
+import { getMailSender } from "@/lib/mailer";
+import { DEFAULT_MESSAGE, DEFAULT_SUBJECT } from "@/lib/cartRecoveryMail";
 
 type CartItemJson = { productId: number; name: string; price: number; quantity: number };
 
 type UserType = "all" | "registered" | "guest" | "anonymous";
+
+function countRecoveryMailsLastWeek() {
+  const since = new Date(Date.now() - 7 * 24 * 3600_000);
+  return prisma.abandonedCart.count({ where: { recoveryEmailSentAt: { gte: since } } });
+}
 
 function timeAgo(date: Date): string {
   const minutes = Math.round((Date.now() - date.getTime()) / 60000);
@@ -43,6 +52,12 @@ export default async function AdminCarritosAbandonadosPage({
 
   const emails = carts.map((c) => c.user?.email ?? c.email).filter((e): e is string => Boolean(e));
 
+  const [recoverySettings, mailSender, sentLast7Days] = await Promise.all([
+    getStoreSettingsRow(),
+    getMailSender(),
+    countRecoveryMailsLastWeek(),
+  ]);
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0">
@@ -51,6 +66,18 @@ export default async function AdminCarritosAbandonadosPage({
           {carts.length} carritos con productos sin comprar. No es automático: es una foto del último estado de cada
           carrito, para que puedan contactar a mano a quien no terminó la compra.
         </p>
+
+        <CartRecoveryPanel
+          initial={{
+            enabled: recoverySettings.cartRecoveryEnabled,
+            delayHours: recoverySettings.cartRecoveryDelayHours,
+            subject: recoverySettings.cartRecoverySubject ?? "",
+            message: recoverySettings.cartRecoveryMessage ?? "",
+          }}
+          mailReady={Boolean(mailSender)}
+          sentLast7Days={sentLast7Days}
+          defaults={{ subject: DEFAULT_SUBJECT, message: DEFAULT_MESSAGE }}
+        />
 
         <div className="mt-6 flex flex-wrap items-end gap-3">
           <UserTypeFilter defaultValue={userType} />

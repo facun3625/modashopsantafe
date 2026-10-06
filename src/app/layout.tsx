@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { Providers } from "@/components/Providers";
 import { SiteChrome } from "@/components/SiteChrome";
 import { getSiteSettings } from "@/lib/settings";
+import { getThemeForRequest } from "@/lib/themeRuntime";
+import { themeCss, themeFontHref } from "@/lib/themes";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -35,14 +37,25 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [settings, requestHeaders] = await Promise.all([getSiteSettings(), headers()]);
+  const [settings, requestHeaders, theme] = await Promise.all([getSiteSettings(), headers(), getThemeForRequest()]);
   const isMaintenancePage = requestHeaders.get("x-maintenance-page") === "1";
+  const fontHref = theme ? themeFontHref(theme.config) : null;
 
   return (
     <html lang="es" className={`${poppins.variable} h-full antialiased`}>
+      <head>
+        {/* Tema vigente (campaña o aspecto base): colores, tipografía de títulos, botones y fondo — valores ya validados en lib/themes.ts */}
+        {theme && <style id="theme-css" dangerouslySetInnerHTML={{ __html: themeCss(theme.config) }} />}
+        {fontHref && <link rel="stylesheet" href={fontHref} />}
+      </head>
       <body className="flex min-h-full flex-col font-sans">
         <Providers>
-          <SiteChrome settings={settings} isMaintenancePage={isMaintenancePage}>
+          <SiteChrome
+            settings={settings}
+            isMaintenancePage={isMaintenancePage}
+            announcement={theme?.config.announcement.enabled ? theme.config.announcement : null}
+            previewThemeName={theme?.previewing ? theme.name : null}
+          >
             {children}
           </SiteChrome>
         </Providers>
