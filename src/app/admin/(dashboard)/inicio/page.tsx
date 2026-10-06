@@ -311,7 +311,7 @@ export default async function AdminInicioPage() {
               { ok: stats.health.odooOk, label: "Conexión con Odoo", href: "/admin/configuracion" },
               { ok: stats.health.smtpOk, label: "Mailing (SMTP)", href: "/admin/configuracion" },
               { ok: stats.health.pointsEnabled, label: "Sistema de puntos activo", href: "/admin/puntos" },
-              { ok: stats.health.heroSlideCount > 0, label: "Slider del home cargado", href: "/admin/configuracion" },
+              { ok: stats.health.heroSlideCount > 0, label: "Slider del aspecto base cargado", href: "/admin/temas" },
             ].map((item) => (
               <Link
                 key={item.label}

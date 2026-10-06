@@ -94,7 +94,10 @@ export async function getDashboardStats() {
     prisma.pointTransaction.aggregate({ _sum: { amount: true }, where: { amount: { gt: 0 } } }),
     prisma.pointTransaction.aggregate({ _sum: { amount: true }, where: { amount: { lt: 0 } } }),
     prisma.mailCampaign.count({ where: { status: "done" } }),
-    prisma.heroSlide.count(),
+    prisma.theme.findFirst({ where: { isBase: true }, select: { config: true } }).then((t) => {
+      const hero = (t?.config as { hero?: unknown[] } | null)?.hero;
+      return Array.isArray(hero) ? hero.length : 0;
+    }),
   ]);
 
   const chartMap = new Map<string, number>();
