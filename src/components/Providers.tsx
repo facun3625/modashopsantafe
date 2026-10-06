@@ -7,11 +7,11 @@ import { AuthModalProvider } from "@/lib/authModal";
 import { AuthModal } from "@/components/AuthModal";
 import { FavoritesProvider } from "@/lib/favorites";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children, cartAutoCloseSeconds }: { children: React.ReactNode; cartAutoCloseSeconds: number }) {
   return (
     <SessionProvider>
       <FavoritesProvider>
-        <CartProvider>
+        <CartProvider autoCloseSeconds={cartAutoCloseSeconds}>
           <AuthModalProvider>
             {children}
             <CartDrawer />

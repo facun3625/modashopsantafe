@@ -50,6 +50,7 @@ export async function getSiteSettings() {
       { icon: row.benefit2Icon, title: row.benefit2Title, subtitle: row.benefit2Subtitle },
       { icon: row.benefit3Icon, title: row.benefit3Title, subtitle: row.benefit3Subtitle },
     ],
+    cartAutoCloseSeconds: Math.min(10, Math.max(0, row.cartAutoCloseSeconds)),
     // Pop-up promocional del sitio público — null si está apagado o si no
     // tiene ni título ni texto cargado (ver SitePopupModal).
     popup:

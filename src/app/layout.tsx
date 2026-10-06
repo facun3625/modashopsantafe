@@ -49,7 +49,7 @@ export default async function RootLayout({
         {fontHref && <link rel="stylesheet" href={fontHref} />}
       </head>
       <body className="flex min-h-full flex-col font-sans">
-        <Providers>
+        <Providers cartAutoCloseSeconds={settings.cartAutoCloseSeconds}>
           <SiteChrome
             settings={settings}
             isMaintenancePage={isMaintenancePage}

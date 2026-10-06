@@ -42,6 +42,15 @@ export async function updateWelcomeCouponSettings(formData: FormData) {
   revalidatePath("/admin/configuracion");
 }
 
+// Cuánto queda abierto el carrito después de agregar un producto (0 = no se cierra solo)
+export async function updateCartAutoCloseSettings(formData: FormData) {
+  await requireAdmin();
+  const seconds = Math.min(10, Math.max(0, Math.floor(Number(formData.get("cartAutoCloseSeconds")) || 0)));
+  await prisma.storeSettings.upsert({ where: { id: "global" }, create: { id: "global", cartAutoCloseSeconds: seconds }, update: { cartAutoCloseSeconds: seconds } });
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/configuracion");
+}
+
 // Cada cuánto se vuelve a consultar el catálogo a Odoo (ver lib/catalogCache.ts). 0 = siempre en vivo.
 export async function updateCatalogCacheSettings(formData: FormData) {
   await requireAdmin();
