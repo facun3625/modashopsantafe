@@ -39,6 +39,7 @@ export async function savePaymentMethodConfig(formData: FormData) {
     paywayPublicKey?: string;
     paywayPrivateKey?: string;
     paywaySandbox?: boolean;
+    pendingExpiryDays?: number | null;
   } = { discountPct };
 
   if (method === "mercadopago") {
@@ -67,6 +68,12 @@ export async function savePaymentMethodConfig(formData: FormData) {
     data.bankCbu = (formData.get("bankCbu") as string) || undefined;
     data.bankAlias = (formData.get("bankAlias") as string) || undefined;
     data.bankHolderName = (formData.get("bankHolderName") as string) || undefined;
+  }
+
+  if (method === "contra_entrega") {
+    // Vacío o 0 = el pedido pendiente no vence. Tope de 60 días para no dejar stock retenido indefinidamente por error.
+    const raw = Math.floor(Number(formData.get("pendingExpiryDays")) || 0);
+    data.pendingExpiryDays = raw > 0 ? Math.min(raw, 60) : null;
   }
 
   const config = await prisma.paymentMethodConfig.update({ where: { method }, data });

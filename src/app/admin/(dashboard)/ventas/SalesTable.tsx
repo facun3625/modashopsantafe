@@ -7,7 +7,7 @@ import { orderStatusLabel, paymentMethodLabel, ORDER_STATUS_STYLES } from "@/lib
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EyeIcon } from "@/components/icons";
 import { changeOrderStatus, deleteOrder, retryOrderPicking } from "./actions";
-import { pendingExpiresAt } from "@/lib/orderExpiryRules";
+import { pendingExpiresAt, type ExpiryDaysByMethod } from "@/lib/orderExpiryRules";
 
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "webp", "gif", "avif"];
 const STATUSES: OrderStatus[] = ["pending", "confirmed", "delivered", "cancelled"];
@@ -104,7 +104,7 @@ function MissingPickingNotice({ orderId }: { orderId: string }) {
 }
 
 // "Vence en X días" para pendientes que se cancelan solos, o "Vencido sin pago" si ya se canceló por eso.
-function ExpiryNotice({ order, now }: { order: SalesOrder; now: number }) {
+function ExpiryNotice({ order, now, expiryDays }: { order: SalesOrder; now: number; expiryDays: ExpiryDaysByMethod }) {
   if (order.status === "cancelled" && order.expiredAt) {
     return (
       <span className="inline-block rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600" title={`Se canceló solo el ${order.expiredAt.toLocaleDateString("es-AR")} y se le avisó al cliente por mail.`}>
@@ -113,7 +113,7 @@ function ExpiryNotice({ order, now }: { order: SalesOrder; now: number }) {
     );
   }
   if (order.status !== "pending") return null;
-  const expiresAt = pendingExpiresAt(order);
+  const expiresAt = pendingExpiresAt(order, expiryDays);
   if (!expiresAt) return null;
   const hoursLeft = (expiresAt.getTime() - now) / 3600_000;
   const text = hoursLeft <= 0 ? "vence hoy" : hoursLeft < 24 ? `vence en ${Math.ceil(hoursLeft)} h` : `vence en ${Math.ceil(hoursLeft / 24)} días`;
@@ -127,7 +127,7 @@ function ExpiryNotice({ order, now }: { order: SalesOrder; now: number }) {
   );
 }
 
-export function SalesTable({ orders }: { orders: SalesOrder[] }) {
+export function SalesTable({ orders, expiryDays }: { orders: SalesOrder[]; expiryDays: ExpiryDaysByMethod }) {
   const [selected, setSelected] = useState<SalesOrder | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
   // Un solo "ahora" por carga de la lista, para calcular cuánto le falta a cada pendiente para vencer
@@ -192,7 +192,7 @@ export function SalesTable({ orders }: { orders: SalesOrder[] }) {
                     <div className="flex flex-col items-start gap-1">
                       <OrderStatusSelect orderId={o.id} status={o.status} />
                       {o.status === "confirmed" && !o.odooPickingId && <MissingPickingNotice orderId={o.id} />}
-                      <ExpiryNotice order={o} now={now} />
+                      <ExpiryNotice order={o} now={now} expiryDays={expiryDays} />
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">

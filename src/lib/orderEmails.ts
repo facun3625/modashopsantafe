@@ -2,7 +2,8 @@ import { getStoreSettingsRow } from "@/lib/settings";
 import { getMailSender } from "@/lib/mailer";
 import { buildMailHtml } from "@/lib/mailTemplate";
 import { sendPushToUser } from "@/lib/webPush";
-import { EXPIRING_PAYMENT_METHODS, PENDING_EXPIRY_DAYS } from "@/lib/orderExpiryRules";
+import { prisma } from "@/lib/prisma";
+import type { PaymentMethod } from "@/generated/prisma/enums";
 
 // Mail "Recibimos tu pedido" que se le manda al cliente al confirmar la compra.
 // Fire and forget desde la ruta de pedidos: nunca tira ni frena la venta.
@@ -101,9 +102,11 @@ export async function sendOrderConfirmation(order: OrderConfirmationEmail): Prom
   if (note) paragraphs.push(note);
   // Aviso fijo (no editable) del vencimiento: va siempre que el pedido pueda vencer, para que coincida con lo que hace
   // el sistema aunque el admin haya personalizado la nota.
-  if (EXPIRING_PAYMENT_METHODS.includes(order.paymentMethod)) {
+  const expiry = await prisma.paymentMethodConfig.findFirst({ where: { method: order.paymentMethod as PaymentMethod }, select: { pendingExpiryDays: true } });
+  const expiryDays = expiry?.pendingExpiryDays ?? 0;
+  if (expiryDays > 0) {
     paragraphs.push(
-      `Reservamos tus productos por ${PENDING_EXPIRY_DAYS} días: si en ese plazo no se confirma el pedido, se cancela automáticamente y te avisamos por mail.`
+      `Reservamos tus productos por ${expiryDays} ${expiryDays === 1 ? "día" : "días"}: si en ese plazo no se confirma el pedido, se cancela automáticamente y te avisamos por mail.`
     );
   }
   paragraphs.push(closing);

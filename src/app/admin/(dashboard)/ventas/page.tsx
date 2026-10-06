@@ -1,4 +1,5 @@
 import { getSalesPage } from "@/lib/sales";
+import { getPendingExpiryDays } from "@/lib/orderExpiry";
 import type { OrderStatus, PaymentMethod } from "@/generated/prisma/enums";
 import { Pagination } from "@/components/Pagination";
 import { SalesTable } from "./SalesTable";
@@ -25,6 +26,7 @@ export default async function AdminVentasPage({
     : undefined;
   const productId = params.productId ? Number(params.productId) : undefined;
 
+  const expiryDays = await getPendingExpiryDays();
   const { orders, total } = await getSalesPage({
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
@@ -54,7 +56,7 @@ export default async function AdminVentasPage({
         <SalesFilters />
       </div>
 
-      <SalesTable orders={orders} />
+      <SalesTable orders={orders} expiryDays={expiryDays} />
 
       <div className="shrink-0">
         <Pagination

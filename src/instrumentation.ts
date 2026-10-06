@@ -20,7 +20,7 @@ export async function register() {
     releaseDeliveredReservations().catch((err) =>
       console.error("releaseDeliveredReservations (auto) failed", err)
     );
-    // ...y cancela los pendientes de contra entrega con más de 5 días, avisándole al cliente.
+    // ...y cancela los pendientes de contra entrega que pasaron los días configurados en Pagos, avisándole al cliente.
     expirePendingOrders().catch((err) => console.error("expirePendingOrders (auto) failed", err));
   };
 

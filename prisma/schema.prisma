@@ -481,6 +481,11 @@ model PaymentMethodConfig {
   bankAlias      String?
   bankHolderName String?
 
+  // Días tras los cuales un pedido pendiente con este medio se cancela solo (ver lib/orderExpiry.ts). Null o 0 = no
+  // vence. Se edita solo en contra entrega: en transferencia el cliente ya adjuntó comprobante, y en MP/Payway un
+  // pendiente puede ser un pago en conciliación.
+  pendingExpiryDays Int?
+
   // Si no tiene ninguna fila acá, el medio de pago acepta cualquier envío
   // habilitado. Si tiene una o más, queda restringido a esos.
   allowedShipping PaymentMethodShipping[]
