@@ -25,7 +25,7 @@ export function CouponsList({ items, categories, lockedKind }: { items: CouponLi
       <div className="flex flex-wrap items-center gap-2">
         {!lockedKind && (
           <div className="flex flex-wrap gap-1.5">
-            {(["all", "quick", "regular", "points"] as const).map((k) => (
+            {(["all", "quick", "welcome", "regular", "points"] as const).map((k) => (
               <button key={k} type="button" onClick={() => setKind(k)} className={`${chip} ${kind === k ? chipOn : chipOff}`}>
                 {k === "all" ? "Todos los tipos" : KIND_LABEL[k]}
               </button>

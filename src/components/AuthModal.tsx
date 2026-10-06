@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { WelcomeCouponNotice, type WelcomeCouponInfo } from "@/components/WelcomeCouponNotice";
 import { AnimatePresence, motion } from "framer-motion";
 import { signIn } from "next-auth/react";
 import { useAuthModal } from "@/lib/authModal";
@@ -164,6 +165,7 @@ function LoginForm({ onDone }: { onDone: () => void }) {
 }
 
 function RegistroForm({ onDone }: { onDone: () => void }) {
+  const [welcome, setWelcome] = useState<WelcomeCouponInfo | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -188,10 +190,14 @@ function RegistroForm({ onDone }: { onDone: () => void }) {
       return;
     }
 
+    const data = (await res.json().catch(() => ({}))) as { welcomeCoupon?: WelcomeCouponInfo | null };
     await signIn("credentials", { email, password, redirect: false });
     setLoading(false);
-    onDone();
+    if (data.welcomeCoupon) setWelcome(data.welcomeCoupon);
+    else onDone();
   }
+
+  if (welcome) return <WelcomeCouponNotice coupon={welcome} onContinue={onDone} />;
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">

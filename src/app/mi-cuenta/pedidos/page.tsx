@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WelcomeCouponCard } from "@/components/WelcomeCouponCard";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { orderStatusLabel, paymentMethodLabel } from "@/lib/sales";
@@ -31,6 +32,8 @@ export default async function MisPedidosPage() {
     <div className="mx-auto max-w-3xl px-3 py-8 sm:px-6 sm:py-12">
       <h1 className="text-2xl font-bold text-brand-ink">Mis pedidos</h1>
       <p className="mt-1 text-brand-muted">Historial de compras hechas con esta cuenta.</p>
+
+      <WelcomeCouponCard userId={session.user.id} />
 
       {orders.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-black/15 bg-white p-8 text-center">

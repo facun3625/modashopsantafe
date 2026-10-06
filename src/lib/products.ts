@@ -46,6 +46,8 @@ export async function getProductsPage(opts: {
   query?: string;
   limit: number;
   offset: number;
+  // Categorías que van primero, en este orden (con sus subcategorías); después el resto. Solo para la vista general.
+  priorityCategoryIds?: number[];
 }): Promise<{ products: OdooProductListItem[]; total: number }> {
   const domain: unknown[] = [["sale_ok", "=", true], HAS_IMAGE_DOMAIN];
   if (opts.categoryId) {
@@ -66,16 +68,62 @@ export async function getProductsPage(opts: {
     domain.push(["qty_available", ">", 0]);
   }
 
+  if (opts.priorityCategoryIds && opts.priorityCategoryIds.length > 0) {
+    return getPrioritizedPage(domain, opts.priorityCategoryIds, opts.limit, opts.offset);
+  }
+
   const [products, total] = await Promise.all([
     executeKw<OdooProductListItem[]>("product.template", "search_read", [domain], {
       fields: PRODUCT_LIST_FIELDS,
       limit: opts.limit,
       offset: opts.offset,
-      order: "name asc",
+      // id desempata productos con el mismo nombre: sin eso, al paginar se repiten o se saltean entre páginas
+      order: "name asc, id asc",
     }),
     executeKw<number>("product.template", "search_count", [domain]),
   ]);
 
+  return { products: await applyReservations(products), total };
+}
+
+// Arma el catálogo como una sola lista hecha de tramos: un tramo por categoría prioritaria (en orden, sin repetir lo
+// que ya entró en un tramo anterior, por si una es subcategoría de otra) y al final el resto. Cuenta cada tramo y trae
+// solo las partes que caen dentro de la página pedida, así la paginación sigue siendo continua.
+async function getPrioritizedPage(
+  base: unknown[],
+  priorityIds: number[],
+  limit: number,
+  offset: number
+): Promise<{ products: OdooProductListItem[]; total: number }> {
+  const notIn = (ids: number[]) => ids.flatMap((id) => ["!", ["categ_id", "child_of", id]]);
+  const segments = [
+    ...priorityIds.map((id, i) => [...base, ["categ_id", "child_of", id], ...notIn(priorityIds.slice(0, i))]),
+    [...base, ...notIn(priorityIds)],
+  ];
+
+  const counts = await Promise.all(segments.map((d) => executeKw<number>("product.template", "search_count", [d])));
+  const total = counts.reduce((a, b) => a + b, 0);
+
+  const reads: Promise<OdooProductListItem[]>[] = [];
+  let start = 0;
+  for (let i = 0; i < segments.length; i++) {
+    const end = start + counts[i];
+    const from = Math.max(offset, start);
+    const to = Math.min(offset + limit, end);
+    if (from < to) {
+      reads.push(
+        executeKw<OdooProductListItem[]>("product.template", "search_read", [segments[i]], {
+          fields: PRODUCT_LIST_FIELDS,
+          limit: to - from,
+          offset: from - start,
+          order: "name asc, id asc",
+        })
+      );
+    }
+    start = end;
+  }
+
+  const products = (await Promise.all(reads)).flat();
   return { products: await applyReservations(products), total };
 }
 

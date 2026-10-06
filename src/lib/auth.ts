@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { issueWelcomeCoupon } from "@/lib/welcomeCoupon";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -46,11 +47,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // misma cuenta: es el mismo email, es la misma persona.
     async signIn({ user, account }) {
       if (account?.provider === "google" && user.email) {
-        await prisma.user.upsert({
-          where: { email: user.email },
-          create: { email: user.email, name: user.name },
-          update: {},
-        });
+        const existing = await prisma.user.findUnique({ where: { email: user.email }, select: { id: true } });
+        if (!existing) {
+          // Cuenta nueva por Google: también recibe el cupón de bienvenida (lo ve en Mi cuenta y le llega por mail)
+          const created = await prisma.user.upsert({
+            where: { email: user.email },
+            create: { email: user.email, name: user.name },
+            update: {},
+          });
+          await issueWelcomeCoupon({ id: created.id, email: created.email, name: created.name });
+        }
       }
       return true;
     },

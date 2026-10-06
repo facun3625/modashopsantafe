@@ -9,7 +9,7 @@ import { TelegramTestButton } from "./TelegramTestButton";
 import { SettingsTabs } from "./SettingsTabs";
 import { CategoryChipSelector } from "./CategoryChipSelector";
 import { IconPicker } from "./IconPicker";
-import { WrenchIcon, PackageIcon, StarIcon } from "@/components/icons";
+import { WrenchIcon, PackageIcon, StarIcon, TagIcon } from "@/components/icons";
 import { DEFAULT_INTRO, DEFAULT_NOTES, DEFAULT_CLOSING } from "@/lib/orderEmails";
 import { getCashDiscountPct } from "@/lib/paymentSettings";
 import { syncNow } from "../puntos/actions";
@@ -20,6 +20,7 @@ import {
   updateOrderEmailSettings,
   updateMaintenanceMode,
   updateHideOutOfStock,
+  updateWelcomeCouponSettings,
   updateAiAssistantSettings,
   updateBenefitsSettings,
   updatePopupSettings,
@@ -122,6 +123,57 @@ export default async function AdminConfiguracionPage({
         </div>
       </form>
 
+      <form
+        action={updateWelcomeCouponSettings}
+        className={`rounded-xl border p-5 ${settings.welcomeCouponEnabled ? "border-brand-pink/30 bg-white" : "border-black/10 bg-white"}`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-muted">
+              <TagIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-semibold text-brand-ink">Cupón de bienvenida</p>
+              <p className="text-xs text-brand-muted">
+                {settings.welcomeCouponEnabled
+                  ? "Cada cuenta nueva recibe un cupón personal de un solo uso: lo ve al registrarse, en Mi cuenta y por mail."
+                  : "Apagado: las cuentas nuevas no reciben cupón."}{" "}
+                No se genera si ese email ya tenía compras.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <ToggleSwitch name="welcomeCouponEnabled" defaultChecked={settings.welcomeCouponEnabled} />
+            <SaveButton trackDirty />
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-end gap-4 border-t border-black/5 pt-4">
+          <div>
+            <label className={labelClasses}>Tipo</label>
+            <select name="welcomeCouponType" defaultValue={settings.welcomeCouponType} className="rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none">
+              <option value="percentage">Porcentaje (%)</option>
+              <option value="fixed">Monto fijo ($)</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClasses}>Valor</label>
+            <input type="number" name="welcomeCouponValue" min={1} step="any" defaultValue={settings.welcomeCouponValue} className="w-28 rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none" />
+          </div>
+          <div>
+            <label className={labelClasses}>Vence en (días, 0 = nunca)</label>
+            <input type="number" name="welcomeCouponDays" min={0} max={365} step={1} defaultValue={settings.welcomeCouponDays} className="w-28 rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none" />
+          </div>
+          <div>
+            <label className={labelClasses}>Compra mínima ($, opcional)</label>
+            <input type="number" name="welcomeCouponMinPurchase" min={0} step="any" defaultValue={settings.welcomeCouponMinPurchase ?? ""} placeholder="Sin mínimo" className="w-36 rounded-lg border border-black/10 px-3 py-2 text-sm text-brand-ink focus:border-brand-pink focus:outline-none" />
+          </div>
+        </div>
+        <p className="mt-2 text-xs text-brand-muted">
+          Se suma al descuento del medio de pago, como cualquier cupón. Los cambios aplican a las cuentas que se creen desde ahora.
+        </p>
+      </form>
+
       <div className="rounded-xl border border-black/10 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -220,6 +272,21 @@ export default async function AdminConfiguracionPage({
               orden (reordenalas con las flechas). Si no elegís ninguna, se usa una selección por defecto.
             </p>
             <CategoryChipSelector categories={categories} selectedIds={settings.featuredCategoryIds} />
+          </div>
+
+          <div className="mt-5 border-t border-black/5 pt-4">
+            <label className={labelClasses}>Categorías primero en la tienda</label>
+            <p className="mb-2.5 text-xs text-brand-muted">
+              Al entrar a la tienda sin filtros, se muestran primero los productos de estas categorías (con sus
+              subcategorías), en este orden, y después el resto. Si el cliente elige una categoría o busca algo, no
+              aplica.
+            </p>
+            <CategoryChipSelector
+              categories={categories}
+              selectedIds={settings.shopPriorityCategoryIds}
+              name="shopPriorityCategoryIds"
+              emptyText="Ninguna elegida — la tienda se ordena alfabéticamente, como siempre."
+            />
           </div>
 
           <div className="mt-5 border-t border-black/5 pt-4">

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getAllCategories } from "@/lib/categories";
 import { getProductsPage, getProductCountsByCategory } from "@/lib/products";
+import { getStoreSettingsRow } from "@/lib/settings";
 import { CategorySidebar } from "@/components/CategorySidebar";
 import { ShopControls } from "@/components/ShopControls";
 import { ProductCard } from "@/components/ProductCard";
@@ -20,7 +21,11 @@ export async function ShopView({
   const page = Math.max(1, Number(searchParams.page) || 1);
   const basePath = categoryId ? `/categoria/${categoryId}` : "/tienda";
 
-  const categories = await getAllCategories();
+  const [categories, settings] = await Promise.all([getAllCategories(), getStoreSettingsRow()]);
+  // Orden elegido en Configuración: solo en la vista general (sin categoría ni búsqueda), y solo con categorías que
+  // todavía existen en Odoo
+  const known = new Set(categories.map((c) => c.id));
+  const priorityCategoryIds = !categoryId && !query ? settings.shopPriorityCategoryIds.filter((id) => known.has(id)) : [];
 
   let category = null;
   if (categoryId) {
@@ -35,6 +40,7 @@ export async function ShopView({
       query: query || undefined,
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
+      priorityCategoryIds,
     }),
   ]);
 

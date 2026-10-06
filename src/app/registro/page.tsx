@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { WelcomeCouponNotice, type WelcomeCouponInfo } from "@/components/WelcomeCouponNotice";
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function RegistroPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [welcome, setWelcome] = useState<WelcomeCouponInfo | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,9 +33,27 @@ export default function RegistroPage() {
       return;
     }
 
+    const data = (await res.json().catch(() => ({}))) as { welcomeCoupon?: WelcomeCouponInfo | null };
     await signIn("credentials", { email, password, redirect: false });
+    if (data.welcomeCoupon) {
+      setWelcome(data.welcomeCoupon);
+      setLoading(false);
+      return;
+    }
+    goHome();
+  }
+
+  function goHome() {
     router.push("/");
     router.refresh();
+  }
+
+  if (welcome) {
+    return (
+      <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-6 py-16">
+        <WelcomeCouponNotice coupon={welcome} onContinue={goHome} />
+      </div>
+    );
   }
 
   return (

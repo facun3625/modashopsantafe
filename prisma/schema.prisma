@@ -140,6 +140,18 @@ model StoreSettings {
   // lib/settings.ts).
   featuredCategoryIds Int[] @default([])
 
+  // Categorías (ids de Odoo) que se muestran primero en /tienda sin filtros, en este orden (incluye subcategorías).
+  // Después va el resto del catálogo. Vacío = la tienda se ordena como siempre (alfabético).
+  shopPriorityCategoryIds Int[] @default([])
+
+  // Cupón de bienvenida para cuentas nuevas (ver lib/welcomeCoupon.ts): al registrarse se genera uno personal, de un
+  // solo uso y atado a la cuenta. No se genera si ese email ya tenía pedidos.
+  welcomeCouponEnabled     Boolean      @default(false)
+  welcomeCouponType        DiscountType @default(percentage)
+  welcomeCouponValue       Float        @default(10)
+  welcomeCouponDays        Int          @default(7)
+  welcomeCouponMinPurchase Float?
+
   // Franja de 3 beneficios debajo del hero (ver BenefitsStrip) — ícono
   // (clave de components/icons.tsx, ver BENEFIT_ICON_OPTIONS), título y
   // subtítulo, editables desde /admin/configuracion. Null = se usa el valor

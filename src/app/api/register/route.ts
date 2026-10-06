@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { issueWelcomeCoupon } from "@/lib/welcomeCoupon";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -24,5 +25,8 @@ export async function POST(req: Request) {
     select: { id: true, name: true, email: true },
   });
 
-  return NextResponse.json(user, { status: 201 });
+  // Si está activado en Configuración, se le regala un cupón de bienvenida (se muestra al terminar el registro)
+  const welcomeCoupon = await issueWelcomeCoupon(user);
+
+  return NextResponse.json({ ...user, welcomeCoupon }, { status: 201 });
 }

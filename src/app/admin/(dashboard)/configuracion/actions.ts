@@ -23,6 +23,24 @@ export async function updateMaintenanceMode(formData: FormData) {
   revalidatePath("/admin/inicio");
 }
 
+// Cupón de bienvenida para cuentas nuevas (ver lib/welcomeCoupon.ts)
+export async function updateWelcomeCouponSettings(formData: FormData) {
+  await requireAdmin();
+  const type = formData.get("welcomeCouponType") === "fixed" ? "fixed" : "percentage";
+  const rawValue = Math.max(0, Number(formData.get("welcomeCouponValue")) || 0);
+  const value = type === "percentage" ? Math.min(rawValue, 100) : rawValue;
+  const minPurchase = Number(formData.get("welcomeCouponMinPurchase")) || 0;
+  const data = {
+    welcomeCouponEnabled: formData.get("welcomeCouponEnabled") === "on",
+    welcomeCouponType: type as "fixed" | "percentage",
+    welcomeCouponValue: value,
+    welcomeCouponDays: Math.min(365, Math.max(0, Math.floor(Number(formData.get("welcomeCouponDays")) || 0))),
+    welcomeCouponMinPurchase: minPurchase > 0 ? minPurchase : null,
+  };
+  await prisma.storeSettings.upsert({ where: { id: "global" }, create: { id: "global", ...data }, update: data });
+  revalidatePath("/admin/configuracion");
+}
+
 export async function updateHideOutOfStock(formData: FormData) {
   await requireAdmin();
 
@@ -151,6 +169,7 @@ export async function updateSiteSettings(formData: FormData) {
     contactEmail: (formData.get("contactEmail") as string) || null,
     marqueeText: (formData.get("marqueeText") as string) || null,
     featuredCategoryIds: formData.getAll("featuredCategoryIds").map(Number),
+    shopPriorityCategoryIds: formData.getAll("shopPriorityCategoryIds").map(Number).filter((n) => Number.isInteger(n) && n > 0),
   };
 
   await prisma.storeSettings.upsert({
@@ -161,6 +180,7 @@ export async function updateSiteSettings(formData: FormData) {
 
   revalidatePath("/admin/configuracion");
   revalidatePath("/");
+  revalidatePath("/tienda");
 }
 
 // Franja de 3 beneficios del home (ver BenefitsStrip) — cada campo vacío
