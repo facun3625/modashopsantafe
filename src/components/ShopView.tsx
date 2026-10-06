@@ -53,11 +53,11 @@ export async function ShopView({
     .reduce((sum, c) => sum + (counts.get(c.id) ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-white px-3 py-8 sm:px-6 sm:py-12">
+    <div className="min-h-screen bg-white px-3 py-3 sm:px-6 sm:py-4">
       <ScrollToTop watch={`${categoryId ?? "all"}-${query}-${page}`} />
       <main className="mx-auto max-w-6xl">
-        <h1 className="mb-1 text-3xl font-bold text-brand-ink">{category ? category.name : "Tienda"}</h1>
-        <p className="mb-8 text-brand-muted">
+        <h1 className="mb-1 text-2xl font-bold text-brand-ink">{category ? category.name : "Tienda"}</h1>
+        <p className="mb-5 text-brand-muted">
           {category ? `${total} productos` : "Elegí una categoría para ver los productos."}
         </p>
 

@@ -1,10 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { topLevelCategories, childrenOf } from "@/lib/categoryHelpers";
 import type { OdooCategory } from "@/types/odoo";
+
+// Una sola flechita para todo: la inclinación indica si lleva a la categoría (derecha) o si despliega (abajo / arriba)
+function Chevron({ tilt = "right", className = "" }: { tilt?: "right" | "down" | "up"; className?: string }) {
+  // Base: flecha ancha apuntando abajo; se gira para indicar derecha o arriba
+  const rotate = tilt === "right" ? "-rotate-90" : tilt === "up" ? "rotate-180" : "";
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      className={`h-4 w-4 shrink-0 text-brand-pink transition-transform ${rotate} ${className}`}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
 
 export function CategorySidebar({
   categories,
@@ -17,10 +36,56 @@ export function CategorySidebar({
   grandTotal: number;
   activeCategoryId?: number;
 }) {
+  const visibleChildren = (id: number) => childrenOf(categories, id).filter((c) => (counts.get(c.id) ?? 0) > 0);
   const topLevel = topLevelCategories(categories).filter((c) => (counts.get(c.id) ?? 0) > 0);
 
-  const [openIds, setOpenIds] = useState<Set<number>>(() => new Set());
+  // Al entrar a una categoría, se abren sus padres para que se vea dónde está
+  const [openIds, setOpenIds] = useState<Set<number>>(() => {
+    const open = new Set<number>();
+    let cur = categories.find((c) => c.id === activeCategoryId);
+    while (cur && cur.parent_id) {
+      open.add(cur.parent_id[0]);
+      const pid = cur.parent_id[0];
+      cur = categories.find((c) => c.id === pid);
+    }
+    return open;
+  });
   const [panelOpen, setPanelOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [highlight, setHighlight] = useState(0);
+  const router = useRouter();
+
+  // Buscador predictivo: busca en todas las categorías con productos (también subcategorías), sin tildes ni mayúsculas
+  const results = useMemo(() => {
+    const norm = (v: string) => v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const terms = norm(query.trim()).split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return [];
+    return categories
+      .filter((c) => (counts.get(c.id) ?? 0) > 0)
+      .filter((c) => terms.every((t) => norm(c.name).includes(t)))
+      .slice(0, 8);
+  }, [query, categories, counts]);
+
+  function goTo(id: number) {
+    setQuery("");
+    setHighlight(0);
+    router.push(`/categoria/${id}`);
+  }
+
+  function onSearchKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((h) => Math.min(h + 1, Math.max(results.length - 1, 0)));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, 0));
+    } else if (e.key === "Enter" && results[highlight]) {
+      e.preventDefault();
+      goTo(results[highlight].id);
+    } else if (e.key === "Escape") {
+      setQuery("");
+    }
+  }
 
   useEffect(() => {
     setPanelOpen(window.innerWidth > 800);
@@ -50,16 +115,52 @@ export function CategorySidebar({
           </svg>
           Categorías
         </span>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          className={`h-3.5 w-3.5 shrink-0 transition-transform ${panelOpen ? "rotate-180" : ""}`}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
-        </svg>
+        <Chevron tilt={panelOpen ? "up" : "down"} className="text-brand-pink-dark" />
       </button>
+
+      <div className="relative mb-3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-brand-muted">
+          <circle cx="11" cy="11" r="7" />
+          <path strokeLinecap="round" d="m20 20-3.5-3.5" />
+        </svg>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setHighlight(0);
+          }}
+          onKeyDown={onSearchKey}
+          onBlur={() => setTimeout(() => setQuery(""), 150)}
+          placeholder="Buscar categoría…"
+          aria-label="Buscar una categoría"
+          className="w-full rounded-lg border border-black/10 bg-white py-2 pl-8 pr-2 text-sm text-brand-ink placeholder:text-brand-muted focus:border-brand-pink focus:outline-none"
+        />
+        {query.trim() && (
+          <ul className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-black/10 bg-white py-1 shadow-lg">
+            {results.length === 0 && <li className="px-3 py-2 text-sm text-brand-muted">Sin resultados</li>}
+            {results.map((c, i) => (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    goTo(c.id);
+                  }}
+                  onMouseEnter={() => setHighlight(i)}
+                  className={`flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-sm text-brand-ink ${i === highlight ? "bg-brand-pink/10 text-brand-pink-dark" : ""}`}
+                >
+                  <span className="min-w-0 truncate">
+                    {c.name}
+                    {c.parent_id && <span className="text-xs text-brand-muted"> · {c.parent_id[1]}</span>}
+                  </span>
+                  <span className="ml-2 shrink-0 text-xs text-brand-muted">{counts.get(c.id) ?? 0}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <AnimatePresence initial={false}>
         {panelOpen && (
@@ -71,99 +172,79 @@ export function CategorySidebar({
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="space-y-1 overflow-hidden text-sm"
           >
-        <li>
-          <Link
-            href="/tienda"
-            className={`flex items-center justify-between rounded-lg border-l-2 px-3 py-2 transition-colors ${
-              !activeCategoryId
-                ? "border-brand-pink bg-brand-pink/10 font-semibold text-brand-pink-dark"
-                : "border-transparent text-brand-ink hover:bg-brand-pink/5"
-            }`}
-          >
-            Todas
-            <span className="text-xs text-brand-muted">{grandTotal}</span>
-          </Link>
-        </li>
-
-        {topLevel.map((cat) => {
-          const active = cat.id === activeCategoryId;
-          const subcategories = childrenOf(categories, cat.id).filter((c) => (counts.get(c.id) ?? 0) > 0);
-          const hasChildren = subcategories.length > 0;
-          const isOpen = openIds.has(cat.id);
-
-          return (
-            <li key={cat.id}>
-              <div
-                className={`flex items-center rounded-lg border-l-2 transition-colors ${
-                  active
-                    ? "border-brand-pink bg-brand-pink/10"
-                    : "border-transparent hover:bg-brand-pink/5"
+            <li>
+              <Link
+                href="/tienda"
+                className={`flex items-center justify-between rounded-lg border-l-2 px-3 py-2 transition-colors ${
+                  !activeCategoryId
+                    ? "border-brand-pink bg-brand-pink/10 text-brand-pink-dark"
+                    : "border-transparent text-brand-ink hover:bg-brand-pink/5"
                 }`}
               >
-                <Link
-                  href={`/categoria/${cat.id}`}
-                  className={`flex flex-1 items-center justify-between px-3 py-2 ${
-                    active ? "font-semibold text-brand-pink-dark" : "text-brand-ink"
-                  }`}
-                >
-                  {cat.name}
-                  <span className="ml-2 text-xs text-brand-muted">{counts.get(cat.id) ?? 0}</span>
-                </Link>
-
-                {hasChildren && (
-                  <button
-                    type="button"
-                    onClick={() => toggle(cat.id)}
-                    aria-label={isOpen ? `Contraer ${cat.name}` : `Expandir ${cat.name}`}
-                    className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center text-brand-muted transition-colors hover:text-brand-pink-dark"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-
-              <AnimatePresence initial={false}>
-                {hasChildren && isOpen && (
-                  <motion.ul
-                    key={`sub-${cat.id}`}
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: "easeInOut" }}
-                    className="ml-3 mt-1 space-y-1 overflow-hidden border-l border-brand-pink/20 pl-3"
-                  >
-                    {subcategories.map((sub) => (
-                      <li key={sub.id}>
-                        <Link
-                          href={`/categoria/${sub.id}`}
-                          className={`flex items-center justify-between rounded-lg px-3 py-1.5 text-[13px] transition-colors ${
-                            sub.id === activeCategoryId
-                              ? "font-semibold text-brand-pink-dark"
-                              : "text-brand-muted hover:text-brand-pink-dark"
-                          }`}
-                        >
-                          {sub.name}
-                          <span className="text-xs text-brand-muted/70">{counts.get(sub.id) ?? 0}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </motion.ul>
-                )}
-              </AnimatePresence>
+                Todas
+                <span className="text-xs text-brand-muted">{grandTotal}</span>
+              </Link>
             </li>
-          );
-        })}
+
+            {topLevel.map((cat) => renderNode(cat))}
           </motion.ul>
         )}
       </AnimatePresence>
     </nav>
   );
+
+  // Una categoría con subcategorías se abre al tocarla y empuja la lista hacia abajo; sin subcategorías lleva a su página.
+  // Se repite en todos los niveles del árbol.
+  function renderNode(cat: OdooCategory): React.ReactNode {
+    const kids = visibleChildren(cat.id);
+    const active = cat.id === activeCategoryId;
+    const rowClass = `flex w-full items-center justify-between rounded-lg border-l-2 px-3 py-2 text-left transition-colors ${
+      active ? "border-brand-pink bg-brand-pink/10 text-brand-pink-dark" : "border-transparent text-brand-ink hover:bg-brand-pink/5"
+    }`;
+
+    if (kids.length === 0) {
+      return (
+        <li key={cat.id}>
+          <Link href={`/categoria/${cat.id}`} className={rowClass}>
+            {cat.name}
+            <Chevron />
+          </Link>
+        </li>
+      );
+    }
+
+    const isOpen = openIds.has(cat.id);
+    return (
+      <li key={cat.id}>
+        <button type="button" onClick={() => toggle(cat.id)} aria-expanded={isOpen} className={rowClass}>
+          {cat.name}
+          <Chevron tilt={isOpen ? "up" : "down"} />
+        </button>
+
+        <AnimatePresence initial={false}>
+          {isOpen && (
+            <motion.ul
+              key={`sub-${cat.id}`}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="ml-3 mt-1 space-y-1 overflow-hidden border-l border-brand-pink/20 pl-3"
+            >
+              <li>
+                <Link
+                  href={`/categoria/${cat.id}`}
+                  className="flex items-center justify-between rounded-lg px-3 py-1.5 text-[13px] text-brand-pink-dark hover:bg-brand-pink/5"
+                >
+                  Ver todo en {cat.name}
+                  <Chevron />
+                </Link>
+              </li>
+              {kids.map((child) => renderNode(child))}
+            </motion.ul>
+          )}
+        </AnimatePresence>
+      </li>
+    );
+  }
 }

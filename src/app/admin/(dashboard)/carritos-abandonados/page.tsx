@@ -50,6 +50,9 @@ export default async function AdminCarritosAbandonadosPage({
     include: { user: { select: { name: true, email: true, phone: true } } },
   });
 
+  // El link del mensaje de WhatsApp vuelve a cargar el carrito guardado en el navegador de quien lo abre
+  const base = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "");
+
   const emails = carts.map((c) => c.user?.email ?? c.email).filter((e): e is string => Boolean(e));
 
   const [recoverySettings, mailSender, sentLast7Days] = await Promise.all([
@@ -150,7 +153,7 @@ export default async function AdminCarritosAbandonadosPage({
                         <a
                           href={buildWhatsAppLink(
                             phone,
-                            `Hola ${cart.user?.name ?? cart.name ?? ""}! Vimos que dejaste ${items.length === 1 ? items[0]?.name ?? "un producto" : `${items.length} productos`} en tu carrito de ModaShop. ¿Te ayudamos a completar la compra?`
+                            `Hola ${cart.user?.name ?? cart.name ?? ""}! Vimos que dejaste ${items.length === 1 ? items[0]?.name ?? "un producto" : `${items.length} productos`} en tu carrito de ModaShop. ¿Te ayudamos a completar la compra? ${base}/carrito?recuperar=${cart.id}`
                           )}
                           target="_blank"
                           rel="noopener noreferrer"
