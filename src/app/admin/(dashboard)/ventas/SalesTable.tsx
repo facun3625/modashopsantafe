@@ -6,7 +6,8 @@ import type { OrderStatus } from "@/generated/prisma/enums";
 import { orderStatusLabel, paymentMethodLabel, ORDER_STATUS_STYLES } from "@/lib/orderLabels";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EyeIcon } from "@/components/icons";
-import { changeOrderStatus, deleteOrder } from "./actions";
+import { changeOrderStatus, deleteOrder, retryOrderPicking } from "./actions";
+import { pendingExpiresAt } from "@/lib/orderExpiryRules";
 
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "webp", "gif", "avif"];
 const STATUSES: OrderStatus[] = ["pending", "confirmed", "delivered", "cancelled"];
@@ -20,24 +21,33 @@ function receiptKind(url: string | null): "image" | "pdf" | "other" | null {
 }
 
 // Select de estado que aplica el cambio al instante (sin botón aceptar).
-// Optimista: muestra el nuevo estado enseguida y revierte si el server falla.
+// Optimista: muestra el nuevo estado enseguida y revierte si el server no lo pudo aplicar (ej. Odoo no respondió al
+// cancelar), mostrando el motivo.
 function OrderStatusSelect({ orderId, status }: { orderId: string; status: OrderStatus }) {
   const [value, setValue] = useState<OrderStatus>(status);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function onChange(next: OrderStatus) {
     const prev = value;
     setValue(next);
+    setError(null);
     startTransition(async () => {
       try {
-        await changeOrderStatus(orderId, next);
+        const result = await changeOrderStatus(orderId, next);
+        if (!result.ok) {
+          setValue(prev);
+          setError(result.error);
+        }
       } catch {
         setValue(prev);
+        setError("No se pudo cambiar el estado. Probá de nuevo.");
       }
     });
   }
 
   return (
+    <div className="flex flex-col items-start gap-1">
     <select
       value={value}
       disabled={pending}
@@ -52,12 +62,76 @@ function OrderStatusSelect({ orderId, status }: { orderId: string; status: Order
         </option>
       ))}
     </select>
+    {error && <p className="max-w-[260px] text-[11px] font-medium text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+// Aviso + botón "Reintentar" para un pedido confirmado que no tiene orden en Odoo (falló al confirmar, o es viejo).
+function MissingPickingNotice({ orderId }: { orderId: string }) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function retry() {
+    setError(null);
+    startTransition(async () => {
+      const result = await retryOrderPicking(orderId).catch(() => ({ ok: false as const, error: "No se pudo reintentar." }));
+      if (!result.ok) setError(result.error);
+    });
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center gap-1.5">
+        <span
+          className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700"
+          title="No tiene orden en Odoo, así que nunca se va a marcar como entregado solo. Reintentar la crea de nuevo (y limpia cualquier orden incompleta). Si esta venta ya se despachó, no reintentes: cambiá el estado a mano."
+        >
+          sin orden en Odoo
+        </span>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={retry}
+          className="cursor-pointer rounded-full border border-amber-300 px-2 py-0.5 text-[11px] font-semibold text-amber-800 hover:bg-amber-50 disabled:opacity-50"
+        >
+          {pending ? "Reintentando…" : "Reintentar"}
+        </button>
+      </div>
+      {error && <p className="max-w-[260px] text-[11px] font-medium text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+// "Vence en X días" para pendientes que se cancelan solos, o "Vencido sin pago" si ya se canceló por eso.
+function ExpiryNotice({ order, now }: { order: SalesOrder; now: number }) {
+  if (order.status === "cancelled" && order.expiredAt) {
+    return (
+      <span className="inline-block rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600" title={`Se canceló solo el ${order.expiredAt.toLocaleDateString("es-AR")} y se le avisó al cliente por mail.`}>
+        vencido sin pago
+      </span>
+    );
+  }
+  if (order.status !== "pending") return null;
+  const expiresAt = pendingExpiresAt(order);
+  if (!expiresAt) return null;
+  const hoursLeft = (expiresAt.getTime() - now) / 3600_000;
+  const text = hoursLeft <= 0 ? "vence hoy" : hoursLeft < 24 ? `vence en ${Math.ceil(hoursLeft)} h` : `vence en ${Math.ceil(hoursLeft / 24)} días`;
+  return (
+    <span
+      className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${hoursLeft < 24 ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}
+      title={`Si no se confirma antes del ${expiresAt.toLocaleString("es-AR")}, se cancela solo, se libera el stock y se le avisa al cliente por mail.`}
+    >
+      {text}
+    </span>
   );
 }
 
 export function SalesTable({ orders }: { orders: SalesOrder[] }) {
   const [selected, setSelected] = useState<SalesOrder | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  // Un solo "ahora" por carga de la lista, para calcular cuánto le falta a cada pendiente para vencer
+  const [now] = useState(() => Date.now());
 
   // Abre el comprobante directo desde la lista: imagen en lightbox, PDF/otros
   // en pestaña nueva.
@@ -117,14 +191,8 @@ export function SalesTable({ orders }: { orders: SalesOrder[] }) {
                   <td className="px-4 py-3">
                     <div className="flex flex-col items-start gap-1">
                       <OrderStatusSelect orderId={o.id} status={o.status} />
-                      {(o.status === "pending" || o.status === "confirmed") && !o.odooPickingId && (
-                        <span
-                          className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700"
-                          title="No tiene picking en Odoo enganchado, así que el chequeo automático (cada 15 min) nunca lo va a poder marcar como entregado solo. Si esta venta ya se despachó, cambiá el estado a mano para liberar el stock que está reteniendo."
-                        >
-                          sin picking — revisar
-                        </span>
-                      )}
+                      {o.status === "confirmed" && !o.odooPickingId && <MissingPickingNotice orderId={o.id} />}
+                      <ExpiryNotice order={o} now={now} />
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -176,12 +244,19 @@ function OrderDetailModal({
 }) {
   const [isPending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const kind = receiptKind(order.transferProofUrl);
   const showPdfPanel = kind === "pdf";
 
   function doDelete() {
+    setDeleteError(null);
     startTransition(async () => {
-      await deleteOrder(order.id);
+      const result = await deleteOrder(order.id).catch(() => ({ ok: false as const, error: "No se pudo eliminar. Probá de nuevo." }));
+      if (!result.ok) {
+        setConfirmDelete(false);
+        setDeleteError(result.error);
+        return;
+      }
       onClose();
     });
   }
@@ -312,7 +387,8 @@ function OrderDetailModal({
             )}
 
             {/* Eliminar */}
-            <div className="flex justify-end border-t border-black/10 pt-4">
+            <div className="flex items-center justify-end gap-3 border-t border-black/10 pt-4">
+              {deleteError && <p className="text-xs font-medium text-red-600">{deleteError}</p>}
               <button
                 disabled={isPending}
                 onClick={() => setConfirmDelete(true)}

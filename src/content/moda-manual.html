@@ -309,7 +309,7 @@
         <code>Confirmado</code> — el pago ya está OK; en ese momento se genera la orden reservada en Odoo.<br>
         <code>Entregado</code> — se pone <b>solo</b> cuando el equipo despacha el pedido en Odoo (se revisa cada 15 min); ahí se liberan el stock reservado y, si el cliente tiene cuenta, sus puntos.<br>
         <code>Cancelado</code> — libera la reserva de stock igual que Entregado, pero sin acreditar puntos.</p>
-        <p>Si un pedido pending/confirmed muestra el chip amarillo <b>"sin picking — revisar"</b>, es uno que quedó sin engancharse a una orden de Odoo (típicamente uno viejo, de antes de esta automatización) — nunca se va a liberar solo, hay que cambiarle el estado a mano.</p>
+        <p>Si un pedido <b>confirmado</b> muestra el chip amarillo <b>"sin picking — revisar"</b>, es uno que quedó sin engancharse a una orden de Odoo (típicamente uno viejo, de antes de esta automatización) — nunca se va a liberar solo, hay que cambiarle el estado a mano. Un pedido <b>pendiente</b> sin picking es normal: la orden en Odoo se crea recién al confirmar el pago.</p>
       </div>
     </section>
 

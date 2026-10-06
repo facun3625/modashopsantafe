@@ -9,6 +9,8 @@ const ACTION_LABELS: Record<string, string> = {
   "order.deliver": "Marcó como entregado",
   "order.reopen": "Reabrió el pedido (pago pendiente)",
   "order.delete": "Eliminó el pedido",
+  "order.picking_retry": "Reintentó crear la orden en Odoo",
+  "order.expire": "Venció sin pago (cancelado solo)",
   "payment.enable": "Activó un medio de pago",
   "payment.disable": "Desactivó un medio de pago",
   "payment.update": "Editó un medio de pago",
@@ -38,7 +40,8 @@ export async function logAdminAction(
   opts?: { targetType?: string; targetId?: string; detail?: string; adminEmail?: string; adminId?: string }
 ): Promise<void> {
   try {
-    const session = await auth();
+    // Las tareas de fondo (ej. vencimiento de pedidos) pasan adminEmail y no tienen sesión: no se pide.
+    const session = opts?.adminEmail ? null : await auth();
     await prisma.adminLog.create({
       data: {
         adminId: opts?.adminId ?? session?.user?.id ?? null,

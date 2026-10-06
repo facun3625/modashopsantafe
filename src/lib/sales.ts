@@ -49,6 +49,7 @@ export async function getSalesPage(opts: {
         couponDiscount: true,
         createdAt: true,
         odooPickingId: true,
+        expiredAt: true,
         shippingMethod: { select: { name: true } },
         items: { select: { id: true, name: true, price: true, quantity: true } },
       },

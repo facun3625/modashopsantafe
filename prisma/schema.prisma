@@ -671,6 +671,10 @@ model Order {
   // Comprobante adjuntado por el cliente (solo transferencia)
   transferProofUrl String?
 
+  // Cuándo se canceló solo por falta de pago (pendiente de contra entrega con más de
+  // PENDING_EXPIRY_DAYS, ver lib/orderExpiry.ts). Null = no venció.
+  expiredAt DateTime?
+
   items OrderItem[]
 
   createdAt DateTime @default(now())

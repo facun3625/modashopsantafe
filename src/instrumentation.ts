@@ -9,6 +9,7 @@ export async function register() {
 
   const { syncDeliveredOrders } = await import("@/lib/points");
   const { releaseDeliveredReservations } = await import("@/lib/reservations");
+  const { expirePendingOrders } = await import("@/lib/orderExpiry");
   const INTERVAL_MS = 15 * 60 * 1000;
 
   const run = () => {
@@ -19,6 +20,8 @@ export async function register() {
     releaseDeliveredReservations().catch((err) =>
       console.error("releaseDeliveredReservations (auto) failed", err)
     );
+    // ...y cancela los pendientes de contra entrega con más de 5 días, avisándole al cliente.
+    expirePendingOrders().catch((err) => console.error("expirePendingOrders (auto) failed", err));
   };
 
   setTimeout(run, 30_000);
