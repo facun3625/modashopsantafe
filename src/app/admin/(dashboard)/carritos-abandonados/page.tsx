@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/admin/Badge";
-import { WhatsAppIcon } from "@/components/icons";
+import { WhatsAppSentCell } from "@/components/admin/WhatsAppSentCell";
+import { WhatsAppSendLink } from "@/components/admin/WhatsAppSendLink";
 import { buildWhatsAppLink, isLikelyPhone } from "@/lib/whatsapp";
 import { CopyEmailsButton } from "./CopyEmailsButton";
 import { UserTypeFilter } from "./UserTypeFilter";
-import { deleteAbandonedCart, cleanupOldAbandonedCarts } from "./actions";
+import { deleteAbandonedCart, cleanupOldAbandonedCarts, markCartWhatsApp } from "./actions";
 import { CartRecoveryPanel } from "./CartRecoveryPanel";
 import { getStoreSettingsRow } from "@/lib/settings";
 import { getMailSender } from "@/lib/mailer";
@@ -108,6 +109,7 @@ export default async function AdminCarritosAbandonadosPage({
               <th className="px-4 py-3 font-semibold">Items</th>
               <th className="px-4 py-3 font-semibold">Total</th>
               <th className="px-4 py-3 font-semibold">Última actividad</th>
+              <th className="px-4 py-3 font-semibold">WhatsApp</th>
               <th className="px-4 py-3 font-semibold" />
             </tr>
           </thead>
@@ -148,22 +150,24 @@ export default async function AdminCarritosAbandonadosPage({
                   <td className="px-4 py-3 text-brand-pink-dark">${cart.total.toFixed(2)}</td>
                   <td className="px-4 py-3 text-brand-muted">{timeAgo(cart.lastActive)}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-3">
-                      {phone && isLikelyPhone(phone) && (
-                        <a
+                    {phone && isLikelyPhone(phone) ? (
+                      <div className="flex flex-col gap-1">
+                        <WhatsAppSentCell date={cart.whatsappSentAt} count={cart.whatsappCount} />
+                        <WhatsAppSendLink
+                          sent={Boolean(cart.whatsappSentAt)}
+                          onSent={markCartWhatsApp.bind(null, cart.id)}
                           href={buildWhatsAppLink(
                             phone,
                             `Hola ${cart.user?.name ?? cart.name ?? ""}! Vimos que dejaste ${items.length === 1 ? items[0]?.name ?? "un producto" : `${items.length} productos`} en tu carrito de ModaShop. ¿Te ayudamos a completar la compra? ${base}/carrito?recuperar=${cart.id}`
                           )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="Escribir por WhatsApp"
-                          className="flex items-center gap-1 text-xs font-semibold text-green-700 hover:underline"
-                        >
-                          <WhatsAppIcon className="h-3.5 w-3.5 shrink-0" />
-                          WhatsApp
-                        </a>
-                      )}
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-brand-muted">Sin teléfono</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-3">
                       <form action={deleteAbandonedCart.bind(null, cart.id)}>
                         <button
                           type="submit"
@@ -179,7 +183,7 @@ export default async function AdminCarritosAbandonadosPage({
             })}
             {carts.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-brand-muted">
+                <td colSpan={7} className="px-4 py-8 text-center text-brand-muted">
                   No hay carritos abandonados por ahora.
                 </td>
               </tr>

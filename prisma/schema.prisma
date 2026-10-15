@@ -74,6 +74,9 @@ model WaitlistEntry {
   email        String
 
   createdAt DateTime @default(now())
+  // Cuándo y cuántas veces se le escribió por WhatsApp desde el panel (botón "WhatsApp" de la lista)
+  whatsappSentAt DateTime?
+  whatsappCount  Int       @default(0)
 
   @@unique([productId, email])
 }
@@ -302,6 +305,13 @@ model AiConversation {
   sessionId String      @unique
   userId    String?
   user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // Datos que el cliente deja al abrir el chat, para poder contactarlo si la IA no resuelve la consulta
+  name      String?
+  phone     String?
+  // Cuándo se marcó como atendida (null = pendiente de revisar)
+  handledAt DateTime?
+  // Último mensaje de la conversación (para ordenar la lista del panel)
+  lastMessageAt DateTime @default(now())
   messages  AiMessage[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
@@ -637,6 +647,9 @@ model AbandonedCart {
   createdAt  DateTime @default(now())
   // Cuándo se le mandó el mail automático de recuperación (null = nunca)
   recoveryEmailSentAt DateTime?
+  // Cuándo y cuántas veces se le escribió por WhatsApp desde el panel (botón "WhatsApp" de la lista)
+  whatsappSentAt DateTime?
+  whatsappCount  Int       @default(0)
 }
 
 // Personas que pidieron no recibir más recordatorios de carrito (link de baja del mail)

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SearchIcon, PackageIcon, SalesIcon, UsersIcon, StoreIcon, UserIcon, CardIcon, TruckIcon, TagIcon, MailIcon, CartIcon, StarIcon, GearIcon, BellIcon, BellRingIcon, SendIcon, HomeIcon, ClipboardIcon, TrendUpIcon, EyeIcon, PaletteIcon } from "@/components/icons";
+import { SearchIcon, PackageIcon, SalesIcon, UsersIcon, StoreIcon, UserIcon, CardIcon, TruckIcon, TagIcon, MailIcon, CartIcon, StarIcon, GearIcon, BellIcon, BellRingIcon, SendIcon, HomeIcon, ClipboardIcon, TrendUpIcon, EyeIcon, PaletteIcon, ChatIcon } from "@/components/icons";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 
 const LINKS = [
@@ -15,6 +15,7 @@ const LINKS = [
   { href: "/admin/visitas", keywords: "trafico analytics", label: "Visitas", icon: EyeIcon },
   { href: "/admin/carritos-abandonados", keywords: "carrito recuperar", label: "Carritos abandonados", icon: CartIcon },
   { href: "/admin/lista-espera", keywords: "avisame stock espera", label: "Lista de espera", icon: BellIcon },
+  { href: "/admin/conversaciones", keywords: "vendedora ia chat consultas telefono contacto conversaciones inteligencia artificial", label: "Conversaciones IA", icon: ChatIcon },
   { href: "/admin/mailing", keywords: "campanas email correos masivos", label: "Mailing", icon: SendIcon },
   { href: "/admin/notificaciones", keywords: "push avisos", label: "Notificaciones", icon: BellRingIcon },
   { href: "/admin/pagos", keywords: "mercado pago transferencia tarjeta payway efectivo descuento medios", label: "Pagos", icon: CardIcon },

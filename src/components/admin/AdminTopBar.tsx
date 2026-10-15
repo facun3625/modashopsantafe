@@ -32,8 +32,14 @@ export function AdminTopBar({ name, email, counts }: { name: string; email: stri
       hint: counts.staleOrders > 0 ? `${counts.staleOrders} hace más de 24 horas` : "",
       urgent: counts.staleOrders > 0,
     },
+    counts.pendingConversations > 0 && {
+      href: "/admin/conversaciones?f=contact",
+      text: `${counts.pendingConversations} conversación${counts.pendingConversations === 1 ? "" : "es"} de la IA sin atender`,
+      hint: "",
+      urgent: false,
+    },
   ].filter(Boolean) as { href: string; text: string; hint: string; urgent: boolean }[];
-  const total = counts.pendingOrders;
+  const total = counts.pendingOrders + counts.pendingConversations;
   const initials = (name || email).split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "A";
 
   return (

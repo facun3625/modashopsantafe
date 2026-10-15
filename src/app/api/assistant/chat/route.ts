@@ -5,7 +5,7 @@ import { getStoreSettingsRow } from "@/lib/settings";
 import { buildAssistantInstructions } from "@/lib/ai/prompt";
 import { runAssistantProvider } from "@/lib/ai/provider";
 import { DEFAULT_AI_MODELS } from "@/lib/ai/types";
-import { parseAssistantRequest, parseAssistantSessionId } from "@/lib/ai/validation";
+import { parseAssistantRequest } from "@/lib/ai/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +97,8 @@ export async function POST(request: NextRequest) {
     const conversation = await prisma.aiConversation.upsert({
       where: { sessionId: parsed.sessionId },
       create: { sessionId: parsed.sessionId, userId: session?.user?.id },
-      update: session?.user?.id ? { userId: session.user.id } : {},
+      // lastMessageAt ordena la lista de Conversaciones del panel; handledAt vuelve a null: hay algo nuevo para revisar
+      update: { lastMessageAt: new Date(), handledAt: null, ...(session?.user?.id ? { userId: session.user.id } : {}) },
       select: { id: true },
     });
     await prisma.aiMessage.createMany({
@@ -122,16 +123,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  let sessionId: string;
-  try {
-    const body = await request.json() as { sessionId?: unknown };
-    sessionId = parseAssistantSessionId(body.sessionId);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Solicitud inválida";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
-
-  await prisma.aiConversation.deleteMany({ where: { sessionId } });
+// El botón "Limpiar" del chat solo borra los mensajes en el navegador: la conversación
+// queda guardada en el panel para que el equipo pueda hacer seguimiento del contacto.
+export async function DELETE() {
   return new NextResponse(null, { status: 204 });
 }

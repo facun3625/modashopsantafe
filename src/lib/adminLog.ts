@@ -14,6 +14,7 @@ const ACTION_LABELS: Record<string, string> = {
   "payment.enable": "Activó un medio de pago",
   "payment.disable": "Desactivó un medio de pago",
   "payment.update": "Editó un medio de pago",
+  "ai.conversation_delete": "Eliminó una conversación de la IA",
 };
 
 export function adminActionLabel(action: string): string {

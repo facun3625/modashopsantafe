@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "AiConversation" ADD COLUMN     "handledAt" TIMESTAMP(3),
+ADD COLUMN     "lastMessageAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "name" TEXT,
+ADD COLUMN     "phone" TEXT;

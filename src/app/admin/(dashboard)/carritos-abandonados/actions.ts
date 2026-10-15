@@ -15,6 +15,16 @@ export async function deleteAbandonedCart(id: string) {
   revalidatePath("/admin/carritos-abandonados");
 }
 
+// Queda anotado cada click en "WhatsApp" de la lista, para saber a quién ya se le escribió
+export async function markCartWhatsApp(id: string) {
+  await requireAdmin();
+  await prisma.abandonedCart.update({
+    where: { id },
+    data: { whatsappSentAt: new Date(), whatsappCount: { increment: 1 } },
+  });
+  revalidatePath("/admin/carritos-abandonados");
+}
+
 // Sin cron todavía — botón manual para limpiar lo que quedó viejo (+30 días
 // sin actividad, casi seguro que ya no sirve para contactar a nadie).
 export async function cleanupOldAbandonedCarts() {
