@@ -9,6 +9,7 @@ import { getVisitorContact, saveVisitorContact } from "@/lib/visitorContact";
 import { tokenizeCard } from "@/lib/decidirScript";
 import { PAYWAY_CARD_BRANDS, PROVINCIAS_AR } from "@/lib/payway";
 import { detectCardBrand, tokenizeMercadoPagoCard } from "@/lib/mercadoPagoScript";
+import { isLikelyPhone } from "@/lib/whatsapp";
 
 type PaymentMethod = "mercadopago" | "transferencia" | "contra_entrega" | "payway";
 
@@ -41,7 +42,7 @@ type ShippingMethod = {
 export function CheckoutForm() {
   const router = useRouter();
   const { data: session } = useSession();
-  const { items, total, clear } = useCart();
+  const { items, total, clear, recoveryPhone, saveRecoveryPhone } = useCart();
 
   const [methods, setMethods] = useState<AvailableMethod[] | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
@@ -53,7 +54,8 @@ export function CheckoutForm() {
   // nombre y email más abajo.
   const [name, setName] = useState(() => getVisitorContact().name ?? "");
   const [email, setEmail] = useState(() => getVisitorContact().email ?? "");
-  const [phone, setPhone] = useState(() => getVisitorContact().phone ?? "");
+  const [phoneInput, setPhoneInput] = useState<string | null>(null);
+  const phone = phoneInput ?? recoveryPhone;
   const [comprobante, setComprobante] = useState<File | null>(null);
   const checkoutIdRef = useRef<string | null>(null);
   const [requiresReview, setRequiresReview] = useState(false);
@@ -119,7 +121,9 @@ export function CheckoutForm() {
   // guardaba como "Anónimo"). Este segundo sync manda lo que se va
   // completando en el checkout, para el mismo sessionId.
   useEffect(() => {
-    if (!name.trim() && !email.trim() && !phone.trim()) return;
+    // Un teléfono a medio escribir nunca pisa el último número válido.
+    const validPhone = isLikelyPhone(phone) ? phone.trim() : undefined;
+    if (!name.trim() && !email.trim() && !validPhone) return;
     const handle = setTimeout(() => {
       const sessionId = getCartSessionId();
       if (!sessionId || items.length === 0) return;
@@ -131,7 +135,7 @@ export function CheckoutForm() {
           userId: session?.user?.id,
           email: email.trim() || undefined,
           name: name.trim() || undefined,
-          phone: phone.trim() || undefined,
+          phone: validPhone,
           items: items.map((i) => ({ productId: i.productId, name: i.name, price: i.price, quantity: i.quantity })),
           total,
         }),
@@ -432,13 +436,39 @@ export function CheckoutForm() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-semibold text-brand-muted">Teléfono</label>
-          <input
-            required
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
-          />
+          {recoveryPhone && phoneInput === null ? (
+            <div className="rounded-lg border border-black/10 bg-brand-soft/50 px-3.5 py-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-brand-muted">WhatsApp guardado</p>
+                  <p className="truncate text-sm text-brand-ink">{recoveryPhone}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPhoneInput(recoveryPhone)}
+                  className="shrink-0 cursor-pointer text-xs font-semibold text-brand-pink-dark hover:underline"
+                >
+                  Cambiar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <label className="mb-1 block text-xs font-semibold text-brand-muted">Teléfono</label>
+              <input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                onBlur={() => {
+                  if (phoneInput && isLikelyPhone(phoneInput)) saveRecoveryPhone(phoneInput);
+                }}
+                className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+              />
+            </>
+          )}
         </div>
       </div>
 

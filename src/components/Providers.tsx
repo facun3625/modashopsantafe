@@ -6,6 +6,7 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { AuthModalProvider } from "@/lib/authModal";
 import { AuthModal } from "@/components/AuthModal";
 import { FavoritesProvider } from "@/lib/favorites";
+import { CartRecoveryPrompt } from "@/components/CartRecoveryPrompt";
 
 export function Providers({ children, cartAutoCloseSeconds }: { children: React.ReactNode; cartAutoCloseSeconds: number }) {
   return (
@@ -15,6 +16,7 @@ export function Providers({ children, cartAutoCloseSeconds }: { children: React.
           <AuthModalProvider>
             {children}
             <CartDrawer />
+            <CartRecoveryPrompt />
             <AuthModal />
           </AuthModalProvider>
         </CartProvider>

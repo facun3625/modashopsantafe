@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { getCartSessionId } from "@/lib/cartSession";
-import { CONTACT_EVENT, getVisitorContact } from "@/lib/visitorContact";
+import { CONTACT_EVENT, getVisitorContact, saveVisitorContact } from "@/lib/visitorContact";
 
 export type CartItem = {
   productId: number;
@@ -31,17 +31,27 @@ type CartContextValue = {
   closeCart: () => void;
   // El cliente tocó algo dentro del carrito: no se cierra solo
   keepCartOpen: () => void;
+  recoveryPhone: string;
+  recoveryPromptOpen: boolean;
+  saveRecoveryPhone: (phone: string) => void;
+  dismissRecoveryPrompt: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
 
 const STORAGE_KEY = "modashop_cart";
+const RECOVERY_PHONE_KEY = "modashop_cart_recovery_phone";
+const RECOVERY_PROMPT_KEY = "modashop_cart_recovery_prompt";
 
 export function CartProvider({ children, autoCloseSeconds = 3 }: { children: React.ReactNode; autoCloseSeconds?: number }) {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [recoveryPhone, setRecoveryPhone] = useState("");
+  const [recoveryPromptOpen, setRecoveryPromptOpen] = useState(false);
+  const [recoveryPromptHandled, setRecoveryPromptHandled] = useState(false);
+  const hadCartItems = useRef(false);
   // Al agregar un producto el carrito se muestra un momento para confirmar y se cierra solo, así se puede seguir comprando
   const autoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -68,6 +78,8 @@ export function CartProvider({ children, autoCloseSeconds = 3 }: { children: Rea
         // Carritos guardados antes de agregar maxStock no tienen ese campo.
         setItems(parsed.map((i) => ({ ...i, maxStock: i.maxStock ?? Infinity })));
       }
+      setRecoveryPhone(localStorage.getItem(RECOVERY_PHONE_KEY) ?? getVisitorContact().phone ?? "");
+      setRecoveryPromptHandled(localStorage.getItem(RECOVERY_PROMPT_KEY) === "handled");
     } catch {
       // localStorage no disponible o dato corrupto: arrancamos con carrito vacío
     }
@@ -77,6 +89,23 @@ export function CartProvider({ children, autoCloseSeconds = 3 }: { children: Rea
   useEffect(() => {
     if (hydrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items, hydrated]);
+
+  // La decisión del aviso pertenece al carrito actual. Al vaciarlo se
+  // restablece, aunque el contacto válido que Moda ya conocía se conserva.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (items.length > 0) {
+      hadCartItems.current = true;
+      return;
+    }
+    if (!hadCartItems.current) return;
+    hadCartItems.current = false;
+    setRecoveryPhone(getVisitorContact().phone ?? "");
+    setRecoveryPromptHandled(false);
+    setRecoveryPromptOpen(false);
+    localStorage.removeItem(RECOVERY_PHONE_KEY);
+    localStorage.removeItem(RECOVERY_PROMPT_KEY);
+  }, [items.length, hydrated]);
 
   // Se sincroniza solo, en silencio, con cada cambio del carrito — no hay
   // "detector de abandono": es solo una foto del último estado conocido. El
@@ -98,18 +127,20 @@ export function CartProvider({ children, autoCloseSeconds = 3 }: { children: Rea
           userId: session?.user?.id,
           email: session?.user?.email ?? contact.email,
           name: session?.user?.name ?? contact.name,
-          phone: contact.phone,
+          phone: recoveryPhone || contact.phone,
           items: items.map((i) => ({ productId: i.productId, name: i.name, price: i.price, quantity: i.quantity })),
           total,
         }),
       }).catch(() => {});
     }, 800);
     return () => clearTimeout(handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, hydrated, session?.user?.id, session?.user?.email, session?.user?.name, contactVersion]);
+  }, [items, hydrated, recoveryPhone, session?.user?.id, session?.user?.email, session?.user?.name, contactVersion]);
 
   function addItem(item: Omit<CartItem, "quantity">, quantity = 1) {
     setItems((prev) => {
+      if (prev.length === 0 && sessionStatus === "unauthenticated" && !recoveryPromptHandled && !recoveryPhone) {
+        setRecoveryPromptOpen(true);
+      }
       const existing = prev.find((i) => i.productId === item.productId);
       if (existing) {
         return prev.map((i) =>
@@ -140,6 +171,22 @@ export function CartProvider({ children, autoCloseSeconds = 3 }: { children: Rea
     setItems([]);
   }
 
+  function saveRecoveryPhone(phone: string) {
+    const clean = phone.trim();
+    setRecoveryPhone(clean);
+    setRecoveryPromptHandled(true);
+    setRecoveryPromptOpen(false);
+    saveVisitorContact({ phone: clean });
+    localStorage.setItem(RECOVERY_PHONE_KEY, clean);
+    localStorage.setItem(RECOVERY_PROMPT_KEY, "handled");
+  }
+
+  function dismissRecoveryPrompt() {
+    setRecoveryPromptHandled(true);
+    setRecoveryPromptOpen(false);
+    localStorage.setItem(RECOVERY_PROMPT_KEY, "handled");
+  }
+
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
   const total = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
 
@@ -163,6 +210,10 @@ export function CartProvider({ children, autoCloseSeconds = 3 }: { children: Rea
           setIsOpen(false);
         },
         keepCartOpen: clearAutoClose,
+        recoveryPhone,
+        recoveryPromptOpen,
+        saveRecoveryPhone,
+        dismissRecoveryPrompt,
       }}
     >
       {children}
