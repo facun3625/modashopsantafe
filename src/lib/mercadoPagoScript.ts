@@ -22,6 +22,21 @@ type MercadoPagoInstance = {
   getPaymentMethods: (
     data: { bin: string }
   ) => Promise<{ results: { id: string; issuer?: { id?: string | number } }[] }>;
+  getInstallments: (
+    data: { bin: string; amount: string }
+  ) => Promise<
+    {
+      payment_method_id: string;
+      issuer?: { id?: string | number };
+      payer_costs: {
+        installments: number;
+        installment_amount: number;
+        total_amount: number;
+        installment_rate: number;
+        recommended_message: string;
+      }[];
+    }[]
+  >;
 };
 
 declare global {
@@ -66,6 +81,34 @@ export async function detectCardBrand(
   const match = results?.[0];
   if (!match) return null;
   return { paymentMethodId: match.id, issuerId: match.issuer?.id ? String(match.issuer.id) : undefined };
+}
+
+export type MercadoPagoInstallmentOption = {
+  installments: number;
+  installmentAmount: number;
+  totalAmount: number;
+  installmentRate: number;
+  recommendedMessage: string;
+};
+
+// Planes de cuotas disponibles para esa tarjeta puntual y ese monto puntual —
+// refleja lo que el vendedor tiene habilitado en su cuenta de Mercado Pago
+// (bancos, promociones vigentes), no algo que se configure acá.
+export async function getMercadoPagoInstallments(
+  publicKey: string,
+  bin: string,
+  amount: number
+): Promise<MercadoPagoInstallmentOption[]> {
+  const mp = await getClient(publicKey);
+  const results = await mp.getInstallments({ bin, amount: amount.toFixed(2) });
+  const payerCosts = results?.[0]?.payer_costs ?? [];
+  return payerCosts.map((p) => ({
+    installments: p.installments,
+    installmentAmount: p.installment_amount,
+    totalAmount: p.total_amount,
+    installmentRate: p.installment_rate,
+    recommendedMessage: p.recommended_message,
+  }));
 }
 
 export async function tokenizeMercadoPagoCard(

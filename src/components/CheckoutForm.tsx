@@ -8,7 +8,12 @@ import { getCartSessionId } from "@/lib/cartSession";
 import { getVisitorContact, saveVisitorContact } from "@/lib/visitorContact";
 import { tokenizeCard } from "@/lib/decidirScript";
 import { PAYWAY_CARD_BRANDS, PROVINCIAS_AR } from "@/lib/payway";
-import { detectCardBrand, tokenizeMercadoPagoCard } from "@/lib/mercadoPagoScript";
+import {
+  detectCardBrand,
+  tokenizeMercadoPagoCard,
+  getMercadoPagoInstallments,
+  type MercadoPagoInstallmentOption,
+} from "@/lib/mercadoPagoScript";
 import { isLikelyPhone } from "@/lib/whatsapp";
 
 type PaymentMethod = "mercadopago" | "transferencia" | "contra_entrega" | "payway";
@@ -91,6 +96,9 @@ export function CheckoutForm() {
   const [mpExpYear, setMpExpYear] = useState("");
   const [mpCvv, setMpCvv] = useState("");
   const [mpDni, setMpDni] = useState("");
+  const [mpInstallmentOptions, setMpInstallmentOptions] = useState<MercadoPagoInstallmentOption[]>([]);
+  const [mpSelectedInstallments, setMpSelectedInstallments] = useState(1);
+  const [mpInstallmentsLoading, setMpInstallmentsLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/payment-methods", { cache: "no-store" })
@@ -204,6 +212,42 @@ export function CheckoutForm() {
   const selectedShipping = shippingMethods?.find((s) => s.id === selectedShippingId);
   const finalTotal =
     Math.max(0, total - methodDiscount - (appliedCoupon?.discountAmount ?? 0)) + (selectedShipping?.cost ?? 0);
+
+  // Cuotas disponibles para la tarjeta que se va tipeando — se consultan a Mercado Pago apenas hay 6 dígitos (el
+  // BIN), con los mismos planes y tasas que el vendedor tiene habilitados en su cuenta.
+  useEffect(() => {
+    const mpPublicKey = selectedConfig?.mpPublicKey;
+    if (selectedMethod !== "mercadopago" || !mpPublicKey) {
+      setMpInstallmentOptions([]);
+      return;
+    }
+    const bin = mpCardNumber.replace(/\D/g, "").slice(0, 6);
+    if (bin.length < 6) {
+      setMpInstallmentOptions([]);
+      setMpSelectedInstallments(1);
+      return;
+    }
+    let cancelled = false;
+    setMpInstallmentsLoading(true);
+    const handle = setTimeout(() => {
+      getMercadoPagoInstallments(mpPublicKey, bin, finalTotal)
+        .then((options) => {
+          if (cancelled) return;
+          setMpInstallmentOptions(options);
+          setMpSelectedInstallments(options[0]?.installments ?? 1);
+        })
+        .catch(() => {
+          if (!cancelled) setMpInstallmentOptions([]);
+        })
+        .finally(() => {
+          if (!cancelled) setMpInstallmentsLoading(false);
+        });
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [mpCardNumber, selectedMethod, selectedConfig?.mpPublicKey, finalTotal]);
 
   async function handleApplyCoupon() {
     if (!couponCode.trim() || !selectedMethod) return;
@@ -365,7 +409,7 @@ export function CheckoutForm() {
             mpToken: tokenResult.token,
             mpPaymentMethodId: brand.paymentMethodId,
             mpIssuerId: brand.issuerId,
-            mpInstallments: 1,
+            mpInstallments: mpSelectedInstallments,
             mpIdentification: { type: "DNI", number: mpDni },
           }),
         });
@@ -689,6 +733,25 @@ export function CheckoutForm() {
                         className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
                       />
                     </div>
+                    {mpInstallmentsLoading && (
+                      <p className="text-xs text-brand-muted">Buscando cuotas disponibles…</p>
+                    )}
+                    {!mpInstallmentsLoading && mpInstallmentOptions.length > 0 && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Cuotas</label>
+                        <select
+                          value={mpSelectedInstallments}
+                          onChange={(e) => setMpSelectedInstallments(Number(e.target.value))}
+                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
+                        >
+                          {mpInstallmentOptions.map((opt) => (
+                            <option key={opt.installments} value={opt.installments}>
+                              {opt.recommendedMessage}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-brand-muted">
                         Nombre del titular (como figura en la tarjeta)
