@@ -7,6 +7,8 @@ import { ensurePaymentMethodConfigsSeeded } from "@/lib/paymentSettings";
 // necesita mostrarle al cliente para que sepa a dónde transferir. La public
 // key de Payway también se expone a propósito: es justamente la que usa
 // decidir.js en el navegador para tokenizar la tarjeta (no es secreta).
+// Mercado Pago no necesita nada acá: es Checkout Pro, el cliente paga en una
+// página de Mercado Pago, no hay tokenización en este sitio.
 export async function GET() {
   // Por si en esta instalación todavía nadie entró a /admin/pagos: sin esto,
   // una tienda recién instalada podía quedar sin ningún medio de pago hasta
@@ -23,7 +25,6 @@ export async function GET() {
       bankHolderName: true,
       paywayPublicKey: true,
       paywaySandbox: true,
-      mpPublicKey: true,
     },
   });
 

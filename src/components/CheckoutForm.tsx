@@ -8,12 +8,6 @@ import { getCartSessionId } from "@/lib/cartSession";
 import { getVisitorContact, saveVisitorContact } from "@/lib/visitorContact";
 import { tokenizeCard } from "@/lib/decidirScript";
 import { PAYWAY_CARD_BRANDS, PROVINCIAS_AR } from "@/lib/payway";
-import {
-  detectCardBrand,
-  tokenizeMercadoPagoCard,
-  getMercadoPagoInstallments,
-  type MercadoPagoInstallmentOption,
-} from "@/lib/mercadoPagoScript";
 import { isLikelyPhone } from "@/lib/whatsapp";
 
 type PaymentMethod = "mercadopago" | "transferencia" | "contra_entrega" | "payway";
@@ -33,7 +27,6 @@ type AvailableMethod = {
   bankHolderName?: string | null;
   paywayPublicKey?: string | null;
   paywaySandbox?: boolean;
-  mpPublicKey?: string | null;
 };
 
 type ShippingMethod = {
@@ -86,19 +79,6 @@ export function CheckoutForm() {
   const [paywayCity, setPaywayCity] = useState("");
   const [paywayState, setPaywayState] = useState("");
   const [paywayPostalCode, setPaywayPostalCode] = useState("");
-
-  // Mercado Pago: a diferencia de decidir.js, mp.createCardToken recibe un
-  // objeto JS común — no necesita un <form> con atributos data-*, así que
-  // estos campos son estado controlado normal.
-  const [mpCardNumber, setMpCardNumber] = useState("");
-  const [mpCardholderName, setMpCardholderName] = useState("");
-  const [mpExpMonth, setMpExpMonth] = useState("");
-  const [mpExpYear, setMpExpYear] = useState("");
-  const [mpCvv, setMpCvv] = useState("");
-  const [mpDni, setMpDni] = useState("");
-  const [mpInstallmentOptions, setMpInstallmentOptions] = useState<MercadoPagoInstallmentOption[]>([]);
-  const [mpSelectedInstallments, setMpSelectedInstallments] = useState(1);
-  const [mpInstallmentsLoading, setMpInstallmentsLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/payment-methods", { cache: "no-store" })
@@ -212,42 +192,6 @@ export function CheckoutForm() {
   const selectedShipping = shippingMethods?.find((s) => s.id === selectedShippingId);
   const finalTotal =
     Math.max(0, total - methodDiscount - (appliedCoupon?.discountAmount ?? 0)) + (selectedShipping?.cost ?? 0);
-
-  // Cuotas disponibles para la tarjeta que se va tipeando — se consultan a Mercado Pago apenas hay 6 dígitos (el
-  // BIN), con los mismos planes y tasas que el vendedor tiene habilitados en su cuenta.
-  useEffect(() => {
-    const mpPublicKey = selectedConfig?.mpPublicKey;
-    if (selectedMethod !== "mercadopago" || !mpPublicKey) {
-      setMpInstallmentOptions([]);
-      return;
-    }
-    const bin = mpCardNumber.replace(/\D/g, "").slice(0, 6);
-    if (bin.length < 6) {
-      setMpInstallmentOptions([]);
-      setMpSelectedInstallments(1);
-      return;
-    }
-    let cancelled = false;
-    setMpInstallmentsLoading(true);
-    const handle = setTimeout(() => {
-      getMercadoPagoInstallments(mpPublicKey, bin, finalTotal)
-        .then((options) => {
-          if (cancelled) return;
-          setMpInstallmentOptions(options);
-          setMpSelectedInstallments(options[0]?.installments ?? 1);
-        })
-        .catch(() => {
-          if (!cancelled) setMpInstallmentOptions([]);
-        })
-        .finally(() => {
-          if (!cancelled) setMpInstallmentsLoading(false);
-        });
-    }, 500);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [mpCardNumber, selectedMethod, selectedConfig?.mpPublicKey, finalTotal]);
 
   async function handleApplyCoupon() {
     if (!couponCode.trim() || !selectedMethod) return;
@@ -368,34 +312,11 @@ export function CheckoutForm() {
       return;
     }
 
-    // Mercado Pago: mismo espíritu que Payway (tokeniza en el navegador,
-    // cobra al toque), pero la SDK detecta la marca de la tarjeta sola a
-    // partir del BIN en vez de que el cliente la elija a mano.
+    // Mercado Pago: Checkout Pro — se arma el pedido y se le pide a Mercado
+    // Pago un link de pago, el cliente paga ahí (con todas sus tarjetas y
+    // cuotas guardadas) y vuelve solo al confirmarse (ver /carrito/gracias).
     if (selectedMethod === "mercadopago") {
-      if (!selectedConfig?.mpPublicKey) {
-        setError("El pago con tarjeta no está disponible en este momento.");
-        setLoading(false);
-        return;
-      }
-      const bin = mpCardNumber.replace(/\D/g, "").slice(0, 6);
-
       try {
-        const brand = await detectCardBrand(selectedConfig.mpPublicKey, bin);
-        if (!brand) {
-          setError("No se pudo reconocer la tarjeta. Revisá el número.");
-          setLoading(false);
-          return;
-        }
-
-        const tokenResult = await tokenizeMercadoPagoCard(selectedConfig.mpPublicKey, {
-          cardNumber: mpCardNumber,
-          cardholderName: mpCardholderName,
-          identificationNumber: mpDni,
-          securityCode: mpCvv,
-          cardExpirationMonth: mpExpMonth,
-          cardExpirationYear: mpExpYear,
-        });
-
         const res = await fetch("/api/orders/mercadopago", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -406,17 +327,31 @@ export function CheckoutForm() {
             shippingMethodId: selectedShippingId,
             shippingAddress: shippingAddress || undefined,
             couponCode: appliedCoupon?.code,
-            mpToken: tokenResult.token,
-            mpPaymentMethodId: brand.paymentMethodId,
-            mpIssuerId: brand.issuerId,
-            mpInstallments: mpSelectedInstallments,
-            mpIdentification: { type: "DNI", number: mpDni },
           }),
         });
-        const data = await res.json();
-        handleOrderResponse(res, data);
+        const data = await res.json() as {
+          orderId?: string;
+          initPoint?: string;
+          alreadyPaid?: boolean;
+          requiresReview?: boolean;
+          resetAttempt?: boolean;
+          error?: string;
+          shortages?: typeof shortages;
+        };
+        if (!res.ok || (!data.initPoint && !data.alreadyPaid)) {
+          handleOrderResponse(res, data);
+          return;
+        }
+        checkoutIdRef.current = null;
+        try { sessionStorage.removeItem("moda-checkout-id"); } catch {}
+        clear();
+        if (data.alreadyPaid) {
+          router.push(`/carrito/gracias?id=${data.orderId}`);
+          return;
+        }
+        window.location.href = data.initPoint!;
       } catch (err) {
-        setError(err instanceof Error ? err.message : "No se pudo procesar el pago con tarjeta.");
+        setError(err instanceof Error ? err.message : "No se pudo iniciar el pago con Mercado Pago.");
         setLoading(false);
       }
       return;
@@ -718,104 +653,10 @@ export function CheckoutForm() {
                 )}
 
                 {selected && m.method === "mercadopago" && (
-                  <div className="mt-4 flex flex-col gap-3 border-t border-brand-pink/20 pt-4">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-brand-muted">
-                        Número de tarjeta
-                      </label>
-                      <input
-                        required
-                        value={mpCardNumber}
-                        onChange={(e) => setMpCardNumber(e.target.value)}
-                        inputMode="numeric"
-                        maxLength={19}
-                        placeholder="•••• •••• •••• ••••"
-                        className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
-                      />
-                    </div>
-                    {mpInstallmentsLoading && (
-                      <p className="text-xs text-brand-muted">Buscando cuotas disponibles…</p>
-                    )}
-                    {!mpInstallmentsLoading && mpInstallmentOptions.length > 0 && (
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Cuotas</label>
-                        <select
-                          value={mpSelectedInstallments}
-                          onChange={(e) => setMpSelectedInstallments(Number(e.target.value))}
-                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
-                        >
-                          {mpInstallmentOptions.map((opt) => (
-                            <option key={opt.installments} value={opt.installments}>
-                              {opt.recommendedMessage}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-brand-muted">
-                        Nombre del titular (como figura en la tarjeta)
-                      </label>
-                      <input
-                        required
-                        value={mpCardholderName}
-                        onChange={(e) => setMpCardholderName(e.target.value)}
-                        className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Mes venc.</label>
-                        <input
-                          required
-                          value={mpExpMonth}
-                          onChange={(e) => setMpExpMonth(e.target.value)}
-                          inputMode="numeric"
-                          maxLength={2}
-                          placeholder="MM"
-                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">Año venc.</label>
-                        <input
-                          required
-                          value={mpExpYear}
-                          onChange={(e) => setMpExpYear(e.target.value)}
-                          inputMode="numeric"
-                          maxLength={2}
-                          placeholder="AA"
-                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">CVV</label>
-                        <input
-                          required
-                          value={mpCvv}
-                          onChange={(e) => setMpCvv(e.target.value)}
-                          inputMode="numeric"
-                          maxLength={4}
-                          placeholder="•••"
-                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold text-brand-muted">DNI</label>
-                        <input
-                          required
-                          value={mpDni}
-                          onChange={(e) => setMpDni(e.target.value.replace(/\D/g, ""))}
-                          inputMode="numeric"
-                          maxLength={8}
-                          placeholder="12345678"
-                          className="w-full rounded-lg border border-black/10 px-3.5 py-2 text-sm focus:border-brand-pink focus:outline-none"
-                        />
-                      </div>
-                    </div>
+                  <div className="mt-4 border-t border-brand-pink/20 pt-4">
                     <p className="text-xs text-brand-muted">
-                      El pago se procesa al confirmar el pedido. Tu tarjeta se tokeniza en el navegador — nunca
-                      viaja a nuestros servidores. Solo tarjeta, no incluye pago en efectivo.
+                      Al confirmar te llevamos a Mercado Pago para completar el pago — ahí vas a ver todas tus
+                      tarjetas guardadas y las cuotas disponibles. Cuando termines, volvés acá solo.
                     </p>
                   </div>
                 )}

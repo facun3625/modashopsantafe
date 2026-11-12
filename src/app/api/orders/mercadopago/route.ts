@@ -6,22 +6,16 @@ import { prisma } from "@/lib/prisma";
 import { checkStock } from "@/lib/products";
 import { createOrderWithStockGuard, InsufficientStockError, saveUserPhone } from "@/lib/reservations";
 import { getShippingMethodsForPayment } from "@/lib/shipping";
-import { validateCoupon, registerCouponUse } from "@/lib/coupons";
+import { validateCoupon } from "@/lib/coupons";
 import { calculatePaymentMethodDiscount } from "@/lib/paymentMethodDiscount";
-import { notifyNewOrder } from "@/lib/telegram";
-import { sendOrderConfirmation } from "@/lib/orderEmails";
 import { resolvePartnerId, type OrderCustomer } from "@/lib/orders";
-import {
-  createMercadoPagoPayment,
-  refundMercadoPagoPayment,
-  type MercadoPagoIdentification,
-} from "@/lib/mercadopago";
-import { createPickingForOrder } from "@/lib/odooPicking";
+import { createMercadoPagoPreference } from "@/lib/mercadopago";
 import { auth } from "@/lib/auth";
 
-// El pedido y su reserva se guardan antes de cobrar. Solo una aprobación
-// confirma la compra y dispara el picking de Odoo y los avisos. Un resultado
-// incierto conserva el pedido pendiente para que el equipo concilie el pago.
+// El pedido y su reserva de stock se guardan antes de mandar al cliente a
+// pagar — es lo único que pasa en esta request. Checkout Pro es asíncrono:
+// la confirmación (puntos, mail, picking en Odoo) llega después, por el
+// webhook (ver ./webhook/route.ts) cuando Mercado Pago avisa que se aprobó.
 
 type MercadoPagoOrderBody = {
   checkoutId?: string;
@@ -30,29 +24,13 @@ type MercadoPagoOrderBody = {
   shippingMethodId?: string;
   shippingAddress?: string;
   couponCode?: string;
-  mpToken: string;
-  mpPaymentMethodId: string;
-  mpIssuerId?: string;
-  mpInstallments?: number;
-  mpIdentification: MercadoPagoIdentification;
 };
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as MercadoPagoOrderBody | null;
   if (!body) return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
 
-  const {
-    items: rawItems,
-    customer,
-    shippingMethodId,
-    shippingAddress,
-    couponCode,
-    mpToken,
-    mpPaymentMethodId,
-    mpIssuerId,
-    mpInstallments,
-    mpIdentification,
-  } = body;
+  const { items: rawItems, customer, shippingMethodId, shippingAddress, couponCode } = body;
 
   if (!Array.isArray(rawItems) || !rawItems.length) {
     return NextResponse.json({ error: "El carrito está vacío" }, { status: 400 });
@@ -60,34 +38,50 @@ export async function POST(req: Request) {
   if (!customer?.email || !customer?.name || !customer?.phone) {
     return NextResponse.json({ error: "Nombre, email y teléfono son requeridos" }, { status: 400 });
   }
-  if (!mpToken || !mpPaymentMethodId) {
-    return NextResponse.json({ error: "Faltan datos de la tarjeta" }, { status: 400 });
-  }
-  if (!mpIdentification?.number) {
-    return NextResponse.json({ error: "Falta el DNI del titular" }, { status: 400 });
-  }
-
-  if (body.checkoutId !== undefined &&
-      (typeof body.checkoutId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.checkoutId))) {
+  if (typeof body.checkoutId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.checkoutId)) {
     return NextResponse.json({ error: "Identificador de compra inválido" }, { status: 400 });
   }
-  const orderId = createHash("sha256").update("checkout:" + (body.checkoutId ?? "mercadopago:" + mpToken)).digest("hex").slice(0, 36);
+  const orderId = createHash("sha256").update("checkout:" + body.checkoutId).digest("hex").slice(0, 36);
   const reviewResponse = () => NextResponse.json({
     orderId,
     requiresReview: true,
-    error: `El pago del pedido #${orderId.slice(0, 8)} está pendiente de verificación. Contactá a la tienda antes de volver a pagar.`,
+    error: `El pedido #${orderId.slice(0, 8)} ya está en curso. Contactá a la tienda antes de volver a intentar.`,
   }, { status: 409 });
+  const base = (process.env.NEXTAUTH_URL ?? "").replace(/\/$/, "");
+  const notificationUrl = `${base}/api/orders/mercadopago/webhook`;
+  const backUrl = (orderIdForUrl: string) => `${base}/carrito/gracias?id=${orderIdForUrl}`;
 
   try {
     const existing = await prisma.order.findUnique({ where: { id: orderId } });
     if (existing) {
-      if (existing.status === "confirmed" || existing.status === "delivered") {
-        return NextResponse.json({ orderId }, { status: 201 });
-      }
       if (existing.status === "cancelled") {
         return NextResponse.json({ resetAttempt: true, error: "Este intento fue cancelado. Podés iniciar otra compra." }, { status: 400 });
       }
-      return reviewResponse();
+      if (existing.status === "confirmed" || existing.status === "delivered") {
+        return NextResponse.json({ orderId: existing.id, alreadyPaid: true }, { status: 201 });
+      }
+      if (existing.paymentMethod !== "mercadopago") return reviewResponse();
+      // Sigue pendiente: el cliente puede haber cerrado la pestaña de Mercado
+      // Pago sin pagar, o la preferencia anterior falló al crearse. En vez de
+      // mandarlo a "contactá a la tienda" por eso, se le arma una preferencia
+      // nueva para el MISMO pedido ya reservado (no se duplica el stock).
+      const config = await prisma.paymentMethodConfig.findUnique({ where: { method: "mercadopago" } });
+      if (!config?.mpAccessToken) return reviewResponse();
+      const retry = await createMercadoPagoPreference({
+        accessToken: config.mpAccessToken,
+        orderId: existing.id,
+        title: `Pedido ModaShop #${existing.id.slice(0, 8)}`,
+        amount: existing.total,
+        customerName: existing.customerName,
+        customerEmail: existing.customerEmail,
+        customerPhone: existing.customerPhone ?? undefined,
+        successUrl: backUrl(existing.id),
+        failureUrl: backUrl(existing.id),
+        pendingUrl: backUrl(existing.id),
+        notificationUrl,
+      });
+      if (!retry.ok) return NextResponse.json({ error: retry.error }, { status: 502 });
+      return NextResponse.json({ orderId: existing.id, initPoint: retry.initPoint }, { status: 201 });
     }
     const items = await getCheckoutItems(rawItems);
     const config = await prisma.paymentMethodConfig.findUnique({
@@ -111,8 +105,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Falta la dirección de envío" }, { status: 400 });
     }
 
-    // Chequeo rápido antes de cobrar: si ya sabemos que no hay stock, ni
-    // intentamos el cobro (evita cobrarle a alguien por algo que no hay).
+    // Chequeo rápido antes de reservar: si ya sabemos que no hay stock, ni
+    // mandamos al cliente a pagar algo que no vamos a poder entregar.
     const stock = await checkStock(items.map((i) => ({ productId: i.productId, quantity: i.quantity })));
     if (!stock.ok) {
       return NextResponse.json(
@@ -145,8 +139,6 @@ export async function POST(req: Request) {
 
     const partnerId = await resolvePartnerId(session?.user?.id, customer);
 
-    // Persist the order and reserve stock before making any charge. Its ID
-    // is also the provider reference, so an uncertain payment can be reconciled.
     let order;
     try {
       order = await createOrderWithStockGuard(
@@ -169,6 +161,7 @@ export async function POST(req: Request) {
               shippingAddress: shipping.requiresAddress ? String(shippingAddress) : undefined,
               couponId,
               couponDiscount,
+              paymentMethodDiscount,
               odooPartnerId: partnerId,
               items: {
                 create: items.map((item) => ({
@@ -186,91 +179,34 @@ export async function POST(req: Request) {
       if (err instanceof InsufficientStockError) {
         return NextResponse.json({ error: "No hay stock suficiente para algunos productos", shortages: err.shortages }, { status: 409 });
       }
-      // Concurrent retries may race on the unique order ID. Only the request
-      // that created the order is allowed to call the payment provider.
+      // Reintentos concurrentes pueden chocar en el id único del pedido. Solo
+      // la request que lo creó puede pedirle la preferencia a Mercado Pago.
       if (await prisma.order.findUnique({ where: { id: orderId } })) return reviewResponse();
       throw err;
     }
 
-    const charge = await createMercadoPagoPayment({
+    const preference = await createMercadoPagoPreference({
       accessToken: config.mpAccessToken,
-      token: mpToken,
-      paymentMethodId: mpPaymentMethodId,
-      issuerId: mpIssuerId,
-      installments: mpInstallments && mpInstallments > 0 ? mpInstallments : 1,
+      orderId: order.id,
+      title: `Pedido ModaShop #${order.id.slice(0, 8)}`,
       amount: total,
-      description: `Pedido ModaShop — ${customer.email}`,
+      customerName: customer.name,
       customerEmail: customer.email,
-      identification: mpIdentification,
-      externalReference: orderId,
+      customerPhone: customer.phone,
+      successUrl: backUrl(order.id),
+      failureUrl: backUrl(order.id),
+      pendingUrl: backUrl(order.id),
+      notificationUrl,
     });
 
-    if (!charge.ok) {
-      console.error("Payment was not approved for order", orderId, charge.detail);
-      if (!charge.rejected) return reviewResponse();
-      await prisma.order.update({ where: { id: orderId }, data: { status: "cancelled" } });
-      return NextResponse.json({ error: charge.error }, { status: 402 });
+    if (!preference.ok) {
+      console.error("createMercadoPagoPreference failed for", order.id, preference.detail);
+      // El pedido queda pendiente con su stock reservado — el cliente puede
+      // reintentar (mismo checkoutId) en vez de perder el lugar en la cola.
+      return NextResponse.json({ error: preference.error }, { status: 502 });
     }
 
-    try {
-      order = await prisma.order.update({
-        where: { id: orderId, status: "pending" },
-        data: { status: "confirmed", mercadopagoPaymentId: charge.id },
-      });
-    } catch (err) {
-      const refund = await refundMercadoPagoPayment({
-        accessToken: config.mpAccessToken,
-        paymentId: charge.id,
-      });
-      console.error("Could not confirm paid order", orderId, charge.id, err);
-      if (!refund.ok) {
-        console.error("Refund pending for order", orderId, charge.id, refund.error);
-        return reviewResponse();
-      }
-      await prisma.order.update({ where: { id: orderId }, data: { status: "cancelled", mercadopagoPaymentId: charge.id } });
-      return NextResponse.json({ resetAttempt: true, error: "No se pudo confirmar el pedido. El cobro se reembolsó." }, { status: 409 });
-    }
-
-    if (couponId) {
-      try { await registerCouponUse(couponId); }
-      catch (err) { console.error("Could not register coupon for order", order.id, couponId, err); }
-    }
-
-    void notifyNewOrder({
-      orderId: order.id,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      paymentMethod: "mercadopago",
-      total,
-      items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
-      shippingName: shipping.name,
-      shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
-    }).catch((err) => console.error("Order notification failed", order.id, err));
-
-    void sendOrderConfirmation({
-      orderId: order.id,
-      to: customer.email,
-      customerName: customer.name,
-      items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
-      subtotal,
-      discountTotal: couponDiscount + paymentMethodDiscount,
-      shippingName: shipping.name,
-      shippingCost: shipping.cost,
-      total,
-      paymentMethod: "mercadopago",
-      shippingAddress: shipping.requiresAddress ? String(shippingAddress) : null,
-      userId: session?.user?.id,
-    }).catch((err) => console.error("Order notification failed", order.id, err));
-
-    // El pago ya está confirmado → genera la orden en Odoo al toque (no hace
-    // falta que nadie la confirme a mano). Si Odoo falla, no se cae la venta.
-    try {
-      await createPickingForOrder(order.id);
-    } catch (err) {
-      console.error("createPickingForOrder failed for", order.id, err);
-    }
-
-    return NextResponse.json({ orderId: order.id, partnerId, mercadopagoPaymentId: charge.id }, { status: 201 });
+    return NextResponse.json({ orderId: order.id, initPoint: preference.initPoint }, { status: 201 });
   } catch (err) {
     if (err instanceof InvalidCheckoutError) {
       return NextResponse.json({ error: err.message }, { status: 400 });

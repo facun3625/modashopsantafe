@@ -688,6 +688,11 @@ model Order {
   coupon         Coupon? @relation(fields: [couponId], references: [id])
   couponDiscount Float   @default(0)
 
+  // Descuento por medio de pago ya aplicado en `total` (ver lib/paymentMethodDiscount.ts). Se guarda aparte de
+  // couponDiscount para poder desglosarlo en el mail de confirmación incluso cuando la confirmación llega después
+  // de crear el pedido (ver el webhook de Mercado Pago, que no tiene en memoria los datos del checkout original).
+  paymentMethodDiscount Float @default(0)
+
   // res.partner y stock.picking creados en Odoo para este pedido
   odooPartnerId Int?
   odooPickingId Int?

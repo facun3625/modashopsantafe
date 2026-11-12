@@ -1,89 +1,80 @@
-// Cliente de la API de Mercado Pago (Payments API clásica, POST /v1/payments
-// — sigue vigente y tipada en el SDK oficial actual, no está deprecada a
-// favor de la Orders API más nueva). El cobro es SÍNCRONO, igual que Payway:
-// se manda el token que generó el cliente (mp.createCardToken) y la
-// respuesta ya trae "approved"/"rejected" al toque.
+// Cliente de la API de Mercado Pago — Checkout Pro: se crea una "preferencia"
+// (carrito con un link de pago) y el cliente paga en una página de Mercado
+// Pago, no en un formulario propio. Ahí mismo elige entre todas las tarjetas
+// y cuotas que tenga habilitadas en su cuenta — no hay que resolverlas acá.
 //
-// Confirmado leyendo el código fuente real del SDK oficial (mercadopago@3.4.0
-// y el JS de sdk.mercadopago.com/js/v2), no solo documentación:
+// Confirmado leyendo la documentación oficial actual de Checkout Pro
+// (api.mercadopago.com/checkout/preferences) y del webhook de pagos
+// (api.mercadopago.com/v1/payments/{id}):
 // - No hace falta distinguir sandbox/producción por URL — es siempre
 //   api.mercadopago.com; lo que cambia es si las credenciales son de prueba
 //   (empiezan con "TEST-") o reales, eso lo resuelve Mercado Pago solo.
-// - El monto va en la moneda normal (pesos con centavos), NO en centavos
-//   como Payway — ojo con esto, es la diferencia más peligrosa entre los dos.
-// - No exige un bloque de antifraude tipo Cybersource para cobrar.
+// - El monto va en la moneda normal (pesos con centavos), NO en centavos.
 const API_BASE_URL = "https://api.mercadopago.com";
 
-export type MercadoPagoIdentification = { type: string; number: string };
-
-// `error` es SIEMPRE genérico y seguro para el cliente. `detail` es el
-// motivo técnico real, solo para el log del server — mismo criterio que
-// Payway: un motivo de rechazo específico le sirve a un atacante para
-// probar tarjetas robadas una por una.
-export type MercadoPagoPaymentResult =
-  | { ok: true; id: number; status: string }
-  | { ok: false; error: string; detail: string; rejected?: boolean };
-
-const GENERIC_DECLINE_MESSAGE = "El pago fue rechazado. Probá con otra tarjeta o con otro medio de pago.";
-const GENERIC_SYSTEM_ERROR_MESSAGE = "No se pudo procesar el pago. Probá de nuevo en un momento.";
-
-type CreateMercadoPagoPaymentArgs = {
+type CreateMercadoPagoPreferenceArgs = {
   accessToken: string;
-  token: string; // token generado por mp.createCardToken en el cliente
-  paymentMethodId: string; // ej. "visa", "master" — viene de mp.getPaymentMethods({bin})
-  issuerId?: string;
-  installments: number;
-  amount: number; // en pesos, con centavos — NO se multiplica por 100 acá
-  description: string;
+  orderId: string; // external_reference — así se concilia el webhook con el pedido
+  title: string;
+  amount: number;
+  customerName: string;
   customerEmail: string;
-  identification: MercadoPagoIdentification;
-  externalReference: string; // id del pedido, para conciliar
+  customerPhone?: string;
+  successUrl: string;
+  failureUrl: string;
+  pendingUrl: string;
+  notificationUrl: string;
 };
 
-export async function createMercadoPagoPayment(
-  args: CreateMercadoPagoPaymentArgs
-): Promise<MercadoPagoPaymentResult> {
-  const url = `${API_BASE_URL}/v1/payments`;
+export type MercadoPagoPreferenceResult =
+  | { ok: true; preferenceId: string; initPoint: string }
+  | { ok: false; error: string; detail: string };
 
+const GENERIC_SYSTEM_ERROR_MESSAGE = "No se pudo iniciar el pago con Mercado Pago. Probá de nuevo en un momento.";
+
+export async function createMercadoPagoPreference(
+  args: CreateMercadoPagoPreferenceArgs
+): Promise<MercadoPagoPreferenceResult> {
   const body = {
-    transaction_amount: Math.round(args.amount * 100) / 100,
-    token: args.token,
-    description: args.description.slice(0, 250),
-    installments: args.installments,
-    payment_method_id: args.paymentMethodId,
-    issuer_id: args.issuerId,
+    items: [
+      {
+        title: args.title.slice(0, 250),
+        quantity: 1,
+        currency_id: "ARS",
+        unit_price: Math.round(args.amount * 100) / 100,
+      },
+    ],
     payer: {
+      name: args.customerName,
       email: args.customerEmail,
-      identification: args.identification,
+      phone: args.customerPhone ? { number: args.customerPhone } : undefined,
     },
-    external_reference: args.externalReference,
-    // binary_mode: la respuesta siempre resuelve aprobado/rechazado al toque,
-    // nunca queda un pedido en limbo en estado "pendiente de revisión".
-    binary_mode: true,
+    external_reference: args.orderId,
+    back_urls: {
+      success: args.successUrl,
+      failure: args.failureUrl,
+      pending: args.pendingUrl,
+    },
+    // Solo aplica a pagos aprobados — rechazados o pendientes muestran igual
+    // el link de Mercado Pago para "volver al sitio", no hace falta forzarlo.
+    auto_return: "approved",
+    notification_url: args.notificationUrl,
   };
 
   try {
-    const res = await fetch(url, {
+    const res = await fetch(`${API_BASE_URL}/checkout/preferences`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${args.accessToken}`,
-        "X-Idempotency-Key": args.externalReference,
+        "X-Idempotency-Key": args.orderId,
       },
       body: JSON.stringify(body),
     });
     const data = await res.json();
 
-    if (typeof data?.status === "string") {
-      if (data.status !== "approved") {
-        return {
-          ok: false,
-          rejected: data.status === "rejected",
-          error: GENERIC_DECLINE_MESSAGE,
-          detail: `Pago ${data.status} (${data.status_detail ?? "sin detalle"})`,
-        };
-      }
-      return { ok: true, id: data.id, status: data.status };
+    if (res.ok && typeof data?.id === "string" && typeof data?.init_point === "string") {
+      return { ok: true, preferenceId: data.id, initPoint: data.init_point };
     }
 
     const detail = data?.message || data?.cause?.[0]?.description || `Mercado Pago respondió ${res.status}`;
@@ -97,9 +88,32 @@ export async function createMercadoPagoPayment(
   }
 }
 
-// Reembolso total — red de seguridad si el cobro se aprobó pero después no
-// se pudo confirmar el pedido (mismo caso que en Payway: se quedó sin stock
-// en el candado de reserva justo en ese instante).
+export type MercadoPagoPayment = {
+  id: number;
+  status: string; // "approved" | "rejected" | "pending" | "in_process" | "cancelled" | ...
+  externalReference: string | null;
+};
+
+// El webhook solo manda un id — nunca hay que confiar en el resto de lo que mande, se vuelve a pedir el pago
+// completo con NUESTRO access token. Si el id no es un pago real de esta cuenta, Mercado Pago devuelve 404: es
+// la verificación en sí, no hace falta validar ninguna firma aparte.
+export async function getMercadoPagoPayment(accessToken: string, paymentId: string | number): Promise<MercadoPagoPayment | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/v1/payments/${paymentId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (typeof data?.id !== "number" || typeof data?.status !== "string") return null;
+    return { id: data.id, status: data.status, externalReference: data.external_reference ?? null };
+  } catch (err) {
+    console.error("getMercadoPagoPayment failed", paymentId, err);
+    return null;
+  }
+}
+
+// Reembolso total — red de seguridad si el pago se aprobó pero el pedido no se pudo confirmar igual (ej. se quedó
+// sin stock en el candado de reserva justo en ese instante).
 export async function refundMercadoPagoPayment(args: {
   accessToken: string;
   paymentId: number;
